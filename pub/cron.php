@@ -20,23 +20,19 @@
  * versions in the future. If you wish to customize Magento for your
  * needs please refer to http://www.magentocommerce.com for more information.
  *
- * @category   Mage
- * @package    Mage
- * @copyright  Copyright (c) 2013 X.commerce, Inc. (http://www.magentocommerce.com)
+ * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 
-require dirname(__DIR__) . '/app/bootstrap.php';
-Magento_Profiler::start('mage');
-Mage::register('custom_entry_point', true);
-umask(0);
+use Magento\Framework\App\Bootstrap;
+use Magento\Store\Model\Store;
+use Magento\Store\Model\StoreManager;
 
-try {
-    $params = array(Mage::PARAM_RUN_CODE => 'admin');
-    $config = new Mage_Core_Model_Config_Primary(BP, $params);
-    $entryPoint = new Mage_Core_Model_EntryPoint_Cron($config);
-    $entryPoint->processRequest();
-} catch (Exception $e) {
-    Mage::printException($e);
-}
-Magento_Profiler::stop('mage');
+require dirname(__DIR__) . '/app/bootstrap.php';
+$params = $_SERVER;
+$params[StoreManager::PARAM_RUN_CODE] = 'admin';
+$params[Store::CUSTOM_ENTRY_POINT_PARAM] = true;
+$bootstrap = \Magento\Framework\App\Bootstrap::create(BP, $params);
+/** @var \Magento\Framework\App\Cron $app */
+$app = $bootstrap->createApplication('Magento\Framework\App\Cron', ['parameters' => ['group::']]);
+$bootstrap->run($app);

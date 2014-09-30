@@ -20,11 +20,12 @@
  * versions in the future. If you wish to customize Magento for your
  * needs please refer to http://www.magentocommerce.com for more information.
  *
- * @category   Mage
- * @package    Mage
- * @copyright  Copyright (c) 2013 X.commerce, Inc. (http://www.magentocommerce.com)
+ * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
+
+use Magento\Framework\App\Cache\Frontend\Factory;
+use Magento\Framework\Module\Declaration\Reader\Filesystem;
 
 require dirname(__DIR__) . '/app/bootstrap.php';
 
@@ -48,13 +49,13 @@ if (file_exists($configCacheFile) && is_readable($configCacheFile)) {
 
     //checking update time
     if (filemtime($configCacheFile) + $config['update_time'] > time()) {
-        $mediaDirectory = trim(str_replace(__DIR__, '', $config['media_directory']), DS);
+        $mediaDirectory = trim(str_replace(__DIR__, '', $config['media_directory']), '/');
         $allowedResources = array_merge($allowedResources, $config['allowed_resources']);
     }
 }
 
 // Serve file if it's materialized
-$request = new Mage_Core_Model_File_Storage_Request(__DIR__);
+$request = new \Magento\Core\Model\File\Storage\Request(__DIR__);
 if ($mediaDirectory) {
     if (0 !== stripos($request->getPathInfo(), $mediaDirectory . '/') || is_dir($request->getFilePath())) {
         header('HTTP/1.0 404 Not Found');
@@ -68,7 +69,10 @@ if ($mediaDirectory) {
     }
 
     if (is_readable($request->getFilePath())) {
-        $transfer = new Varien_File_Transfer_Adapter_Http();
+        $transfer = new \Magento\Framework\File\Transfer\Adapter\Http(
+            new \Magento\Framework\Controller\Response\Http,
+            new \Magento\Framework\File\Mime
+        );
         $transfer->send($request->getFilePath());
         exit;
     }
@@ -76,12 +80,20 @@ if ($mediaDirectory) {
 // Materialize file in application
 $params = $_SERVER;
 if (empty($mediaDirectory)) {
-    $params[Mage::PARAM_ALLOWED_MODULES] = array('Mage_Core');
-    $params[Mage::PARAM_CACHE_OPTIONS]['frontend_options']['disable_save'] = true;
+    $params[Filesystem::PARAM_ALLOWED_MODULES] = ['Magento_Core'];
+    $params[Factory::PARAM_CACHE_FORCED_OPTIONS] = ['frontend_options' => ['disable_save' => true]];
 }
-
-$config = new Mage_Core_Model_Config_Primary(dirname(__DIR__), $params);
-$entryPoint = new Mage_Core_Model_EntryPoint_Media(
-    $config, $request, $isAllowed, __DIR__, $mediaDirectory, $configCacheFile, $relativeFilename
+$bootstrap = \Magento\Framework\App\Bootstrap::create(BP, $params);
+/** @var \Magento\Core\App\Media $app */
+$app = $bootstrap->createApplication(
+    'Magento\Core\App\Media',
+    [
+        'request' => $request,
+        'workingDirectory' => __DIR__,
+        'mediaDirectory' => $mediaDirectory,
+        'configCacheFile' => $configCacheFile,
+        'isAllowed' => $isAllowed,
+        'relativeFileName' => $relativeFilename,
+    ]
 );
-$entryPoint->processRequest();
+$bootstrap->run($app);

@@ -17,9 +17,7 @@
  * versions in the future. If you wish to customize Magento for your
  * needs please refer to http://www.magentocommerce.com for more information.
  *
- * @category    mage.js
- * @package     test
- * @copyright   Copyright (c) 2013 X.commerce, Inc. (http://www.magentocommerce.com)
+ * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
  * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 SuggestTest = TestCase('SuggestTest');
@@ -100,7 +98,7 @@ SuggestTest.prototype.testRender = function() {
         dropdownWrapper: '<div class="wrapper-test"></div>',
         className: 'test-suggest',
         inputWrapper: '<div class="test-input-wrapper"></div>'
-    }
+    };
 
     var suggestInstance = this.suggestCreate(suggestOptions);
     suggestInstance._render();
@@ -249,14 +247,14 @@ SuggestTest.prototype.testBindDropdown = function() {
         selectTriggered;
 
     suggestInstance._onSelectItem = function() {
-        selectTriggered = true
-    }
+        selectTriggered = true;
+    };
     suggestInstance._focusItem = function() {
-        focusTriggered = true
-    }
+        focusTriggered = true;
+    };
     suggestInstance._blurItem = function() {
-        blurTriggered = true
-    }
+        blurTriggered = true;
+    };
     suggestInstance._bindDropdown();
 
     suggestInstance.dropdown.trigger('testFocus');
@@ -274,10 +272,10 @@ SuggestTest.prototype.testTrigger = function() {
     this.suggestElement
         .on('suggesttestevent', function() {
             return false;
-        })
+        });
     this.suggestElement.parent().on('suggesttestevent', function() {
             propogationStopped = false;
-        })
+        });
     suggestInstance._trigger('testevent');
 
     assertTrue(propogationStopped);
@@ -417,7 +415,7 @@ SuggestTest.prototype.testSelectItem = function() {
         suggestOptions = {
             showRecent: true,
             storageKey: 'jsTestDriver-test-suggest-recent'
-        }
+        };
         suggestInstance = this.suggestCreate(suggestOptions);
         suggestInstance._focused = this.uiHash.item;
 
@@ -457,6 +455,27 @@ SuggestTest.prototype.testSelectItemMultiselect = function() {
     assertFalse(suggestInstance._getOption(suggestInstance._focused).length > 0);
     assertFalse(selectedElement.hasClass(suggestInstance.options.selectedClass));
     assertTrue(suggestInstance.dropdown.is(':hidden'));
+};
+SuggestTest.prototype.testResetSuggestValue = function() {
+    var suggestInstance = this.suggestCreate();
+    suggestInstance.valueField.val('test');
+    suggestInstance._resetSuggestValue();
+    assertEquals(suggestInstance.valueField.val(), suggestInstance._nonSelectedItem.id);
+};
+SuggestTest.prototype.testResetSuggestValueMultiselect = function() {
+    var suggestInstance = this.suggestCreate({multiselect: true});
+    suggestInstance._focused = this.uiHash.item;
+    var selectedElement = jQuery('<div></div>');
+    var event = $.Event('select');
+    event.target = selectedElement[0];
+
+    suggestInstance._selectItem(event);
+    suggestInstance._resetSuggestValue();
+
+    var suggestValue = suggestInstance.valueField.val();
+    assertArray(suggestValue);
+    assertNotUndefined(suggestValue[0]);
+    assertEquals(suggestValue[0], this.uiHash.item.id);
 };
 SuggestTest.prototype.testReadItemData = function() {
     var testElement = jQuery('<div></div>'),
@@ -789,11 +808,11 @@ SuggestTest.prototype.testShowAll = function() {
         suggestInstance = this.suggestCreate();
     suggestInstance._abortSearch = function() {
         searchAborted = true;
-    }
+    };
     suggestInstance._search = function(e, term, context) {
         showAllTerm = term;
         showAllContext = context;
-    }
+    };
 
     suggestInstance._showAll(jQuery.Event('showAll'));
 

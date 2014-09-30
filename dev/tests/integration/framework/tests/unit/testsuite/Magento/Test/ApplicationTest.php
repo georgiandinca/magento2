@@ -18,33 +18,46 @@
  * versions in the future. If you wish to customize Magento for your
  * needs please refer to http://www.magentocommerce.com for more information.
  *
- * @category    Magento
- * @package     Magento
- * @subpackage  integration_tests
- * @copyright   Copyright (c) 2013 X.commerce, Inc. (http://www.magentocommerce.com)
+ * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
  * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
+namespace Magento\Test;
 
-class Magento_Test_ApplicationTest extends PHPUnit_Framework_TestCase
+use Magento\Framework\App\State;
+
+class ApplicationTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * @covers Magento_Test_Application::getInstallDir()
-     * @covers Magento_Test_Application::getDbInstance()
-     * @covers Magento_Test_Application::getInitParams()
+     * @covers \Magento\TestFramework\Application::getInstallDir()
+     * @covers \Magento\TestFramework\Application::getDbInstance()
+     * @covers \Magento\TestFramework\Application::getInitParams()
      */
     public function testConstructor()
     {
-        $dbInstance = $this->getMockForAbstractClass('Magento_Test_Db_DbAbstract', array(), '', false);
+        $dbInstance = $this->getMockForAbstractClass('Magento\TestFramework\Db\AbstractDb', array(), '', false);
         $installDir = '/install/dir';
-        $appMode = Mage_Core_Model_App_State::MODE_DEVELOPER;
+        $appMode = \Magento\Framework\App\State::MODE_DEVELOPER;
+        $directoryList = new \Magento\Framework\App\Filesystem\DirectoryList(BP);
+        $filesystem = new \Magento\Framework\App\Filesystem(
+            $directoryList,
+            new \Magento\Framework\Filesystem\Directory\ReadFactory(),
+            new \Magento\Framework\Filesystem\Directory\WriteFactory(),
+            new \Magento\Framework\Filesystem\File\ReadFactory(
+                new \Magento\Framework\Filesystem\DriverFactory($directoryList)
+            ),
+            new \Magento\Framework\Filesystem\File\WriteFactory(
+                new \Magento\Framework\Filesystem\DriverFactory($directoryList)
+            )
+        );
 
-        $object = new Magento_Test_Application(
+        $object = new \Magento\TestFramework\Application(
             $dbInstance,
             $installDir,
-            new Varien_Simplexml_Element('<data/>'),
+            new \Magento\Framework\Simplexml\Element('<data/>'),
+            '',
             array(),
-            array(),
-            $appMode
+            $appMode,
+            $filesystem
         );
 
         $this->assertSame($dbInstance, $object->getDbInstance(), 'Db instance is not set in Application');
@@ -52,11 +65,15 @@ class Magento_Test_ApplicationTest extends PHPUnit_Framework_TestCase
 
         $initParams = $object->getInitParams();
         $this->assertInternalType('array', $initParams, 'Wrong initialization parameters type');
-        $this->assertArrayHasKey(Mage::PARAM_APP_DIRS, $initParams, 'Directories are not configured');
-        $this->assertArrayHasKey(Mage::PARAM_MODE, $initParams, 'Application mode is not configured');
+        $this->assertArrayHasKey(
+            \Magento\Framework\App\Filesystem::PARAM_APP_DIRS,
+            $initParams,
+            'Directories are not configured'
+        );
+        $this->assertArrayHasKey(State::PARAM_MODE, $initParams, 'Application mode is not configured');
         $this->assertEquals(
-            Mage_Core_Model_App_State::MODE_DEVELOPER,
-            $initParams[Mage::PARAM_MODE],
+            \Magento\Framework\App\State::MODE_DEVELOPER,
+            $initParams[State::PARAM_MODE],
             'Wrong application mode configured'
         );
     }

@@ -18,21 +18,18 @@
  * versions in the future. If you wish to customize Magento for your
  * needs please refer to http://www.magentocommerce.com for more information.
  *
- * @category    Mage
- * @package     Mage_Shell
- * @copyright   Copyright (c) 2013 X.commerce, Inc. (http://www.magentocommerce.com)
+ * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
  * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 
-require_once __DIR__ . '/../../app/bootstrap.php';
-$params = array(
-    Mage::PARAM_RUN_CODE => 'admin',
-    Mage::PARAM_RUN_TYPE => 'store',
-);
+use Magento\Framework\App\Bootstrap;
+use Magento\Store\Model\StoreManager;
 
-$entryPoint = new Mage_Index_Model_EntryPoint_Shell(
-    basename(__FILE__),
-    new Mage_Index_Model_EntryPoint_Shell_ErrorHandler(),
-    new Mage_Core_Model_Config_Primary(BP, $params)
-);
-$entryPoint->processRequest();
+require __DIR__ . '/../../app/bootstrap.php';
+$params = $_SERVER;
+$params[StoreManager::PARAM_RUN_CODE] = 'admin';
+$params[StoreManager::PARAM_RUN_TYPE] = 'store';
+$bootstrap = \Magento\Framework\App\Bootstrap::create(BP, $params);
+/** @var \Magento\Indexer\App\Shell $application */
+$app = $bootstrap->createApplication('Magento\Indexer\App\Shell', ['entryFileName' => basename(__FILE__)]);
+$bootstrap->run($app);
