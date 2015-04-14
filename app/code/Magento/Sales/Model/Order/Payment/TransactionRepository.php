@@ -1,32 +1,14 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Sales\Model\Order\Payment;
 
+use Magento\Framework\Api\FilterBuilder;
+use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Sales\Model\Resource\Order\Payment\Transaction as TransactionResource;
-use Magento\Framework\Service\V1\Data\FilterBuilder;
-use Magento\Framework\Service\V1\Data\SearchCriteriaBuilder;
 
 /**
  * Repository class for \Magento\Sales\Model\Order\Payment\Transaction
@@ -52,15 +34,15 @@ class TransactionRepository
      *
      * @var array
      */
-    private $registry = array();
+    private $registry = [];
 
     /**
-     * @var \Magento\Framework\Service\V1\Data\FilterBuilder
+     * @var \Magento\Framework\Api\FilterBuilder
      */
     private $filterBuilder;
 
     /**
-     * @var \Magento\Framework\Service\V1\Data\SearchCriteriaBuilder
+     * @var \Magento\Framework\Api\SearchCriteriaBuilder
      */
     private $searchCriteriaBuilder;
 
@@ -95,7 +77,7 @@ class TransactionRepository
     public function get($id)
     {
         if (!$id) {
-            throw new \Magento\Framework\Exception\InputException('ID required');
+            throw new \Magento\Framework\Exception\InputException(__('ID required'));
         }
         if (!isset($this->registry[$id])) {
             $filter = $this->filterBuilder->setField('transaction_id')->setValue($id)->setConditionType('eq')->create();
@@ -103,7 +85,9 @@ class TransactionRepository
             $this->find($this->searchCriteriaBuilder->create());
 
             if (!isset($this->registry[$id])) {
-                throw new \Magento\Framework\Exception\NoSuchEntityException('Requested entity doesn\'t exist');
+                throw new \Magento\Framework\Exception\NoSuchEntityException(
+                    __('Requested entity doesn\'t exist')
+                );
             }
         }
         return $this->registry[$id];
@@ -126,10 +110,10 @@ class TransactionRepository
     /**
      * Find entities by criteria
      *
-     * @param \Magento\Framework\Service\V1\Data\SearchCriteria  $criteria
+     * @param \Magento\Framework\Api\SearchCriteria  $criteria
      * @return Transaction[]
      */
-    public function find(\Magento\Framework\Service\V1\Data\SearchCriteria $criteria)
+    public function find(\Magento\Framework\Api\SearchCriteria $criteria)
     {
         /** @var TransactionResource\Collection $collection */
         $collection = $this->transactionCollectionFactory->create();

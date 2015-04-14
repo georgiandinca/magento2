@@ -1,33 +1,17 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Block\Rss\Product;
 
+use Magento\Customer\Model\Context;
 use Magento\Framework\App\Rss\DataProviderInterface;
 
 /**
  * Class Special
  * @package Magento\Catalog\Block\Rss\Product
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Special extends \Magento\Framework\View\Element\AbstractBlock implements DataProviderInterface
 {
@@ -57,7 +41,7 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
     protected $httpContext;
 
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $storeManager;
 
@@ -67,36 +51,50 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
     protected $rssUrlBuilder;
 
     /**
+     * @var \Magento\Msrp\Helper\Data
+     */
+    protected $msrpHelper;
+
+    /**
+     * @var \Magento\Framework\Locale\ResolverInterface
+     */
+    private $localeResolver;
+
+    /**
      * @param \Magento\Framework\View\Element\Template\Context $context
      * @param \Magento\Framework\App\Http\Context $httpContext
      * @param \Magento\Catalog\Helper\Image $imageHelper
      * @param \Magento\Catalog\Helper\Output $outputHelper
-     * @param \Magento\Catalog\Helper\Data $catalogHelper
+     * @param \Magento\Msrp\Helper\Data $msrpHelper
      * @param \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency
      * @param \Magento\Catalog\Model\Rss\Product\Special $rssModel
      * @param \Magento\Framework\App\Rss\UrlBuilderInterface $rssUrlBuilder
+     * @param \Magento\Framework\Locale\ResolverInterface $localeResolver
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\View\Element\Template\Context $context,
         \Magento\Framework\App\Http\Context $httpContext,
         \Magento\Catalog\Helper\Image $imageHelper,
         \Magento\Catalog\Helper\Output $outputHelper,
-        \Magento\Catalog\Helper\Data $catalogHelper,
+        \Magento\Msrp\Helper\Data $msrpHelper,
         \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency,
         \Magento\Catalog\Model\Rss\Product\Special $rssModel,
         \Magento\Framework\App\Rss\UrlBuilderInterface $rssUrlBuilder,
-        array $data = array()
+        \Magento\Framework\Locale\ResolverInterface $localeResolver,
+        array $data = []
     ) {
         $this->outputHelper = $outputHelper;
         $this->imageHelper = $imageHelper;
         $this->rssModel = $rssModel;
         $this->rssUrlBuilder = $rssUrlBuilder;
         $this->priceCurrency = $priceCurrency;
-        $this->catalogHelper = $catalogHelper;
+        $this->msrpHelper = $msrpHelper;
         $this->httpContext = $httpContext;
         $this->storeManager = $context->getStoreManager();
         parent::__construct($context, $data);
+        $this->localeResolver = $localeResolver;
     }
 
     /**
@@ -113,28 +111,31 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
      */
     public function getRssData()
     {
-        $newUrl = $this->rssUrlBuilder->getUrl(array('type' => 'special_products', 'store_id' => $this->getStoreId()));
+        $newUrl = $this->rssUrlBuilder->getUrl(['type' => 'special_products', 'store_id' => $this->getStoreId()]);
         $title = __('%1 - Special Products', $this->storeManager->getStore()->getFrontendName());
-        $lang = $this->_scopeConfig->getValue('general/locale/code', \Magento\Store\Model\ScopeInterface::SCOPE_STORE);
+        $lang = $this->_scopeConfig->getValue(
+            'general/locale/code',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
 
-        $data = array(
+        $data = [
             'title' => $title,
             'description' => $title,
             'link' => $newUrl,
             'charset' => 'UTF-8',
-            'language' => $lang
-        );
+            'language' => $lang,
+        ];
 
-        $currentDate = new \Magento\Framework\Stdlib\DateTime\Date();
+        $currentDate = (new \DateTime())->setTime(0, 0, 0);
         foreach ($this->rssModel->getProductsCollection($this->getStoreId(), $this->getCustomerGroupId()) as $item) {
             /** @var $item \Magento\Catalog\Model\Product */
             $item->setAllowedInRss(true);
             $item->setAllowedPriceInRss(true);
 
-            $this->_eventManager->dispatch('rss_catalog_special_xml_callback', array(
+            $this->_eventManager->dispatch('rss_catalog_special_xml_callback', [
                 'row' => $item->getData(),
                 'product' => $item
-            ));
+            ]);
 
             if (!$item->getAllowedInRss()) {
                 continue;
@@ -144,11 +145,7 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
             if ($item->getSpecialToDate() && $item->getFinalPrice() <= $item->getSpecialPrice() &&
                 $item->getAllowedPriceInRss()
             ) {
-                $compareDate = $currentDate->compareDate(
-                    $item->getSpecialToDate(),
-                    \Magento\Framework\Stdlib\DateTime::DATE_INTERNAL_FORMAT
-                );
-                if (-1 === $compareDate || 0 === $compareDate) {
+                if ($currentDate->format('Y-m-d') <= $item->getSpecialToDate()) {
                     $item->setUseSpecial(true);
                 }
             }
@@ -173,14 +170,14 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
 
         $specialPrice = '';
         if ($item->getAllowedPriceInRss()) {
-            if ($this->catalogHelper->canApplyMsrp($item)) {
+            if ($this->msrpHelper->canApplyMsrp($item)) {
                 $specialPrice = '<br/><a href="' . $item->getProductUrl() . '">' . __('Click for price') . '</a>';
             } else {
                 $special = '';
                 if ($item->getUseSpecial()) {
                     $special = '<br />' . __('Special Expires On: %1', $this->formatDate(
                         $item->getSpecialToDate(),
-                        \Magento\Framework\Stdlib\DateTime\TimezoneInterface::FORMAT_TYPE_MEDIUM
+                        \IntlDateFormatter::MEDIUM
                     ));
                 }
                 $specialPrice = sprintf(
@@ -199,11 +196,11 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
             $specialPrice
         );
 
-        return array(
+        return [
             'title' => $item->getName(),
             'link' => $item->getProductUrl(),
             'description' => $description
-        );
+        ];
     }
 
     /**
@@ -229,7 +226,7 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
     {
         $customerGroupId =   (int) $this->getRequest()->getParam('cid');
         if ($customerGroupId == null) {
-            $customerGroupId = $this->httpContext->getValue(\Magento\Customer\Helper\Data::CONTEXT_GROUP);
+            $customerGroupId = $this->httpContext->getValue(Context::CONTEXT_GROUP);
         }
         return $customerGroupId;
     }
@@ -241,7 +238,10 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
      */
     public function isAllowed()
     {
-        return $this->_scopeConfig->isSetFlag('rss/catalog/special', \Magento\Store\Model\ScopeInterface::SCOPE_STORE);
+        return $this->_scopeConfig->isSetFlag(
+            'rss/catalog/special',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
     }
 
     /**
@@ -257,11 +257,19 @@ class Special extends \Magento\Framework\View\Element\AbstractBlock implements D
      */
     public function getFeeds()
     {
-        $data = array();
+        $data = [];
         if ($this->isAllowed()) {
-            $url = $this->rssUrlBuilder->getUrl(array('type' => 'special_products'));
-            $data = array('label' => __('Special Products'), 'link' => $url);
+            $url = $this->rssUrlBuilder->getUrl(['type' => 'special_products']);
+            $data = ['label' => __('Special Products'), 'link' => $url];
         }
         return $data;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isAuthRequired()
+    {
+        return false;
     }
 }

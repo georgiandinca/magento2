@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Block\Product\ProductList;
 
@@ -30,6 +12,8 @@ use Magento\Catalog\Model\Product\ProductList\Toolbar as ToolbarModel;
  * Product list toolbar
  *
  * @author      Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.TooManyFields)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Toolbar extends \Magento\Framework\View\Element\Template
 {
@@ -45,14 +29,14 @@ class Toolbar extends \Magento\Framework\View\Element\Template
      *
      * @var array
      */
-    protected $_availableOrder = array();
+    protected $_availableOrder = [];
 
     /**
      * List of available view types
      *
      * @var array
      */
-    protected $_availableMode = array();
+    protected $_availableMode = [];
 
     /**
      * Is enable View switcher
@@ -124,12 +108,12 @@ class Toolbar extends \Magento\Framework\View\Element\Template
     protected $_productListHelper;
 
     /**
-     * @var \Magento\Catalog\Helper\Data
+     * @var \Magento\Framework\Url\EncoderInterface
      */
-    protected $_catalogHelper;
+    protected $urlEncoder;
 
     /**
-     * @var \Magento\Core\Helper\PostData
+     * @var \Magento\Framework\Data\Helper\PostHelper
      */
     protected $_postDataHelper;
 
@@ -138,9 +122,9 @@ class Toolbar extends \Magento\Framework\View\Element\Template
      * @param \Magento\Catalog\Model\Session $catalogSession
      * @param \Magento\Catalog\Model\Config $catalogConfig
      * @param ToolbarModel $toolbarModel
-     * @param Data $helper
+     * @param \Magento\Framework\Url\EncoderInterface $urlEncoder
      * @param \Magento\Catalog\Helper\Product\ProductList $productListHelper
-     * @param \Magento\Core\Helper\PostData $postDataHelper
+     * @param \Magento\Framework\Data\Helper\PostHelper $postDataHelper
      * @param array $data
      */
     public function __construct(
@@ -148,15 +132,15 @@ class Toolbar extends \Magento\Framework\View\Element\Template
         \Magento\Catalog\Model\Session $catalogSession,
         \Magento\Catalog\Model\Config $catalogConfig,
         ToolbarModel $toolbarModel,
-        \Magento\Catalog\Helper\Data $helper,
+        \Magento\Framework\Url\EncoderInterface $urlEncoder,
         \Magento\Catalog\Helper\Product\ProductList $productListHelper,
-        \Magento\Core\Helper\PostData $postDataHelper,
-        array $data = array()
+        \Magento\Framework\Data\Helper\PostHelper $postDataHelper,
+        array $data = []
     ) {
         $this->_catalogSession = $catalogSession;
         $this->_catalogConfig = $catalogConfig;
         $this->_toolbarModel = $toolbarModel;
-        $this->_catalogHelper = $helper;
+        $this->urlEncoder = $urlEncoder;
         $this->_productListHelper = $productListHelper;
         $this->_postDataHelper = $postDataHelper;
         parent::__construct($context, $data);
@@ -289,7 +273,7 @@ class Toolbar extends \Magento\Framework\View\Element\Template
             return $dir;
         }
 
-        $directions = array('asc', 'desc');
+        $directions = ['asc', 'desc'];
         $dir = strtolower($this->_toolbarModel->getDirection());
         if (!$dir || !in_array($dir, $directions)) {
             $dir = $this->_direction;
@@ -325,7 +309,7 @@ class Toolbar extends \Magento\Framework\View\Element\Template
      */
     public function setDefaultDirection($dir)
     {
-        if (in_array(strtolower($dir), array('asc', 'desc'))) {
+        if (in_array(strtolower($dir), ['asc', 'desc'])) {
             $this->_direction = strtolower($dir);
         }
         return $this;
@@ -397,9 +381,9 @@ class Toolbar extends \Magento\Framework\View\Element\Template
      * @param array $params Query parameters
      * @return string
      */
-    public function getPagerUrl($params = array())
+    public function getPagerUrl($params = [])
     {
-        $urlParams = array();
+        $urlParams = [];
         $urlParams['_current'] = true;
         $urlParams['_escape'] = true;
         $urlParams['_use_rewrite'] = true;
@@ -411,9 +395,9 @@ class Toolbar extends \Magento\Framework\View\Element\Template
      * @param array $params
      * @return string
      */
-    public function getPagerEncodedUrl($params = array())
+    public function getPagerEncodedUrl($params = [])
     {
-        return $this->_catalogHelper->urlEncode($this->getPagerUrl($params));
+        return $this->urlEncoder->encode($this->getPagerUrl($params));
     }
 
     /**
@@ -654,7 +638,6 @@ class Toolbar extends \Magento\Framework\View\Element\Template
         $pagerBlock = $this->getChildBlock('product_list_toolbar_pager');
 
         if ($pagerBlock instanceof \Magento\Framework\Object) {
-
             /* @var $pagerBlock \Magento\Theme\Block\Html\Pager */
             $pagerBlock->setAvailableLimit($this->getAvailableLimit());
 
@@ -692,20 +675,20 @@ class Toolbar extends \Magento\Framework\View\Element\Template
      * @param array $customOptions Optional parameter for passing custom selectors from template
      * @return string
      */
-    public function getWidgetOptionsJson(array $customOptions = array())
+    public function getWidgetOptionsJson(array $customOptions = [])
     {
         $postData = $this->_postDataHelper->getPostData(
             $this->getPagerUrl(),
-            array(\Magento\Framework\App\Action\Action::PARAM_NAME_URL_ENCODED => $this->getPagerEncodedUrl())
+            [\Magento\Framework\App\Action\Action::PARAM_NAME_URL_ENCODED => $this->getPagerEncodedUrl()]
         );
-        $options = array(
+        $options = [
             'modeCookie' => ToolbarModel::MODE_COOKIE_NAME,
             'directionCookie' => ToolbarModel::DIRECTION_COOKIE_NAME,
             'orderCookie' => ToolbarModel::ORDER_COOKIE_NAME,
             'limitCookie' => ToolbarModel::LIMIT_COOKIE_NAME,
-            'postData' => json_decode($postData)
-        );
+            'postData' => json_decode($postData),
+        ];
         $options = array_replace_recursive($options, $customOptions);
-        return json_encode(array('productListToolbarForm' => $options));
+        return json_encode(['productListToolbarForm' => $options]);
     }
 }

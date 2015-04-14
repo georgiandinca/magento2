@@ -3,6 +3,8 @@
  * Doc block for this file
  */
 
+// @codingStandardsIgnoreFile
+
 /**
  * Doc block for this class
  */
@@ -13,7 +15,7 @@ class Magento_Test_Php_Exemplar_CodeStyleTest_phpcs_input_coding_style_functions
      *
      * @return string
      */
-    function publicMethod()
+    public function publicMethod()
     {
         return 'Hello!';
     }

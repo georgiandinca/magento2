@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -35,7 +17,6 @@
  */
 namespace Magento\Store\Model;
 
-use Magento\Store\Model\Website;
 
 class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\Framework\Object\IdentityInterface
 {
@@ -70,14 +51,14 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      *
      * @var int[]
      */
-    protected $_storeIds = array();
+    protected $_storeIds = [];
 
     /**
      * Group store codes array
      *
      * @var string[]
      */
-    protected $_storeCodes = array();
+    protected $_storeCodes = [];
 
     /**
      * The number of stores in a group
@@ -99,7 +80,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
     private $_isReadOnly = false;
 
     /**
-     * @var \Magento\Core\Model\Resource\Config\Data
+     * @var \Magento\Config\Model\Resource\Config\Data
      */
     protected $_configDataResource;
 
@@ -109,16 +90,16 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
     protected $_storeListFactory;
 
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
     /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
-     * @param \Magento\Core\Model\Resource\Config\Data $configDataResource
+     * @param \Magento\Config\Model\Resource\Config\Data $configDataResource
      * @param \Magento\Store\Model\Store $store
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
@@ -126,12 +107,12 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
     public function __construct(
         \Magento\Framework\Model\Context $context,
         \Magento\Framework\Registry $registry,
-        \Magento\Core\Model\Resource\Config\Data $configDataResource,
+        \Magento\Config\Model\Resource\Config\Data $configDataResource,
         \Magento\Store\Model\Resource\Store\CollectionFactory $storeListFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->_configDataResource = $configDataResource;
         $this->_storeListFactory = $storeListFactory;
@@ -156,7 +137,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     protected function _loadStores()
     {
-        $this->_stores = array();
+        $this->_stores = [];
         $this->_storesCount = 0;
         foreach ($this->getStoreCollection() as $store) {
             $this->_stores[$store->getId()] = $store;
@@ -177,7 +158,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     public function setStores($stores)
     {
-        $this->_stores = array();
+        $this->_stores = [];
         $this->_storesCount = 0;
         foreach ($stores as $store) {
             $this->_stores[$store->getId()] = $store;
@@ -207,7 +188,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     public function getStores()
     {
-        if (is_null($this->_stores)) {
+        if ($this->_stores === null) {
             $this->_loadStores();
         }
         return $this->_stores;
@@ -220,7 +201,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     public function getStoreIds()
     {
-        if (is_null($this->_stores)) {
+        if ($this->_stores === null) {
             $this->_loadStores();
         }
         return $this->_storeIds;
@@ -233,7 +214,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     public function getStoreCodes()
     {
-        if (is_null($this->_stores)) {
+        if ($this->_stores === null) {
             $this->_loadStores();
         }
         return $this->_storeCodes;
@@ -244,7 +225,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     public function getStoresCount()
     {
-        if (is_null($this->_stores)) {
+        if ($this->_stores === null) {
             $this->_loadStores();
         }
         return $this->_storesCount;
@@ -260,7 +241,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
         if (!$this->hasDefaultStoreId()) {
             return false;
         }
-        if (is_null($this->_stores)) {
+        if ($this->_stores === null) {
             $this->_loadStores();
         }
         return $this->_defaultStore;
@@ -296,7 +277,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     public function getStoresByLocale($locale)
     {
-        $stores = array();
+        $stores = [];
         foreach ($this->getStores() as $store) {
             /* @var $store \Magento\Store\Model\Store */
             if ($store->getLocaleCode() == $locale) {
@@ -324,7 +305,7 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     public function getWebsite()
     {
-        if (is_null($this->getWebsiteId())) {
+        if ($this->getWebsiteId() === null) {
             return false;
         }
         return $this->_storeManager->getWebsite($this->getWebsiteId());
@@ -371,13 +352,13 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
     /**
      * @return $this
      */
-    protected function _beforeDelete()
+    public function beforeDelete()
     {
         $this->_configDataResource->clearScopeData(
             \Magento\Store\Model\ScopeInterface::SCOPE_STORES,
             $this->getStoreIds()
         );
-        return parent::_beforeDelete();
+        return parent::beforeDelete();
     }
 
     /**
@@ -401,6 +382,6 @@ class Group extends \Magento\Framework\Model\AbstractModel implements \Magento\F
      */
     public function getIdentities()
     {
-        return array(self::CACHE_TAG . '_' . $this->getId());
+        return [self::CACHE_TAG . '_' . $this->getId()];
     }
 }

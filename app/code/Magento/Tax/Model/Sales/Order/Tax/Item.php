@@ -1,40 +1,119 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Tax\Model\Sales\Order\Tax;
 
 /**
- * @author      Magento Core Team <core@magentocommerce.com>
+ * @codeCoverageIgnore
  */
-class Item extends \Magento\Framework\Model\AbstractModel
+class Item extends \Magento\Framework\Model\AbstractExtensibleModel implements
+    \Magento\Tax\Api\Data\OrderTaxDetailsItemInterface
 {
     /**
-     * Initialization
-     *
-     * @return void
+     * {@inheritdoc}
      */
     protected function _construct()
     {
         $this->_init('Magento\Tax\Model\Resource\Sales\Order\Tax\Item');
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getType()
+    {
+        return $this->getData(self::KEY_TYPE);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getItemId()
+    {
+        return $this->getData(self::KEY_ITEM_ID);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getAssociatedItemId()
+    {
+        return $this->getData(self::KEY_ASSOCIATED_ITEM_ID);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getAppliedTaxes()
+    {
+        return $this->getData(self::KEY_APPLIED_TAXES);
+    }
+
+    /**
+     * Set type (shipping, product, weee, gift wrapping, etc)
+     *
+     * @param string $type
+     * @return $this
+     */
+    public function setType($type)
+    {
+        return $this->setData(self::KEY_TYPE, $type);
+    }
+
+    /**
+     * Set item id
+     *
+     * @param int $itemId
+     * @return $this
+     */
+    public function setItemId($itemId)
+    {
+        return $this->setData(self::KEY_ITEM_ID, $itemId);
+    }
+
+    /**
+     * Set associated item id
+     *
+     * @param int $associatedItemId
+     * @return $this
+     */
+    public function setAssociatedItemId($associatedItemId)
+    {
+        return $this->setData(self::KEY_ASSOCIATED_ITEM_ID, $associatedItemId);
+    }
+
+    /**
+     * Set applied taxes
+     *
+     * @param \Magento\Tax\Api\Data\OrderTaxDetailsAppliedTaxInterface[] $appliedTaxes
+     * @return $this
+     */
+    public function setAppliedTaxes(array $appliedTaxes = null)
+    {
+        return $this->setData(self::KEY_APPLIED_TAXES, $appliedTaxes);
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * @return \Magento\Tax\Api\Data\OrderTaxDetailsItemExtensionInterface|null
+     */
+    public function getExtensionAttributes()
+    {
+        return $this->_getExtensionAttributes();
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * @param \Magento\Tax\Api\Data\OrderTaxDetailsItemExtensionInterface $extensionAttributes
+     * @return $this
+     */
+    public function setExtensionAttributes(
+        \Magento\Tax\Api\Data\OrderTaxDetailsItemExtensionInterface $extensionAttributes
+    ) {
+        return $this->_setExtensionAttributes($extensionAttributes);
     }
 }

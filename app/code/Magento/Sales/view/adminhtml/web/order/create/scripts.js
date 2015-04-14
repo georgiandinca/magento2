@@ -1,24 +1,6 @@
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License (AFL 3.0)
- * that is bundled with this package in the file LICENSE_AFL.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/afl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 define([
     "jquery",
@@ -49,6 +31,7 @@ AdminOrder.prototype = {
         this.productConfigureAddFields = {};
         this.productPriceBase = {};
         this.collectElementsValue = true;
+        this.isOnlyVirtualProduct = false;
         Event.observe(window, 'load',  (function(){
             this.dataArea = new OrderFormArea('data', $(this.getAreaId('data')), this);
             this.itemsArea = Object.extend(new OrderFormArea('items', $(this.getAreaId('items')), this), {
@@ -219,8 +202,7 @@ AdminOrder.prototype = {
 
         if (data['reset_shipping']) {
             this.resetShippingMethod(data);
-        }
-        else {
+        } else {
             this.saveData(data);
             if (name == 'country_id' || name == 'customer_address_id') {
                 this.loadArea(['shipping_method', 'billing_method', 'totals', 'items'], true, data);
@@ -287,6 +269,10 @@ AdminOrder.prototype = {
             var dataFields = $(this.shippingAddressContainer).select('input', 'select', 'textarea');
             for (var i = 0; i < dataFields.length; i++) {
                 dataFields[i].disabled = flag;
+
+                if(this.isOnlyVirtualProduct) {
+                    dataFields[i].setValue('');
+                }
             }
             var buttons = $(this.shippingAddressContainer).select('button');
             // Add corresponding class to buttons while disabling them
@@ -302,23 +288,31 @@ AdminOrder.prototype = {
     },
 
     setShippingAsBilling : function(flag){
+        var data;
+        var areasToLoad = ['billing_method', 'shipping_address', 'totals', 'giftmessage'];
         this.disableShippingAddress(flag);
         if(flag){
-            var data = this.serializeData(this.billingAddressContainer);
-        }
-        else{
-            var data = this.serializeData(this.shippingAddressContainer);
+            data = this.serializeData(this.billingAddressContainer);
+        } else {
+            data = this.serializeData(this.shippingAddressContainer);
+            areasToLoad.push('shipping_method');
         }
         data = data.toObject();
         data['shipping_as_billing'] = flag ? 1 : 0;
         data['reset_shipping'] = 1;
-        this.loadArea(['shipping_method', 'billing_method', 'shipping_address', 'totals', 'giftmessage'], true, data);
+        this.loadArea( areasToLoad, true, data);
     },
 
     resetShippingMethod : function(data){
+        var areasToLoad = ['billing_method', 'shipping_address', 'totals', 'giftmessage', 'items'];
+        if(!this.isOnlyVirtualProduct) {
+            areasToLoad.push('shipping_method');
+            areasToLoad.push('shipping_address');
+        }
+
         data['reset_shipping'] = 1;
         this.isShippingMethodReseted = true;
-        this.loadArea(['shipping_method', 'billing_method', 'shipping_address', 'totals', 'giftmessage', 'items'], true, data);
+        this.loadArea(areasToLoad, true, data);
     },
 
     loadShippingRates : function(){
@@ -674,6 +668,7 @@ AdminOrder.prototype = {
         if (confirm(confirmMessage)) {
             this.collectElementsValue = false;
             order.sidebarApplyChanges({'sidebar[empty_customer_cart]': 1});
+            this.collectElementsValue = true;
         }
     },
 
@@ -1093,12 +1088,11 @@ AdminOrder.prototype = {
         }
     },
 
-    overlay : function(elId, show, observe)
-    {
+    overlay : function(elId, show, observe) {
         if (typeof(show) == 'undefined') { show = true; }
 
         var orderObj = this;
-        var obj = this.overlayData.get(elId)
+        var obj = this.overlayData.get(elId);
         if (!obj) {
             obj = {
                 show: show,
@@ -1107,11 +1101,10 @@ AdminOrder.prototype = {
                 fx: function(event) {
                     this.order.processOverlay(this.el, this.show);
                 }
-            }
+            };
             obj.bfx = obj.fx.bindAsEventListener(obj);
             this.overlayData.set(elId, obj);
-        }
-        else {
+        } else {
             obj.show = show;
             Event.stopObserving(window, 'resize', obj.bfx);
         }
@@ -1121,19 +1114,17 @@ AdminOrder.prototype = {
         this.processOverlay(elId, show);
     },
 
-    processOverlay : function(elId, show)
-    {
+    processOverlay : function(elId, show) {
         var el = $(elId);
 
         if (!el) {
-            return false;
+            return;
         }
 
         var parentEl = el.up(1);
         if (show) {
             parentEl.removeClassName('ignore-validate');
-        }
-        else {
+        } else {
             parentEl.addClassName('ignore-validate');
         }
 
@@ -1172,49 +1163,84 @@ AdminOrder.prototype = {
             parameters: params,
             onSuccess: function(response) {
                 var message = '';
-                var groupChangeRequired = false;
+                var groupActionRequired = null;
                 try {
                     response = response.responseText.evalJSON();
 
-                    if (true === response.valid) {
-                        message = parameters.vatValidMessage;
-                        if (currentCustomerGroupId != response.group) {
-                            message = parameters.vatValidAndGroupChangeMessage;
-                            groupChangeRequired = true;
+                    if (null === response.group) {
+                        if (true === response.valid) {
+                            message = parameters.vatValidMessage;
+                        } else if (true === response.success) {
+                            message = parameters.vatInvalidMessage.replace(/%s/, params.vat);
+                        } else {
+                            message = parameters.vatValidationFailedMessage;
                         }
-                    } else if (response.success) {
-                        message = parameters.vatInvalidMessage.replace(/%s/, params.vat);
-                        groupChangeRequired = true;
                     } else {
-                        message = parameters.vatValidationFailedMessage;
-                        groupChangeRequired = true;
+                        if (true === response.valid) {
+                            message = parameters.vatValidAndGroupValidMessage;
+                            if (0 === response.group) {
+                                message = parameters.vatValidAndGroupInvalidMessage;
+                                groupActionRequired = 'inform';
+                            } else if (currentCustomerGroupId != response.group) {
+                                message = parameters.vatValidAndGroupChangeMessage;
+                                groupActionRequired = 'change';
+                            }
+                        } else if (response.success) {
+                            message = parameters.vatInvalidMessage.replace(/%s/, params.vat);
+                            groupActionRequired = 'inform';
+                        } else {
+                            message = parameters.vatValidationFailedMessage;
+                            groupActionRequired = 'inform';
+                        }
                     }
-
                 } catch (e) {
-                    message = parameters.vatErrorMessage;
+                    message = parameters.vatValidationFailedMessage;
                 }
-                if (!groupChangeRequired) {
+                if (null === groupActionRequired) {
                     alert(message);
                 }
                 else {
-                    this.processCustomerGroupChange(parameters.groupIdHtmlId, message, response.group);
+                    this.processCustomerGroupChange(
+                        parameters.groupIdHtmlId,
+                        message,
+                        parameters.vatCustomerGroupMessage,
+                        parameters.vatGroupErrorMessage,
+                        response.group,
+                        groupActionRequired
+                    );
                 }
             }.bind(this)
         });
     },
 
-    processCustomerGroupChange: function(groupIdHtmlId, message, groupId)
+    processCustomerGroupChange: function(groupIdHtmlId, message, customerGroupMessage, errorMessage, groupId, action)
     {
-        var currentCustomerGroupId = $(groupIdHtmlId).value;
-        var currentCustomerGroupTitle = $$('#' + groupIdHtmlId + ' > option[value=' + currentCustomerGroupId + ']')[0].text;
-        var customerGroupOption = $$('#' + groupIdHtmlId + ' > option[value=' + groupId + ']')[0];
-        var confirmText = message.replace(/%s/, customerGroupOption.text);
-        confirmText = confirmText.replace(/%s/, currentCustomerGroupTitle);
-        if (confirm(confirmText)) {
-            $$('#' + groupIdHtmlId + ' option').each(function(o) {
-                o.selected = o.readAttribute('value') == groupId;
-            });
-            this.accountGroupChange();
+        var groupMessage = '';
+        try {
+            var currentCustomerGroupId = $(groupIdHtmlId).value;
+            var currentCustomerGroupTitle =
+                $$('#' + groupIdHtmlId + ' > option[value=' + currentCustomerGroupId + ']')[0].text;
+            var customerGroupOption = $$('#' + groupIdHtmlId + ' > option[value=' + groupId + ']')[0];
+            groupMessage = customerGroupMessage.replace(/%s/, customerGroupOption.text);
+        } catch (e) {
+            groupMessage = errorMessage;
+            if (action === 'change') {
+                message = '';
+                action = 'inform';
+            }
+        }
+
+        if (action === 'change') {
+            var confirmText = message.replace(/%s/, customerGroupOption.text);
+            confirmText = confirmText.replace(/%s/, currentCustomerGroupTitle);
+            if (confirm(confirmText)) {
+                $$('#' + groupIdHtmlId + ' option').each(function (o) {
+                    o.selected = o.readAttribute('value') == groupId;
+                });
+                this.accountGroupChange();
+            }
+        } else if (action === 'inform') {
+            alert(message + '\n' + groupMessage);
         }
     }
 };

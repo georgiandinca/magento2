@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Email\Model\Template;
 
@@ -50,7 +32,7 @@ class Filter extends \Magento\Framework\Filter\Template
      *
      * @var array
      */
-    protected $_modifiers = array('nl2br' => '');
+    protected $_modifiers = ['nl2br' => ''];
 
     /**
      * Store id
@@ -70,7 +52,7 @@ class Filter extends \Magento\Framework\Filter\Template
     protected $_assetRepo;
 
     /**
-     * @var \Magento\Framework\Logger
+     * @var \Psr\Log\LoggerInterface
      */
     protected $_logger;
 
@@ -83,12 +65,12 @@ class Filter extends \Magento\Framework\Filter\Template
      * Core store config
      * Variable factory
      *
-     * @var \Magento\Core\Model\VariableFactory
+     * @var \Magento\Variable\Model\VariableFactory
      */
     protected $_variableFactory;
 
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
@@ -127,15 +109,15 @@ class Filter extends \Magento\Framework\Filter\Template
      * @var \Magento\Backend\Model\UrlInterface
      */
     protected $backendUrlBuilder;
-    
+
     /**
      * @param \Magento\Framework\Stdlib\String $string
-     * @param \Magento\Framework\Logger $logger
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Escaper $escaper
      * @param \Magento\Framework\View\Asset\Repository $assetRepo
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     * @param \Magento\Core\Model\VariableFactory $coreVariableFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Variable\Model\VariableFactory $coreVariableFactory
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\View\LayoutInterface $layout
      * @param \Magento\Framework\View\LayoutFactory $layoutFactory
      * @param \Magento\Framework\App\State $appState
@@ -146,23 +128,23 @@ class Filter extends \Magento\Framework\Filter\Template
      */
     public function __construct(
         \Magento\Framework\Stdlib\String $string,
-        \Magento\Framework\Logger $logger,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Escaper $escaper,
         \Magento\Framework\View\Asset\Repository $assetRepo,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Core\Model\VariableFactory $coreVariableFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Variable\Model\VariableFactory $coreVariableFactory,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\View\LayoutInterface $layout,
         \Magento\Framework\View\LayoutFactory $layoutFactory,
         \Magento\Framework\App\State $appState,
         \Magento\Backend\Model\UrlInterface $backendUrlBuilder,
-        $variables = array()
+        $variables = []
     ) {
         $this->_escaper = $escaper;
         $this->_assetRepo = $assetRepo;
         $this->_logger = $logger;
         $this->_scopeConfig = $scopeConfig;
-        $this->_modifiers['escape'] = array($this, 'modifierEscape');
+        $this->_modifiers['escape'] = [$this, 'modifierEscape'];
         $this->_variableFactory = $coreVariableFactory;
         $this->_storeManager = $storeManager;
         $this->_layout = $layout;
@@ -244,12 +226,12 @@ class Filter extends \Magento\Framework\Filter\Template
      */
     public function blockDirective($construction)
     {
-        $skipParams = array('class', 'id', 'output');
+        $skipParams = ['class', 'id', 'output'];
         $blockParameters = $this->_getIncludeParameters($construction[2]);
         $block = null;
 
         if (isset($blockParameters['class'])) {
-            $block = $this->_layout->createBlock($blockParameters['class'], null, array('data' => $blockParameters));
+            $block = $this->_layout->createBlock($blockParameters['class'], null, ['data' => $blockParameters]);
         } elseif (isset($blockParameters['id'])) {
             $block = $this->_layout->createBlock('Magento\Cms\Block\Block');
             if ($block) {
@@ -268,7 +250,6 @@ class Filter extends \Magento\Framework\Filter\Template
             }
             $block->setDataUsingMethod($k, $v);
         }
-
 
         if (isset($blockParameters['output'])) {
             $method = $blockParameters['output'];
@@ -298,7 +279,7 @@ class Filter extends \Magento\Framework\Filter\Template
         if ($this->_directiveParams['area'] != $this->_appState->getAreaCode()) {
             return $this->_appState->emulateAreaCode(
                 $this->_directiveParams['area'],
-                array($this, 'emulateAreaCallback')
+                [$this, 'emulateAreaCallback']
             );
         } else {
             return $this->emulateAreaCallback();
@@ -312,10 +293,10 @@ class Filter extends \Magento\Framework\Filter\Template
      */
     public function emulateAreaCallback()
     {
-        $skipParams = array('handle', 'area');
+        $skipParams = ['handle', 'area'];
 
         /** @var $layout \Magento\Framework\View\LayoutInterface */
-        $layout = $this->_layoutFactory->create(array('cacheable' => false));
+        $layout = $this->_layoutFactory->create(['cacheable' => false]);
         $layout->getUpdate()->addHandle($this->_directiveParams['handle'])->load();
 
         $layout->generateXml();
@@ -385,7 +366,7 @@ class Filter extends \Magento\Framework\Filter\Template
     {
         $params = $this->_getIncludeParameters($construction[2]);
         return $this->_storeManager->getStore()
-            ->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA). $params['url'];
+            ->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA) . $params['url'];
     }
 
     /**
@@ -399,7 +380,7 @@ class Filter extends \Magento\Framework\Filter\Template
     {
         $params = $this->_getIncludeParameters($construction[2]);
         if (!isset($params['_query'])) {
-            $params['_query'] = array();
+            $params['_query'] = [];
         }
         foreach ($params as $k => $v) {
             if (strpos($k, '_query_') === 0) {
@@ -545,7 +526,7 @@ class Filter extends \Magento\Framework\Filter\Template
      * also allow additional parameter "store"
      *
      * @param string[] $construction
-     * @throws \Magento\Framework\Mail\Exception
+     * @throws \Magento\Framework\Exception\MailException
      * @return string
      */
     public function protocolDirective($construction)
@@ -556,7 +537,9 @@ class Filter extends \Magento\Framework\Filter\Template
             try {
                 $store = $this->_storeManager->getStore($params['store']);
             } catch (\Exception $e) {
-                throw new \Magento\Framework\Mail\Exception(__('Requested invalid store "%1"', $params['store']));
+                throw new \Magento\Framework\Exception\MailException(
+                    __('Requested invalid store "%1"', $params['store'])
+                );
             }
         }
         $isSecure = $this->_storeManager->getStore($store)->isCurrentlySecure();
@@ -611,8 +594,8 @@ class Filter extends \Magento\Framework\Filter\Template
                 $params['code']
             );
             $mode = $this->_plainTemplateMode
-                ? \Magento\Core\Model\Variable::TYPE_TEXT
-                : \Magento\Core\Model\Variable::TYPE_HTML;
+                ? \Magento\Variable\Model\Variable::TYPE_TEXT
+                : \Magento\Variable\Model\Variable::TYPE_HTML;
             $value = $variable->getValue($mode);
             if ($value) {
                 $customVarValue = $value;
@@ -635,7 +618,7 @@ class Filter extends \Magento\Framework\Filter\Template
             $value = parent::filter($value);
         } catch (\Exception $e) {
             $value = '';
-            $this->_logger->logException($e);
+            $this->_logger->critical($e);
         }
         return $value;
     }

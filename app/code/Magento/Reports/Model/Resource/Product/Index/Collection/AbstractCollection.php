@@ -1,27 +1,8 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
-
 
 /**
  * Reports Product Index Abstract Product Resource Collection
@@ -30,6 +11,9 @@
  */
 namespace Magento\Reports\Model\Resource\Product\Index\Collection;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Product\Collection
 {
     /**
@@ -45,8 +29,8 @@ abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Produc
     protected $_customerVisitor;
 
     /**
-     * @param \Magento\Core\Model\EntityFactory $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Eav\Model\Config $eavConfig
@@ -54,7 +38,7 @@ abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Produc
      * @param \Magento\Eav\Model\EntityFactory $eavEntityFactory
      * @param \Magento\Catalog\Model\Resource\Helper $resourceHelper
      * @param \Magento\Framework\Validator\UniversalFactory $universalFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Module\Manager $moduleManager
      * @param \Magento\Catalog\Model\Indexer\Product\Flat\State $catalogProductFlatState
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
@@ -63,14 +47,15 @@ abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Produc
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\Customer\Model\Session $customerSession
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
+     * @param \Magento\Customer\Api\GroupManagementInterface $groupManagement
      * @param \Magento\Customer\Model\Visitor $customerVisitor
      * @param mixed $connection
-     * 
+     *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        \Magento\Core\Model\EntityFactory $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Eav\Model\Config $eavConfig,
@@ -78,7 +63,7 @@ abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Produc
         \Magento\Eav\Model\EntityFactory $eavEntityFactory,
         \Magento\Catalog\Model\Resource\Helper $resourceHelper,
         \Magento\Framework\Validator\UniversalFactory $universalFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Module\Manager $moduleManager,
         \Magento\Catalog\Model\Indexer\Product\Flat\State $catalogProductFlatState,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -87,6 +72,7 @@ abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Produc
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Customer\Model\Session $customerSession,
         \Magento\Framework\Stdlib\DateTime $dateTime,
+        \Magento\Customer\Api\GroupManagementInterface $groupManagement,
         \Magento\Customer\Model\Visitor $customerVisitor,
         $connection = null
     ) {
@@ -109,6 +95,7 @@ abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Produc
             $localeDate,
             $customerSession,
             $dateTime,
+            $groupManagement,
             $connection
         );
         $this->_customerVisitor = $customerVisitor;
@@ -130,9 +117,9 @@ abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Produc
     {
         if (!$this->getFlag('is_idx_table_joined')) {
             $this->joinTable(
-                array('idx_table' => $this->_getTableName()),
+                ['idx_table' => $this->_getTableName()],
                 'product_id=entity_id',
-                array('product_id' => 'product_id', 'item_store_id' => 'store_id', 'added_at' => 'added_at'),
+                ['product_id' => 'product_id', 'item_store_id' => 'store_id', 'added_at' => 'added_at'],
                 $this->_getWhereCondition()
             );
             $this->setFlag('is_idx_table_joined', true);
@@ -177,7 +164,7 @@ abstract class AbstractCollection extends \Magento\Catalog\Model\Resource\Produc
      */
     protected function _getWhereCondition()
     {
-        $condition = array();
+        $condition = [];
 
         if ($this->_customerSession->isLoggedIn()) {
             $condition['customer_id'] = $this->_customerSession->getCustomerId();

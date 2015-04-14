@@ -1,37 +1,22 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Persistent\Model\Observer;
 
+/**
+ * Class EmulateQuote
+ */
 class EmulateQuote
 {
     /**
      * Customer account service
      *
-     * @var \Magento\Customer\Service\V1\CustomerAccountServiceInterface
+     * @var \Magento\Customer\Api\CustomerRepositoryInterface
      */
-    protected $_customerAccountService;
+    protected $customerRepository;
 
     /**
      * Customer session
@@ -66,20 +51,20 @@ class EmulateQuote
      * @param \Magento\Persistent\Helper\Data $persistentData
      * @param \Magento\Checkout\Model\Session $checkoutSession
      * @param \Magento\Customer\Model\Session $customerSession
-     * @param \Magento\Customer\Service\V1\CustomerAccountServiceInterface $customerAccountService
+     * @param \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository
      */
     public function __construct(
         \Magento\Persistent\Helper\Session $persistentSession,
         \Magento\Persistent\Helper\Data $persistentData,
         \Magento\Checkout\Model\Session $checkoutSession,
         \Magento\Customer\Model\Session $customerSession,
-        \Magento\Customer\Service\V1\CustomerAccountServiceInterface $customerAccountService
+        \Magento\Customer\Api\CustomerRepositoryInterface $customerRepository
     ) {
         $this->_persistentSession = $persistentSession;
         $this->_persistentData = $persistentData;
         $this->_checkoutSession = $checkoutSession;
         $this->_customerSession = $customerSession;
-        $this->_customerAccountService = $customerAccountService;
+        $this->customerRepository = $customerRepository;
     }
 
     /**
@@ -90,7 +75,7 @@ class EmulateQuote
      */
     public function execute($observer)
     {
-        $stopActions = array('persistent_index_saveMethod', 'customer_account_createpost');
+        $stopActions = ['persistent_index_saveMethod', 'customer_account_createpost'];
 
         if (!$this->_persistentData->canProcess($observer)
             || !$this->_persistentSession->isPersistent()
@@ -107,7 +92,7 @@ class EmulateQuote
 
         if ($this->_persistentData->isShoppingCartPersist()) {
             $this->_checkoutSession->setCustomerData(
-                $this->_customerAccountService->getCustomer($this->_persistentSession->getSession()->getCustomerId())
+                $this->customerRepository->getById($this->_persistentSession->getSession()->getCustomerId())
             );
             if (!$this->_checkoutSession->hasQuote()) {
                 $this->_checkoutSession->getQuote();

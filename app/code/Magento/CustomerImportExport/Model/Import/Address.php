@@ -1,28 +1,14 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\CustomerImportExport\Model\Import;
 
+/**
+ * @SuppressWarnings(PHPMD.TooManyFields)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class Address extends AbstractCustomer
 {
     /**#@+
@@ -80,17 +66,17 @@ class Address extends AbstractCustomer
      *
      * @var array
      */
-    protected static $_defaultAddressAttributeMapping = array(
+    protected static $_defaultAddressAttributeMapping = [
         self::COLUMN_DEFAULT_BILLING => 'default_billing',
-        self::COLUMN_DEFAULT_SHIPPING => 'default_shipping'
-    );
+        self::COLUMN_DEFAULT_SHIPPING => 'default_shipping',
+    ];
 
     /**
      * Permanent entity columns
      *
      * @var string[]
      */
-    protected $_permanentAttributes = array(self::COLUMN_WEBSITE, self::COLUMN_EMAIL, self::COLUMN_ADDRESS_ID);
+    protected $_permanentAttributes = [self::COLUMN_WEBSITE, self::COLUMN_EMAIL, self::COLUMN_ADDRESS_ID];
 
     /**
      * Existing addresses
@@ -104,14 +90,14 @@ class Address extends AbstractCustomer
      *
      * @var array
      */
-    protected $_addresses = array();
+    protected $_addresses = [];
 
     /**
      * Attributes with index (not label) value
      *
      * @var string[]
      */
-    protected $_indexValueAttributes = array(self::COLUMN_COUNTRY_ID);
+    protected $_indexValueAttributes = [self::COLUMN_COUNTRY_ID];
 
     /**
      * Customer entity DB table name
@@ -136,28 +122,28 @@ class Address extends AbstractCustomer
      *
      * @var array
      */
-    protected $_countryRegions = array();
+    protected $_countryRegions = [];
 
     /**
      * Region ID to region default name pairs
      *
      * @var array
      */
-    protected $_regions = array();
+    protected $_regions = [];
 
     /**
      * Column names that holds values with particular meaning
      *
      * @var string[]
      */
-    protected $_specialAttributes = array(
+    protected $_specialAttributes = [
         self::COLUMN_ACTION,
         self::COLUMN_WEBSITE,
         self::COLUMN_EMAIL,
         self::COLUMN_ADDRESS_ID,
         self::COLUMN_DEFAULT_BILLING,
-        self::COLUMN_DEFAULT_SHIPPING
-    );
+        self::COLUMN_DEFAULT_SHIPPING,
+    ];
 
     /**
      * Customer entity
@@ -199,7 +185,7 @@ class Address extends AbstractCustomer
      *
      * @var array
      */
-    protected $_importedRowPks = array();
+    protected $_importedRowPks = [];
 
     /**
      * @var \Magento\ImportExport\Model\Resource\Helper
@@ -227,13 +213,12 @@ class Address extends AbstractCustomer
     protected $dateTime;
 
     /**
-     * @param \Magento\Core\Helper\Data $coreData
      * @param \Magento\Framework\Stdlib\String $string
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\ImportExport\Model\ImportFactory $importFactory
      * @param \Magento\ImportExport\Model\Resource\Helper $resourceHelper
      * @param \Magento\Framework\App\Resource $resource
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\ImportExport\Model\Export\Factory $collectionFactory
      * @param \Magento\Eav\Model\Config $eavConfig
      * @param \Magento\CustomerImportExport\Model\Resource\Import\Customer\StorageFactory $storageFactory
@@ -244,15 +229,16 @@ class Address extends AbstractCustomer
      * @param \Magento\Customer\Model\Resource\Address\Attribute\CollectionFactory $attributesFactory
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
      * @param array $data
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        \Magento\Core\Helper\Data $coreData,
         \Magento\Framework\Stdlib\String $string,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         \Magento\ImportExport\Model\ImportFactory $importFactory,
         \Magento\ImportExport\Model\Resource\Helper $resourceHelper,
         \Magento\Framework\App\Resource $resource,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\ImportExport\Model\Export\Factory $collectionFactory,
         \Magento\Eav\Model\Config $eavConfig,
         \Magento\CustomerImportExport\Model\Resource\Import\Customer\StorageFactory $storageFactory,
@@ -262,7 +248,7 @@ class Address extends AbstractCustomer
         \Magento\Customer\Model\Resource\Address\CollectionFactory $addressColFactory,
         \Magento\Customer\Model\Resource\Address\Attribute\CollectionFactory $attributesFactory,
         \Magento\Framework\Stdlib\DateTime $dateTime,
-        array $data = array()
+        array $data = []
     ) {
         $this->_customerFactory = $customerFactory;
         $this->_addressFactory = $addressFactory;
@@ -277,7 +263,6 @@ class Address extends AbstractCustomer
             $data['attribute_collection'] = $attributeCollection;
         }
         parent::__construct(
-            $coreData,
             $string,
             $scopeConfig,
             $importFactory,
@@ -336,7 +321,7 @@ class Address extends AbstractCustomer
     protected function _getRegionParameters()
     {
         if (!$this->_regionParameters) {
-            $this->_regionParameters = array();
+            $this->_regionParameters = [];
             /** @var $regionIdAttribute \Magento\Customer\Model\Attribute */
             $regionIdAttribute = $this->_eavConfig->getAttribute($this->getEntityTypeCode(), 'region_id');
             $this->_regionParameters['table'] = $regionIdAttribute->getBackend()->getTable();
@@ -372,7 +357,7 @@ class Address extends AbstractCustomer
         foreach ($this->_addressCollection as $address) {
             $customerId = $address->getParentId();
             if (!isset($this->_addresses[$customerId])) {
-                $this->_addresses[$customerId] = array();
+                $this->_addresses[$customerId] = [];
             }
             $addressId = $address->getId();
             if (!in_array($addressId, $this->_addresses[$customerId])) {
@@ -410,11 +395,11 @@ class Address extends AbstractCustomer
     protected function _importData()
     {
         while ($bunch = $this->_dataSourceModel->getNextBunch()) {
-            $addUpdateRows = array();
-            $attributes = array();
-            $defaults = array();
+            $addUpdateRows = [];
+            $attributes = [];
+            $defaults = [];
             // customer default addresses (billing/shipping) data
-            $deleteRowIds = array();
+            $deleteRowIds = [];
 
             foreach ($bunch as $rowNumber => $rowData) {
                 // check row data
@@ -469,6 +454,8 @@ class Address extends AbstractCustomer
      *
      * @param array $rowData
      * @return array
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function _prepareDataForUpdate(array $rowData)
     {
@@ -480,13 +467,13 @@ class Address extends AbstractCustomer
         $regionIdAttributeId = $regionParameters['attribute_id'];
 
         // get address attributes
-        $addressAttributes = array();
+        $addressAttributes = [];
         foreach ($this->_attributes as $attributeAlias => $attributeParams) {
             if (isset($rowData[$attributeAlias]) && strlen($rowData[$attributeAlias])) {
                 if ('select' == $attributeParams['type']) {
                     $value = $attributeParams['options'][strtolower($rowData[$attributeAlias])];
                 } elseif ('datetime' == $attributeParams['type']) {
-                    $value = new \DateTime('@' . strtotime($rowData[$attributeAlias]));
+                    $value = (new \DateTime())->setTimestamp(strtotime($rowData[$attributeAlias]));
                     $value = $value->format(\Magento\Framework\Stdlib\DateTime::DATETIME_PHP_FORMAT);
                 } else {
                     $value = $rowData[$attributeAlias];
@@ -509,16 +496,15 @@ class Address extends AbstractCustomer
         }
 
         // entity table data
-        $entityRow = array(
+        $entityRow = [
             'entity_id' => $addressId,
-            'entity_type_id' => $this->getEntityTypeId(),
             'parent_id' => $customerId,
-            'created_at' => $this->dateTime->now(),
-            'updated_at' => $this->dateTime->now()
-        );
+            'created_at' => (new \DateTime())->format(\Magento\Framework\Stdlib\DateTime::DATETIME_PHP_FORMAT),
+            'updated_at' => (new \DateTime())->format(\Magento\Framework\Stdlib\DateTime::DATETIME_PHP_FORMAT),
+        ];
 
         // attribute values
-        $attributes = array();
+        $attributes = [];
         foreach ($this->_attributes as $attributeParams) {
             if (isset($addressAttributes[$attributeParams['id']])) {
                 $attributes[$attributeParams['table']][$addressId][$attributeParams['id']]
@@ -527,7 +513,7 @@ class Address extends AbstractCustomer
         }
 
         // customer default addresses
-        $defaults = array();
+        $defaults = [];
         foreach (self::getDefaultAddressAttributeMapping() as $columnName => $attributeCode) {
             if (!empty($rowData[$columnName])) {
                 /** @var $attribute \Magento\Eav\Model\Entity\Attribute\AbstractAttribute */
@@ -550,7 +536,7 @@ class Address extends AbstractCustomer
             }
         }
 
-        return array('entity_row' => $entityRow, 'attributes' => $attributes, 'defaults' => $defaults);
+        return ['entity_row' => $entityRow, 'attributes' => $attributes, 'defaults' => $defaults];
     }
 
     /**
@@ -562,7 +548,7 @@ class Address extends AbstractCustomer
     protected function _saveAddressEntities(array $entityRows)
     {
         if ($entityRows) {
-            $this->_connection->insertOnDuplicate($this->_entityTable, $entityRows, array('updated_at'));
+            $this->_connection->insertOnDuplicate($this->_entityTable, $entityRows, ['updated_at']);
         }
         return $this;
     }
@@ -576,18 +562,17 @@ class Address extends AbstractCustomer
     protected function _saveAddressAttributes(array $attributesData)
     {
         foreach ($attributesData as $tableName => $data) {
-            $tableData = array();
+            $tableData = [];
             foreach ($data as $addressId => $attributeData) {
                 foreach ($attributeData as $attributeId => $value) {
-                    $tableData[] = array(
+                    $tableData[] = [
                         'entity_id' => $addressId,
-                        'entity_type_id' => $this->getEntityTypeId(),
                         'attribute_id' => $attributeId,
-                        'value' => $value
-                    );
+                        'value' => $value,
+                    ];
                 }
             }
-            $this->_connection->insertOnDuplicate($tableName, $tableData, array('value'));
+            $this->_connection->insertOnDuplicate($tableName, $tableData, ['value']);
         }
         return $this;
     }
@@ -597,26 +582,25 @@ class Address extends AbstractCustomer
      *
      * @param array $defaults
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedLocalVariable)
      */
     protected function _saveCustomerDefaults(array $defaults)
     {
         /** @var $entity \Magento\Customer\Model\Customer */
         $entity = $this->_customerFactory->create();
-        $entityTypeId = $entity->getEntityTypeId();
 
         foreach ($defaults as $tableName => $data) {
-            $tableData = array();
+            $tableData = [];
             foreach ($data as $customerId => $attributeData) {
                 foreach ($attributeData as $attributeId => $value) {
-                    $tableData[] = array(
+                    $tableData[] = [
                         'entity_id' => $customerId,
-                        'entity_type_id' => $entityTypeId,
                         'attribute_id' => $attributeId,
-                        'value' => $value
-                    );
+                        'value' => $value,
+                    ];
                 }
             }
-            $this->_connection->insertOnDuplicate($tableName, $tableData, array('value'));
+            $this->_connection->insertOnDuplicate($tableName, $tableData, ['value']);
         }
         return $this;
     }
@@ -630,7 +614,7 @@ class Address extends AbstractCustomer
     protected function _deleteAddressEntities(array $entityRowIds)
     {
         if ($entityRowIds) {
-            $this->_connection->delete($this->_entityTable, array('entity_id IN (?)' => $entityRowIds));
+            $this->_connection->delete($this->_entityTable, ['entity_id IN (?)' => $entityRowIds]);
         }
         return $this;
     }
@@ -663,6 +647,8 @@ class Address extends AbstractCustomer
      * @param array $rowData
      * @param int $rowNumber
      * @return void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function _validateRowForUpdate(array $rowData, $rowNumber)
     {
@@ -701,7 +687,7 @@ class Address extends AbstractCustomer
                             $this->_countryRegions[strtolower($rowData[self::COLUMN_COUNTRY_ID])]
                         ) ? $this->_countryRegions[strtolower(
                             $rowData[self::COLUMN_COUNTRY_ID]
-                        )] : array();
+                        )] : [];
 
                         if (!empty($rowData[self::COLUMN_REGION]) && !empty($countryRegions) && !isset(
                             $countryRegions[strtolower($rowData[self::COLUMN_REGION])]

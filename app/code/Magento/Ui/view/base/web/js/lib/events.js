@@ -1,32 +1,17 @@
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License (AFL 3.0)
- * that is bundled with this package in the file LICENSE_AFL.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/afl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 define([
     'underscore'
 ], function(_) {
     'use strict';
 
-    function addHandler(events, callback, name) {
-        (events[name] = events[name] || []).push(callback);
+    function addHandler(events, ns, callback, name) {
+        (events[name] = events[name] || []).push({
+            callback: callback,
+            ns: ns
+        });
     }
 
     function getEvents(obj, name) {
@@ -35,35 +20,70 @@ define([
         return name ? events[name] : events;
     }
 
+    function keepHandler(ns, handler){
+        if(!ns){
+            return false;
+        }
+
+        return handler.ns !== ns;
+    }
+
+    function trigger(handlers, args){
+        var bubble  = true,
+            callback;
+
+        handlers.forEach(function(handler){
+            callback = handler.callback;
+
+            if (callback.apply(null, args) === false) {
+                bubble = false;
+            }
+        });
+
+        return bubble;
+    }
+
     return {
         /**
          * Calls callback when name event is triggered.
-         * @param  {String}   name
-         * @param  {Function} callback
-         * @return {Object} reference to this
+         * @param  {String}     events
+         * @param  {Function}   callback
+         * @param  {Function}   ns
+         * @return {Object}     reference to this
          */
-        on: function(name, callback) {
-            var events = getEvents(this);
+        on: function (events, callback, ns) {
+            var storage = getEvents(this),
+                iterator;
 
-            typeof name === 'object' ?
-                _.each(name, addHandler.bind(window, events)) :
-                addHandler(events, callback, name);
+            if (arguments.length < 2) {
+                ns = callback;
+            }
+
+            iterator = addHandler.bind(null, storage, ns);
+
+            _.isObject(events) ?
+                _.each(events, iterator) :
+                iterator(callback, events);
 
             return this;
         },
 
         /**
-         * Removed callback from listening to target event 
-         * @param  {String} name
+         * Removed callback from listening to target events
+         * @param  {String} ns
          * @return {Object} reference to this
          */
-        off: function(name) {
-            var events      = getEvents(this),
-                handlers    = events[name];
+        off: function (ns) {
+            var storage = getEvents(this),
+                filter  = keepHandler.bind(null, ns);
 
-            if (Array.isArray(handlers)) {
-                delete events[name];
-            }
+            _.each(storage, function (handlers, name) {
+                handlers = handlers.filter(filter);
+
+                handlers.length ?
+                    (storage[name] = handlers) :
+                    (delete storage[name]);
+            });
 
             return this;
         },
@@ -73,19 +93,11 @@ define([
          * @param  {String} name
          * @return {Object} reference to this
          */
-        trigger: function(name) {
+        trigger: function (name) {
             var handlers = getEvents(this, name),
-                args;
+                args     = _.toArray(arguments).slice(1);
 
-            if (typeof handlers !== 'undefined') {
-                args = Array.prototype.slice.call(arguments, 1);
-
-                handlers.forEach(function(callback) {
-                    callback.apply(this, args);
-                });
-            }
-
-            return this;
+            return _.isUndefined(handlers) || trigger(handlers, args);
         }
-    }
+    };
 });

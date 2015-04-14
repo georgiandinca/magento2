@@ -1,32 +1,15 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\ConfigurableProduct\Test\Block\Adminhtml\Product\Edit\Tab\Super\Config;
 
-use Mtf\Client\Driver\Selenium\Element;
-use Mtf\Client\Element\Locator;
+use Magento\Mtf\Client\Locator;
+use Magento\Backend\Test\Block\Template;
 use Magento\Backend\Test\Block\Widget\Form;
+use Magento\Mtf\Client\Element\SimpleElement;
 
 /**
  * Class Matrix
@@ -42,24 +25,24 @@ class Matrix extends Form
     protected $mappingGetFields = [
         'name' => [
             'selector' => 'td[data-column="name"] > a',
-            'strategy' => Locator::SELECTOR_CSS
+            'strategy' => Locator::SELECTOR_CSS,
         ],
         'sku' => [
             'selector' => 'td[data-column="sku"] > span',
-            'strategy' => Locator::SELECTOR_CSS
+            'strategy' => Locator::SELECTOR_CSS,
         ],
         'quantity_and_stock_status' => [
             'composite' => 1,
             'fields' => [
                 'qty' => [
                     'selector' => 'td[data-column="qty"]',
-                    'strategy' => Locator::SELECTOR_CSS
-                ]
-            ]
+                    'strategy' => Locator::SELECTOR_CSS,
+                ],
+            ],
         ],
         'weight' => [
             'selector' => 'td[data-column="weight"]',
-            'strategy' => Locator::SELECTOR_CSS
+            'strategy' => Locator::SELECTOR_CSS,
         ],
     ];
 
@@ -94,19 +77,35 @@ class Matrix extends Form
     // @codingStandardsIgnoreEnd
 
     /**
-     * Fill variations
+     * Title of variation matrix css selector.
+     *
+     * @var string
+     */
+    protected $matrixTitle = 'h3.title';
+
+    /**
+     * Selector for template block.
+     *
+     * @var string
+     */
+    protected $template = './ancestor::body';
+
+    /**
+     * Fill variations.
      *
      * @param array $matrix
      * @return void
      */
     public function fillVariations(array $matrix)
     {
+        $this->_rootElement->find($this->matrixTitle)->click();
         $count = 1;
         foreach ($matrix as $variation) {
             $variationRow = $this->_rootElement->find(
                 sprintf($this->variationRowByNumber, $count),
                 Locator::SELECTOR_XPATH
             );
+            ksort($variation);
             $mapping = $this->dataMapping($variation);
 
             $this->_fill($mapping, $variationRow);
@@ -121,13 +120,14 @@ class Matrix extends Form
     /**
      * Assign product to variation matrix
      *
-     * @param Element $variationRow
+     * @param SimpleElement $variationRow
      * @param int $productId
      * @return void
      */
-    protected function assignProduct(Element $variationRow, $productId)
+    protected function assignProduct(SimpleElement $variationRow, $productId)
     {
         $variationRow->find($this->configurableAttribute)->click();
+        $this->getTemplateBlock()->waitLoader();
         $this->_rootElement->find(
             sprintf($this->selectAssociatedProduct, $productId),
             Locator::SELECTOR_XPATH
@@ -142,10 +142,10 @@ class Matrix extends Form
     public function getVariationsData()
     {
         $data = [];
-        $variationRows = $this->_rootElement->find($this->variationRow, Locator::SELECTOR_XPATH)->getElements();
+        $variationRows = $this->_rootElement->getElements($this->variationRow, Locator::SELECTOR_XPATH);
 
         foreach ($variationRows as $key => $variationRow) {
-            /** @var Element $variationRow */
+            /** @var SimpleElement $variationRow */
             if ($variationRow->isVisible()) {
                 $data[$key] = $this->_getData($this->dataMapping(), $variationRow);
                 $data[$key] += $this->getOptionalFields($variationRow, $this->mappingGetFields);
@@ -158,11 +158,11 @@ class Matrix extends Form
     /**
      * Get optional fields
      *
-     * @param Element $context
+     * @param SimpleElement $context
      * @param array $fields
      * @return array
      */
-    protected function getOptionalFields(Element $context, array $fields)
+    protected function getOptionalFields(SimpleElement $context, array $fields)
     {
         $data = [];
 
@@ -174,5 +174,18 @@ class Matrix extends Form
             }
         }
         return $data;
+    }
+
+    /**
+     * Get template block.
+     *
+     * @return Template
+     */
+    public function getTemplateBlock()
+    {
+        return $this->blockFactory->create(
+            'Magento\Backend\Test\Block\Template',
+            ['element' => $this->_rootElement->find($this->template, Locator::SELECTOR_XPATH)]
+        );
     }
 }

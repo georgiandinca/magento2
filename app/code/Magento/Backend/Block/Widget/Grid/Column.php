@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Backend\Block\Widget\Grid;
 
@@ -65,7 +47,7 @@ class Column extends \Magento\Backend\Block\Widget
      *
      * @var array
      */
-    protected $_rendererTypes = array(
+    protected $_rendererTypes = [
         'action' => 'Magento\Backend\Block\Widget\Grid\Column\Renderer\Action',
         'button' => 'Magento\Backend\Block\Widget\Grid\Column\Renderer\Button',
         'checkbox' => 'Magento\Backend\Block\Widget\Grid\Column\Renderer\Checkbox',
@@ -85,15 +67,15 @@ class Column extends \Magento\Backend\Block\Widget
         'select' => 'Magento\Backend\Block\Widget\Grid\Column\Renderer\Select',
         'store' => 'Magento\Backend\Block\Widget\Grid\Column\Renderer\Store',
         'text' => 'Magento\Backend\Block\Widget\Grid\Column\Renderer\Longtext',
-        'wrapline' => 'Magento\Backend\Block\Widget\Grid\Column\Renderer\Wrapline'
-    );
+        'wrapline' => 'Magento\Backend\Block\Widget\Grid\Column\Renderer\Wrapline',
+    ];
 
     /**
      * Filter types
      *
      * @var array
      */
-    protected $_filterTypes = array(
+    protected $_filterTypes = [
         'datetime' => 'Magento\Backend\Block\Widget\Grid\Column\Filter\Datetime',
         'date' => 'Magento\Backend\Block\Widget\Grid\Column\Filter\Date',
         'range' => 'Magento\Backend\Block\Widget\Grid\Column\Filter\Range',
@@ -108,8 +90,8 @@ class Column extends \Magento\Backend\Block\Widget
         'skip-list' => 'Magento\Backend\Block\Widget\Grid\Column\Filter\SkipList',
         'store' => 'Magento\Backend\Block\Widget\Grid\Column\Filter\Store',
         'theme' => 'Magento\Backend\Block\Widget\Grid\Column\Filter\Theme',
-        'default' => 'Magento\Backend\Block\Widget\Grid\Column\Filter\Text'
-    );
+        'default' => 'Magento\Backend\Block\Widget\Grid\Column\Filter\Text',
+    ];
 
     /**
      * Column is grouped
@@ -250,6 +232,7 @@ class Column extends \Magento\Backend\Block\Widget
 
     /**
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getSortable()
     {
@@ -422,7 +405,7 @@ class Column extends \Magento\Backend\Block\Widget
      */
     public function getRenderer()
     {
-        if (is_null($this->_renderer)) {
+        if ($this->_renderer === null) {
             $rendererClass = $this->getData('renderer');
             if (empty($rendererClass)) {
                 $rendererClass = $this->_getRendererByType();
@@ -477,9 +460,9 @@ class Column extends \Magento\Backend\Block\Widget
      */
     public function getFilter()
     {
-        if (is_null($this->_filter)) {
+        if ($this->_filter === null) {
             $filterClass = $this->getData('filter');
-            if (false === (bool)$filterClass && false === is_null($filterClass)) {
+            if (false === (bool)$filterClass && false === ($filterClass === null)) {
                 return false;
             }
             if (!$filterClass) {

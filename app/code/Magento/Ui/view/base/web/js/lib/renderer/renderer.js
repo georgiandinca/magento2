@@ -1,24 +1,6 @@
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License (AFL 3.0)
- * that is bundled with this package in the file LICENSE_AFL.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/afl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 define([
     '../loader',
@@ -98,9 +80,9 @@ define([
                 templatesToRender = [],
                 extendPointsToRender = [];
 
-            templateContainer = document.createDocumentFragment();
+            templateContainer = document.createElement('div');
 
-            wrap(toArray($(rawHtml)), templateContainer);
+            wrap(toArray($.parseHTML(rawHtml)), templateContainer);
 
             extendNodes          = getExtendNodesFrom(templateContainer);
             templatesToRender    = extendNodes.map(extractTemplatePath, this)
@@ -113,7 +95,7 @@ define([
                     args = toArray(arguments);
 
                 args.forEach(function(renderedNodes, idx) {
-                    container = document.createDocumentFragment();
+                    container = document.createElement('div');
                     wrap(renderedNodes, container);
 
                     correspondingExtendNode = extendNodes[idx];
@@ -121,9 +103,8 @@ define([
 
                     $(correspondingExtendNode).empty();
 
-                    this._overridePartsOf(container)
-                        .by(newParts)
-                        .appendTo(correspondingExtendNode);
+                    this._overridePartsOf(container, newParts)
+                        .replace(correspondingExtendNode);
 
                 }, this);
 
@@ -168,47 +149,34 @@ define([
         },
 
         /**
-         * Caches template and returns object for the sake of chaining
+         * Loops over newParts map and invokes override actions for each found.
          * @param  {HTMLElement} template - container to look for parts to be overrided by new ones.
+         * @param  {Object} newParts - the result of _buildPartsMapFrom method.
          * @return {Object}
          */
-        _overridePartsOf: function(template) {
+        _overridePartsOf: function(template, newParts) {
+            var oldElement;
+
+            _.each(newParts, function(actions, partName) {
+                _.each(actions, function(newElements, action) {
+
+                    oldElement = template.querySelector(createPartSelectorFor(partName));
+                    overrides[action](
+                        oldElement,
+                        newElements
+                    );
+
+                });
+            });
+
             return {
 
                 /**
-                 * Loops over newParts map and invokes override actions for each found.
-                 * @param  {Object} newParts - the result of _buildPartsMapFrom method.
-                 * @return {Object} - Returns object for the sake of chaining
+                 * Replaces extendNode with the result of overrides
+                 * @param  {HTMLElement} extendNode - initial container of new parts declarations
                  */
-                by: function(newParts) {
-                    var oldElement;
-
-                    _.each(newParts, function(actions, partName) {
-                        _.each(actions, function(newElements, action) {
-
-                            oldElement = template.querySelector(createPartSelectorFor(partName));
-                            overrides[action](
-                                oldElement,
-                                newElements
-                            );
-
-                        });
-                    });
-
-                    return {
-
-                        /**
-                         * Appends template's (overrided already) children to extendNode.
-                         * @param  {HTMLElement} extendNode - initial container of new parts declarations
-                         */
-                        appendTo: function(extendNode) {
-                            if (template.hasChildNodes()) {
-                                toArray(template.childNodes).forEach(function (child) {
-                                    extendNode.appendChild(child);
-                                });
-                            }
-                        }
-                    }
+                replace: function(extendNode) {
+                    $(extendNode).replaceWith(template.childNodes);
                 }
             }
         }

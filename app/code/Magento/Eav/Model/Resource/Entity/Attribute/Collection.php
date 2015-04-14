@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Eav\Model\Resource\Entity\Attribute;
 
@@ -40,6 +22,33 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     protected $_addSetInfoFlag = false;
 
     /**
+     * @var \Magento\Eav\Model\Config
+     */
+    protected $eavConfig;
+
+    /**
+     * @param \Magento\Framework\Data\Collection\EntityFactoryInterface $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
+     * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
+     * @param \Magento\Framework\Event\ManagerInterface $eventManager
+     * @param \Magento\Eav\Model\Config $eavConfig
+     * @param \Zend_Db_Adapter_Abstract|null $connection
+     * @param \Magento\Framework\Model\Resource\Db\AbstractDb $resource
+     */
+    public function __construct(
+        \Magento\Framework\Data\Collection\EntityFactoryInterface $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
+        \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
+        \Magento\Framework\Event\ManagerInterface $eventManager,
+        \Magento\Eav\Model\Config $eavConfig,
+        $connection = null,
+        \Magento\Framework\Model\Resource\Db\AbstractDb $resource = null
+    ) {
+        $this->eavConfig = $eavConfig;
+        parent::__construct($entityFactory, $logger, $fetchStrategy, $eventManager, $connection, $resource);
+    }
+
+    /**
      * Resource model initialization
      *
      * @return void
@@ -56,7 +65,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     protected function _getLoadDataFields()
     {
-        return array(
+        return [
             'attribute_id',
             'entity_type_id',
             'attribute_code',
@@ -66,7 +75,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
             'backend_table',
             'frontend_input',
             'source_model'
-        );
+        ];
     }
 
     /**
@@ -100,7 +109,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
         $this->addFieldToFilter('main_table.entity_type_id', $id);
         if ($additionalTable) {
             $this->join(
-                array('additional_table' => $additionalTable),
+                ['additional_table' => $additionalTable],
                 'additional_table.attribute_id = main_table.attribute_id'
             );
         }
@@ -119,16 +128,16 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
         if (is_array($setId)) {
             if (!empty($setId)) {
                 $this->join(
-                    array('entity_attribute' => $this->getTable('eav_entity_attribute')),
+                    ['entity_attribute' => $this->getTable('eav_entity_attribute')],
                     'entity_attribute.attribute_id = main_table.attribute_id',
                     'attribute_id'
                 );
-                $this->addFieldToFilter('entity_attribute.attribute_set_id', array('in' => $setId));
+                $this->addFieldToFilter('entity_attribute.attribute_set_id', ['in' => $setId]);
                 $this->addAttributeGrouping();
             }
         } elseif ($setId) {
             $this->join(
-                array('entity_attribute' => $this->getTable('eav_entity_attribute')),
+                ['entity_attribute' => $this->getTable('eav_entity_attribute')],
                 'entity_attribute.attribute_id = main_table.attribute_id'
             );
             $this->addFieldToFilter('entity_attribute.attribute_set_id', $setId);
@@ -136,6 +145,32 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
         }
 
         return $this;
+    }
+
+    /**
+     * Add attribute set filter to collection based on attribute set name and corresponding entity type.
+     *
+     * @param string $attributeSetName
+     * @param string $entityTypeCode
+     * @return void
+     */
+    public function setAttributeSetFilterBySetName($attributeSetName, $entityTypeCode)
+    {
+        //@codeCoverageIgnoreStart
+        $entityTypeId = $this->eavConfig->getEntityType($entityTypeCode)->getId();
+        $this->join(
+            ['entity_attribute' => $this->getTable('eav_entity_attribute')],
+            'entity_attribute.attribute_id = main_table.attribute_id'
+        );
+        $this->join(
+            ['attribute_set' => $this->getTable('eav_attribute_set')],
+            'attribute_set.attribute_set_id = entity_attribute.attribute_set_id',
+            []
+        );
+        $this->addFieldToFilter('attribute_set.entity_type_id', $entityTypeId);
+        $this->addFieldToFilter('attribute_set.attribute_set_name', $attributeSetName);
+        $this->setOrder('entity_attribute.sort_order', self::SORT_ORDER_ASC);
+        //@codeCoverageIgnoreEnd
     }
 
     /**
@@ -149,11 +184,11 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     {
         $this->getSelect()->distinct(true);
         $this->join(
-            array('entity_attribute' => $this->getTable('eav_entity_attribute')),
+            ['entity_attribute' => $this->getTable('eav_entity_attribute')],
             'entity_attribute.attribute_id = main_table.attribute_id',
             'attribute_id'
         );
-        $this->addFieldToFilter('entity_attribute.attribute_set_id', array('in' => $setIds));
+        $this->addFieldToFilter('entity_attribute.attribute_set_id', ['in' => $setIds]);
         $this->setOrder('sort_order', self::SORT_ORDER_ASC);
 
         return $this;
@@ -177,7 +212,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
                 "{$alias}.attribute_id = main_table.attribute_id AND {$alias}.attribute_set_id =?",
                 $setId
             );
-            $this->join(array($alias => 'eav_entity_attribute'), $joinCondition, 'attribute_id');
+            $this->join([$alias => 'eav_entity_attribute'], $joinCondition, 'attribute_id');
         }
 
         //$this->getSelect()->distinct(true);
@@ -194,7 +229,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     public function setAttributesExcludeFilter($attributes)
     {
-        return $this->addFieldToFilter('main_table.attribute_id', array('nin' => $attributes));
+        return $this->addFieldToFilter('main_table.attribute_id', ['nin' => $attributes]);
     }
 
     /**
@@ -206,7 +241,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     public function setExcludeSetFilter($setId)
     {
         $existsSelect = $this->getConnection()->select()->from(
-            array('entity_attribute' => $this->getTable('eav_entity_attribute'))
+            ['entity_attribute' => $this->getTable('eav_entity_attribute')]
         )->where(
             'entity_attribute.attribute_set_id = ?',
             $setId
@@ -226,7 +261,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     public function setAttributeGroupFilter($groupId)
     {
         $this->join(
-            array('entity_attribute' => $this->getTable('eav_entity_attribute')),
+            ['entity_attribute' => $this->getTable('eav_entity_attribute')],
             'entity_attribute.attribute_id = main_table.attribute_id'
         );
         $this->addFieldToFilter('entity_attribute.attribute_group_id', $groupId);
@@ -253,7 +288,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     public function addIsUniqueFilter()
     {
-        return $this->addFieldToFilter('is_unique', array('gt' => 0));
+        return $this->addFieldToFilter('is_unique', ['gt' => 0]);
     }
 
     /**
@@ -276,15 +311,15 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
         $adapter = $this->getConnection();
         $orWhere = implode(
             ' OR ',
-            array(
+            [
                 $adapter->quoteInto('(main_table.frontend_input = ? AND ao.option_id > 0)', 'select'),
                 $adapter->quoteInto('(main_table.frontend_input <> ?)', 'select'),
                 '(main_table.is_user_defined = 0)'
-            )
+            ]
         );
 
         $this->getSelect()->joinLeft(
-            array('ao' => $this->getTable('eav_attribute_option')),
+            ['ao' => $this->getTable('eav_attribute_option')],
             'ao.attribute_id = main_table.attribute_id',
             'option_id'
         )->group(
@@ -326,21 +361,21 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     protected function _addSetInfo()
     {
         if ($this->_addSetInfoFlag) {
-            $attributeIds = array();
+            $attributeIds = [];
             foreach ($this->_data as &$dataItem) {
                 $attributeIds[] = $dataItem['attribute_id'];
             }
-            $attributeToSetInfo = array();
+            $attributeToSetInfo = [];
 
             $adapter = $this->getConnection();
             if (count($attributeIds) > 0) {
                 $select = $adapter->select()->from(
-                    array('entity' => $this->getTable('eav_entity_attribute')),
-                    array('attribute_id', 'attribute_set_id', 'attribute_group_id', 'sort_order')
+                    ['entity' => $this->getTable('eav_entity_attribute')],
+                    ['attribute_id', 'attribute_set_id', 'attribute_group_id', 'sort_order']
                 )->joinLeft(
-                    array('attribute_group' => $this->getTable('eav_attribute_group')),
+                    ['attribute_group' => $this->getTable('eav_attribute_group')],
                     'entity.attribute_group_id = attribute_group.attribute_group_id',
-                    array('group_sort_order' => 'sort_order')
+                    ['group_sort_order' => 'sort_order']
                 )->where(
                     'attribute_id IN (?)',
                     $attributeIds
@@ -348,17 +383,17 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
                 $result = $adapter->fetchAll($select);
 
                 foreach ($result as $row) {
-                    $data = array(
+                    $data = [
                         'group_id' => $row['attribute_group_id'],
                         'group_sort' => $row['group_sort_order'],
-                        'sort' => $row['sort_order']
-                    );
+                        'sort' => $row['sort_order'],
+                    ];
                     $attributeToSetInfo[$row['attribute_id']][$row['attribute_set_id']] = $data;
                 }
             }
 
             foreach ($this->_data as &$attributeData) {
-                $setInfo = array();
+                $setInfo = [];
                 if (isset($attributeToSetInfo[$attributeData['attribute_id']])) {
                     $setInfo = $attributeToSetInfo[$attributeData['attribute_id']];
                 }
@@ -396,10 +431,10 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
             return $this;
         }
         if (!is_array($code)) {
-            $code = array($code);
+            $code = [$code];
         }
 
-        return $this->addFieldToFilter('attribute_code', array('in' => $code));
+        return $this->addFieldToFilter('attribute_code', ['in' => $code]);
     }
 
     /**
@@ -416,14 +451,13 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
             (int)$storeId
         );
         $this->getSelect()->joinLeft(
-            array('al' => $this->getTable('eav_attribute_label')),
+            ['al' => $this->getTable('eav_attribute_label')],
             $joinExpression,
-            array('store_label' => $adapter->getIfNullSql('al.value', 'main_table.frontend_label'))
+            ['store_label' => $adapter->getIfNullSql('al.value', 'main_table.frontend_label')]
         );
 
         return $this;
     }
-
 
     /**
      * @inheritdoc

@@ -1,38 +1,22 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Helper;
 
+use Magento\Catalog\Api\CategoryRepositoryInterface;
+use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
-use Magento\Tax\Service\V1\Data\QuoteDetailsBuilder;
-use Magento\Tax\Service\V1\Data\QuoteDetails\ItemBuilder as QuoteDetailsItemBuilder;
-use Magento\Tax\Service\V1\Data\TaxClassKey;
-use Magento\Customer\Model\Address\Converter as AddressConverter;
+use Magento\Tax\Api\Data\TaxClassKeyInterface;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Tax\Model\Config;
 
 /**
  * Catalog data helper
+ * @SuppressWarnings(PHPMD.TooManyFields)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Data extends \Magento\Framework\App\Helper\AbstractHelper
 {
@@ -114,23 +98,9 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     /**
      * Store manager
      *
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
-
-    /**
-     * Product factory
-     *
-     * @var \Magento\Catalog\Model\ProductFactory
-     */
-    protected $_productFactory;
-
-    /**
-     * Category factory
-     *
-     * @var \Magento\Catalog\Model\CategoryFactory
-     */
-    protected $_categoryFactory;
 
     /**
      * Template filter factory
@@ -140,11 +110,11 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     protected $_templateFilterFactory;
 
     /**
-     * Tax class key builder
+     * Tax class key factory
      *
-     * @var \Magento\Tax\Service\V1\Data\TaxClassKeyBuilder
+     * @var \Magento\Tax\Api\Data\TaxClassKeyInterfaceFactory
      */
-    protected $_taxClassKeyBuilder;
+    protected $_taxClassKeyFactory;
 
     /**
      * Tax helper
@@ -154,25 +124,18 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     protected $_taxConfig;
 
     /**
-     * Quote details builder
+     * Quote details factory
      *
-     * @var QuoteDetailsBuilder
+     * @var \Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory
      */
-    protected $_quoteDetailsBuilder;
+    protected $_quoteDetailsFactory;
 
     /**
-     * Quote details item builder
+     * Quote details item factory
      *
-     * @var QuoteDetailsItemBuilder
+     * @var \Magento\Tax\Api\Data\QuoteDetailsItemInterfaceFactory
      */
-    protected $_quoteDetailsItemBuilder;
-
-    /**
-     * Address converter
-     *
-     * @var AddressConverter
-     */
-    protected $_addressConverter;
+    protected $_quoteDetailsItemFactory;
 
     /**
      * @var CustomerSession
@@ -182,7 +145,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     /**
      * Tax calculation service interface
      *
-     * @var \Magento\Tax\Service\V1\TaxCalculationServiceInterface
+     * @var \Magento\Tax\Api\TaxCalculationInterface
      */
     protected $_taxCalculationService;
 
@@ -194,68 +157,73 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     protected $priceCurrency;
 
     /**
+     * @var ProductRepositoryInterface
+     */
+    protected $productRepository;
+
+    /**
+     * @var CategoryRepositoryInterface
+     */
+    protected $categoryRepository;
+
+    /**
      * @param \Magento\Framework\App\Helper\Context $context
-     * @param \Magento\Catalog\Model\CategoryFactory $categoryFactory
-     * @param \Magento\Catalog\Model\ProductFactory $productFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Catalog\Model\Session $catalogSession
      * @param \Magento\Framework\Stdlib\String $string
      * @param Category $catalogCategory
      * @param Product $catalogProduct
      * @param \Magento\Framework\Registry $coreRegistry
-     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Catalog\Model\Template\Filter\Factory $templateFilterFactory
      * @param string $templateFilterModel
-     * @param TaxClassKeyBuilder $taxClassKeyBuilder
+     * @param \Magento\Tax\Api\Data\TaxClassKeyInterfaceFactory $taxClassKeyFactory
      * @param Config $taxConfig
-     * @param QuoteDetailsBuilder $quoteDetailsBuilder
-     * @param QuoteDetailsItemBuilder $quoteDetailsItemBuilder
-     * @param TaxCalculationServiceInterface $taxCalculationService
+     * @param \Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory $quoteDetailsFactory
+     * @param \Magento\Tax\Api\Data\QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory
+     * @param \Magento\Tax\Api\TaxCalculationInterface $taxCalculationService
      * @param CustomerSession $customerSession
-     * @param AddressConverter $addressConverter
      * @param PriceCurrencyInterface $priceCurrency
+     * @param ProductRepositoryInterface $productRepository
+     * @param CategoryRepositoryInterface $categoryRepository
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\App\Helper\Context $context,
-        \Magento\Catalog\Model\CategoryFactory $categoryFactory,
-        \Magento\Catalog\Model\ProductFactory $productFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Catalog\Model\Session $catalogSession,
         \Magento\Framework\Stdlib\String $string,
         Category $catalogCategory,
         Product $catalogProduct,
         \Magento\Framework\Registry $coreRegistry,
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         \Magento\Catalog\Model\Template\Filter\Factory $templateFilterFactory,
         $templateFilterModel,
-        \Magento\Tax\Service\V1\Data\TaxClassKeyBuilder $taxClassKeyBuilder,
+        \Magento\Tax\Api\Data\TaxClassKeyInterfaceFactory $taxClassKeyFactory,
         \Magento\Tax\Model\Config $taxConfig,
-        QuoteDetailsBuilder $quoteDetailsBuilder,
-        QuoteDetailsItemBuilder $quoteDetailsItemBuilder,
-        \Magento\Tax\Service\V1\TaxCalculationServiceInterface $taxCalculationService,
+        \Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory $quoteDetailsFactory,
+        \Magento\Tax\Api\Data\QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory,
+        \Magento\Tax\Api\TaxCalculationInterface $taxCalculationService,
         CustomerSession $customerSession,
-        AddressConverter $addressConverter,
-        PriceCurrencyInterface $priceCurrency
+        PriceCurrencyInterface $priceCurrency,
+        ProductRepositoryInterface $productRepository,
+        CategoryRepositoryInterface $categoryRepository
     ) {
-        $this->_categoryFactory = $categoryFactory;
-        $this->_productFactory = $productFactory;
         $this->_storeManager = $storeManager;
         $this->_catalogSession = $catalogSession;
         $this->_templateFilterFactory = $templateFilterFactory;
         $this->string = $string;
         $this->_catalogCategory = $catalogCategory;
         $this->_catalogProduct = $catalogProduct;
-        $this->_scopeConfig = $scopeConfig;
         $this->_coreRegistry = $coreRegistry;
         $this->_templateFilterModel = $templateFilterModel;
-        $this->_taxClassKeyBuilder = $taxClassKeyBuilder;
+        $this->_taxClassKeyFactory = $taxClassKeyFactory;
         $this->_taxConfig = $taxConfig;
-        $this->_quoteDetailsBuilder = $quoteDetailsBuilder;
-        $this->_quoteDetailsItemBuilder = $quoteDetailsItemBuilder;
+        $this->_quoteDetailsFactory = $quoteDetailsFactory;
+        $this->_quoteDetailsItemFactory = $quoteDetailsItemFactory;
         $this->_taxCalculationService = $taxCalculationService;
         $this->_customerSession = $customerSession;
-        $this->_addressConverter = $addressConverter;
         $this->priceCurrency = $priceCurrency;
+        $this->productRepository = $productRepository;
+        $this->categoryRepository = $categoryRepository;
         parent::__construct($context);
     }
 
@@ -281,7 +249,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     {
         if (!$this->_categoryPath) {
 
-            $path = array();
+            $path = [];
             $category = $this->getCategory();
             if ($category) {
                 $pathInStore = $category->getPathInStore();
@@ -292,16 +260,16 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
                 // add category path breadcrumb
                 foreach ($pathIds as $categoryId) {
                     if (isset($categories[$categoryId]) && $categories[$categoryId]->getName()) {
-                        $path['category' . $categoryId] = array(
+                        $path['category' . $categoryId] = [
                             'label' => $categories[$categoryId]->getName(),
                             'link' => $this->_isCategoryLink($categoryId) ? $categories[$categoryId]->getUrl() : ''
-                        );
+                        ];
                     }
                 }
             }
 
             if ($this->getProduct()) {
-                $path['product'] = array('label' => $this->getProduct()->getName());
+                $path['product'] = ['label' => $this->getProduct()->getName()];
             }
 
             $this->_categoryPath = $path;
@@ -355,7 +323,11 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     {
         $productId = $this->_catalogSession->getLastViewedProductId();
         if ($productId) {
-            $product = $this->_productFactory->create()->load($productId);
+            try {
+                $product = $this->productRepository->getById($productId);
+            } catch (NoSuchEntityException $e) {
+                return '';
+            }
             /* @var $product \Magento\Catalog\Model\Product */
             if ($this->_catalogProduct->canShow($product, 'catalog')) {
                 return $product->getProductUrl();
@@ -363,7 +335,11 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         }
         $categoryId = $this->_catalogSession->getLastViewedCategoryId();
         if ($categoryId) {
-            $category = $this->_categoryFactory->create()->load($categoryId);
+            try {
+                $category = $this->categoryRepository->get($categoryId);
+            } catch (NoSuchEntityException $e) {
+                return '';
+            }
             /* @var $category \Magento\Catalog\Model\Category */
             if (!$this->_catalogCategory->canShow($category)) {
                 return '';
@@ -396,7 +372,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         if ($this->_coreRegistry->registry('attribute_type_hidden_fields')) {
             return $this->_coreRegistry->registry('attribute_type_hidden_fields');
         } else {
-            return array();
+            return [];
         }
     }
 
@@ -407,7 +383,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function getPriceScope()
     {
-        return $this->_scopeConfig->getValue(
+        return $this->scopeConfig->getValue(
             self::XML_PATH_PRICE_SCOPE,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
@@ -430,7 +406,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function isUsingStaticUrlsAllowed()
     {
-        return $this->_scopeConfig->isSetFlag(
+        return $this->scopeConfig->isSetFlag(
             self::CONFIG_USE_STATIC_URLS,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
             $this->_storeId
@@ -444,7 +420,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function isUrlDirectivesParsingAllowed()
     {
-        return $this->_scopeConfig->isSetFlag(
+        return $this->scopeConfig->isSetFlag(
             self::CONFIG_PARSE_URL_DIRECTIVES,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
             $this->_storeId
@@ -468,7 +444,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function shouldDisplayProductCountOnLayer($storeId = null)
     {
-        return $this->_scopeConfig->isSetFlag(
+        return $this->scopeConfig->isSetFlag(
             self::XML_PATH_DISPLAY_PRODUCT_COUNT,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
             $storeId
@@ -488,6 +464,8 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      * @param   bool $priceIncludesTax flag what price parameter contain tax
      * @param   bool $roundPrice
      * @return  float
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function getTaxPrice(
         $product,
@@ -506,57 +484,53 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
 
         $store = $this->_storeManager->getStore($store);
         if ($this->_taxConfig->needPriceConversion($store)) {
-            if (is_null($priceIncludesTax)) {
+            if ($priceIncludesTax === null) {
                 $priceIncludesTax = $this->_taxConfig->priceIncludesTax($store);
             }
 
             $shippingAddressDataObject = null;
             if ($shippingAddress instanceof \Magento\Customer\Model\Address\AbstractAddress) {
-                $shippingAddressDataObject = $this->_addressConverter->createAddressFromModel(
-                    $shippingAddress,
-                    null,
-                    null
-                );
+                $shippingAddressDataObject = $shippingAddress->getDataModel();
             }
 
             $billingAddressDataObject = null;
             if ($billingAddress instanceof \Magento\Customer\Model\Address\AbstractAddress) {
-                $billingAddressDataObject = $this->_addressConverter->createAddressFromModel(
-                    $billingAddress,
-                    null,
-                    null
-                );
+                $billingAddressDataObject = $billingAddress->getDataModel();
             }
 
-            $item = $this->_quoteDetailsItemBuilder->setQuantity(1)
+            $taxClassKey = $this->_taxClassKeyFactory->create();
+            $taxClassKey->setType(TaxClassKeyInterface::TYPE_ID)
+                ->setValue($product->getTaxClassId());
+
+            $customerTaxClassKey = $this->_taxClassKeyFactory->create();
+            $customerTaxClassKey->setType(TaxClassKeyInterface::TYPE_ID)
+                ->setValue($ctc);
+
+            $item = $this->_quoteDetailsItemFactory->create();
+            $item->setQuantity(1)
                 ->setCode($product->getSku())
                 ->setShortDescription($product->getShortDescription())
-                ->setTaxClassKey(
-                    $this->_taxClassKeyBuilder->setType(TaxClassKey::TYPE_ID)
-                        ->setValue($product->getTaxClassId())->create()
-                )->setTaxIncluded($priceIncludesTax)
+                ->setTaxClassKey($taxClassKey)
+                ->setIsTaxIncluded($priceIncludesTax)
                 ->setType('product')
-                ->setUnitPrice($price)
-                ->create();
-            $quoteDetails = $this->_quoteDetailsBuilder
-                ->setShippingAddress($shippingAddressDataObject)
+                ->setUnitPrice($price);
+
+            $quoteDetails = $this->_quoteDetailsFactory->create();
+            $quoteDetails->setShippingAddress($shippingAddressDataObject)
                 ->setBillingAddress($billingAddressDataObject)
-                ->setCustomerTaxClassKey(
-                    $this->_taxClassKeyBuilder->setType(TaxClassKey::TYPE_ID)
-                        ->setValue($ctc)->create()
-                )->setItems([$item])
-                ->setCustomerId($this->_customerSession->getCustomerId())
-                ->create();
+                ->setCustomerTaxClassKey($customerTaxClassKey)
+                ->setItems([$item])
+                ->setCustomerId($this->_customerSession->getCustomerId());
 
             $storeId = null;
             if ($store) {
                 $storeId = $store->getId();
             }
-            $taxDetails = $this->_taxCalculationService->calculateTax($quoteDetails, $storeId);
+            $taxDetails = $this->_taxCalculationService->calculateTax($quoteDetails, $storeId, $roundPrice);
             $items = $taxDetails->getItems();
             $taxDetailsItem = array_shift($items);
 
-            if (!is_null($includingTax)) {
+            if ($includingTax !== null) {
                 if ($includingTax) {
                     $price = $taxDetailsItem->getPriceInclTax();
                 } else {

@@ -1,28 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Framework\View\Page;
+
+use Magento\Framework\App;
+use Magento\Framework\View;
 
 /**
  * An API for page configuration
@@ -60,23 +45,13 @@ class Config
     protected $allowedTypes = [
         self::ELEMENT_TYPE_BODY,
         self::ELEMENT_TYPE_HTML,
-        self::ELEMENT_TYPE_HEAD
+        self::ELEMENT_TYPE_HEAD,
     ];
 
     /**
-     * @var string
+     * @var Title
      */
     protected $title;
-
-    /**
-     * @var string
-     */
-    protected $titleChunks;
-
-    /**
-     * @var string
-     */
-    protected $pureTitle;
 
     /**
      * Asset service
@@ -111,6 +86,11 @@ class Config
     protected $favicon;
 
     /**
+     * @var \Magento\Framework\View\Layout\BuilderInterface
+     */
+    protected $builder;
+
+    /**
      * @var array
      */
     protected $includes;
@@ -132,93 +112,63 @@ class Config
      * @param \Magento\Framework\View\Asset\GroupedCollection $pageAssets
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Framework\View\Page\FaviconInterface $favicon
+     * @param Title $title
      */
     public function __construct(
-        \Magento\Framework\View\Asset\Repository $assetRepo,
-        \Magento\Framework\View\Asset\GroupedCollection $pageAssets,
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Framework\View\Page\FaviconInterface $favicon
+        View\Asset\Repository $assetRepo,
+        View\Asset\GroupedCollection $pageAssets,
+        App\Config\ScopeConfigInterface $scopeConfig,
+        View\Page\FaviconInterface $favicon,
+        Title $title
     ) {
         $this->assetRepo = $assetRepo;
         $this->pageAssets = $pageAssets;
         $this->scopeConfig = $scopeConfig;
         $this->favicon = $favicon;
+        $this->title = $title;
     }
 
     /**
-     * Set page title
-     *
-     * @param string|array $title
+     * @param View\Layout\BuilderInterface $builder
      * @return $this
      */
-    public function setTitle($title)
+    public function setBuilder(View\Layout\BuilderInterface $builder)
     {
-        $this->title = $this->scopeConfig->getValue(
-            'design/head/title_prefix',
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-        ) . ' ' . $this->prepareTitle($title) . ' ' . $this->scopeConfig->getValue(
-            'design/head/title_suffix',
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-        );
-
+        $this->builder = $builder;
         return $this;
     }
 
     /**
-     * @param array|string $title
-     * @return string
+     * Build page config from page configurations
+     * @return void
      */
-    protected function prepareTitle($title)
+    protected function build()
     {
-        $this->titleChunks = '';
-        $this->pureTitle = '';
-
-        if (is_array($title)) {
-            $this->titleChunks = $title;
-            return implode(' / ', $title);
+        if (!empty($this->builder)) {
+            $this->builder->build();
         }
-        $this->pureTitle = $title;
-        return $this->pureTitle;
+    }
+
+    /**
+     * TODO Will be eliminated in MAGETWO-28359
+     *
+     * @deprecated
+     * @return void
+     */
+    public function publicBuild()
+    {
+        $this->build();
     }
 
     /**
      * Retrieve title element text (encoded)
      *
-     * @return string
+     * @return Title
      */
     public function getTitle()
     {
-        if (empty($this->title)) {
-            $this->title = $this->getDefaultTitle();
-        }
-        return htmlspecialchars(html_entity_decode(trim($this->title), ENT_QUOTES, 'UTF-8'));
-    }
-
-    /**
-     * Same as getTitle(), but return only first item from chunk for backend pages
-     *
-     * @return mixed
-     */
-    public function getShortTitle()
-    {
-        if (!empty($this->titleChunks)) {
-            return reset($this->titleChunks);
-        } else {
-            return $this->pureTitle;
-        }
-    }
-
-    /**
-     * Retrieve default title text
-     *
-     * @return string
-     */
-    public function getDefaultTitle()
-    {
-        return $this->scopeConfig->getValue(
-            'design/head/default_title',
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-        );
+        $this->build();
+        return $this->title;
     }
 
     /**
@@ -228,6 +178,7 @@ class Config
      */
     public function setMetadata($name, $content)
     {
+        $this->build();
         $this->metadata[$name] = $content;
     }
 
@@ -236,6 +187,7 @@ class Config
      */
     public function getMetadata()
     {
+        $this->build();
         return $this->metadata;
     }
 
@@ -255,6 +207,7 @@ class Config
      */
     public function getContentType()
     {
+        $this->build();
         if (empty($this->metadata['content_type'])) {
             $this->metadata['content_type'] = $this->getMediaType() . '; charset=' . $this->getCharset();
         }
@@ -277,6 +230,7 @@ class Config
      */
     public function getMediaType()
     {
+        $this->build();
         if (empty($this->metadata['media_type'])) {
             $this->metadata['media_type'] = $this->scopeConfig->getValue(
                 'design/head/default_media_type',
@@ -302,6 +256,7 @@ class Config
      */
     public function getCharset()
     {
+        $this->build();
         if (empty($this->metadata['charset'])) {
             $this->metadata['charset'] = $this->scopeConfig->getValue(
                 'design/head/default_charset',
@@ -327,6 +282,7 @@ class Config
      */
     public function getDescription()
     {
+        $this->build();
         if (empty($this->metadata['description'])) {
             $this->metadata['description'] = $this->scopeConfig->getValue(
                 'design/head/default_description',
@@ -352,6 +308,7 @@ class Config
      */
     public function getKeywords()
     {
+        $this->build();
         if (empty($this->metadata['keywords'])) {
             $this->metadata['keywords'] = $this->scopeConfig->getValue(
                 'design/head/default_keywords',
@@ -377,6 +334,7 @@ class Config
      */
     public function getRobots()
     {
+        $this->build();
         if (empty($this->metadata['robots'])) {
             $this->metadata['robots'] = $this->scopeConfig->getValue(
                 'design/search_engine_robots/default_robots',
@@ -391,6 +349,7 @@ class Config
      */
     public function getAssetCollection()
     {
+        $this->build();
         return $this->pageAssets;
     }
 
@@ -410,6 +369,8 @@ class Config
     }
 
     /**
+     * Add remote page asset
+     *
      * @param string $url
      * @param string $contentType
      * @param array $properties
@@ -438,7 +399,7 @@ class Config
         $this->pageAssets->add(
             "link/{$href}",
             $remoteAsset,
-            array('attributes' => 'rel="alternate" type="application/rss+xml" title="' . $title . '"')
+            ['attributes' => 'rel="alternate" type="application/rss+xml" title="' . $title . '"']
         );
 
         return $this;
@@ -472,12 +433,15 @@ class Config
      * @param string $attribute
      * @param mixed $value
      * @return $this
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function setElementAttribute($elementType, $attribute, $value)
     {
+        $this->build();
         if (array_search($elementType, $this->allowedTypes) === false) {
-            throw new \Magento\Framework\Exception($elementType . ' isn\'t allowed');
+            throw new \Magento\Framework\Exception\LocalizedException(
+                new \Magento\Framework\Phrase('%1 isn\'t allowed', [$elementType])
+            );
         }
         $this->elements[$elementType][$attribute] = $value;
         return $this;
@@ -492,6 +456,7 @@ class Config
      */
     public function getElementAttribute($elementType, $attribute)
     {
+        $this->build();
         return isset($this->elements[$elementType][$attribute]) ? $this->elements[$elementType][$attribute] : null;
     }
 
@@ -501,6 +466,7 @@ class Config
      */
     public function getElementAttributes($elementType)
     {
+        $this->build();
         return isset($this->elements[$elementType]) ? $this->elements[$elementType] : [];
     }
 
@@ -509,7 +475,6 @@ class Config
      *
      * @param string $handle
      * @return $this
-     * @throws \UnexpectedValueException
      */
     public function setPageLayout($handle)
     {

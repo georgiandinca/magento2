@@ -1,32 +1,17 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Tools\View;
 
-use Magento\TestFramework\Utility\Files;
 use Magento\Framework\App\ObjectManagerFactory;
 use Magento\Framework\App\View\Deployment\Version;
+use Magento\Framework\App\View\Asset\Publisher;
+use Magento\Framework\App\Utility\Files;
+use Magento\Framework\ObjectManagerInterface;
+use Magento\Framework\Translate\Js\Config as JsTranslationConfig;
 
 /**
  * A service for deploying Magento static view files for production mode
@@ -47,14 +32,17 @@ class Deployer
     /** @var Version\StorageInterface */
     private $versionStorage;
 
-    /** @var Version\GeneratorInterface */
-    private $versionGenerator;
+    /** @var \Magento\Framework\Stdlib\DateTime */
+    private $dateTime;
 
     /** @var \Magento\Framework\View\Asset\Repository */
     private $assetRepo;
 
-    /** @var \Magento\Framework\App\View\Asset\Publisher */
+    /** @var Publisher */
     private $assetPublisher;
+
+    /** @var \Magento\Framework\View\Asset\Bundle\Manager */
+    private $bundleManager;
 
     /** @var bool */
     private $isDryRun;
@@ -65,36 +53,58 @@ class Deployer
     /** @var int */
     private $errorCount;
 
+    /** @var \Magento\Framework\View\Template\Html\MinifierInterface */
+    private $htmlMinifier;
+
+    /** @var \Magento\Framework\View\Asset\MinifyService */
+    protected $minifyService;
+
+    /**
+     * @var ObjectManagerInterface
+     */
+    private $objectManager;
+
+    /**
+     * @var JsTranslationConfig
+     */
+    protected $jsTranslationConfig;
+
     /**
      * @param Files $filesUtil
      * @param Deployer\Log $logger
+     * @param Version\StorageInterface $versionStorage
+     * @param \Magento\Framework\Stdlib\DateTime $dateTime
+     * @param \Magento\Framework\View\Asset\MinifyService $minifyService
+     * @param JsTranslationConfig $jsTranslationConfig
      * @param bool $isDryRun
-     * @param \Magento\Framework\App\View\Deployment\Version\StorageInterface $versionStorage
-     * @param \Magento\Framework\App\View\Deployment\Version\GeneratorInterface $versionGenerator
      */
     public function __construct(
         Files $filesUtil,
         Deployer\Log $logger,
         Version\StorageInterface $versionStorage,
-        Version\GeneratorInterface $versionGenerator,
+        \Magento\Framework\Stdlib\DateTime $dateTime,
+        \Magento\Framework\View\Asset\MinifyService $minifyService,
+        JsTranslationConfig $jsTranslationConfig,
         $isDryRun = false
     ) {
         $this->filesUtil = $filesUtil;
         $this->logger = $logger;
         $this->versionStorage = $versionStorage;
-        $this->versionGenerator = $versionGenerator;
+        $this->dateTime = $dateTime;
         $this->isDryRun = $isDryRun;
+        $this->minifyService = $minifyService;
+        $this->jsTranslationConfig = $jsTranslationConfig;
     }
 
     /**
      * Populate all static view files for specified root path and list of languages
      *
-     * @param string $rootPath
      * @param ObjectManagerFactory $omFactory
      * @param array $locales
      * @return void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
-    public function deploy($rootPath, ObjectManagerFactory $omFactory, array $locales)
+    public function deploy(ObjectManagerFactory $omFactory, array $locales)
     {
         $this->omFactory = $omFactory;
         if ($this->isDryRun) {
@@ -105,24 +115,43 @@ class Deployer
         $libFiles = $this->filesUtil->getStaticLibraryFiles();
         list($areas, $appFiles) = $this->collectAppFiles($locales);
         foreach ($areas as $area => $themes) {
-            $this->emulateApplicationArea($rootPath, $area);
+            $this->emulateApplicationArea($area);
             foreach ($locales as $locale) {
+                $this->emulateApplicationLocale($locale, $area);
                 foreach ($themes as $themePath) {
                     $this->logger->logMessage("=== {$area} -> {$themePath} -> {$locale} ===");
                     $this->count = 0;
                     $this->errorCount = 0;
                     foreach ($appFiles as $info) {
-                        list($fileArea, $fileThemePath, , $module, $filePath) = $info;
-                        $this->deployAppFile($area, $fileArea, $themePath, $fileThemePath, $locale, $module, $filePath);
+                        list(, , , $module, $filePath) = $info;
+                        $this->deployFile($filePath, $area, $themePath, $locale, $module);
                     }
                     foreach ($libFiles as $filePath) {
                         $this->deployFile($filePath, $area, $themePath, $locale, null);
                     }
+                    if ($this->jsTranslationConfig->dictionaryEnabled()) {
+                        $this->deployFile(
+                            $this->jsTranslationConfig->getDictionaryFileName(),
+                            $area,
+                            $themePath,
+                            $locale,
+                            null
+                        );
+                    }
+                    $this->bundleManager->flush();
                     $this->logger->logMessage("\nSuccessful: {$this->count} files; errors: {$this->errorCount}\n---\n");
                 }
             }
         }
-        $version = $this->versionGenerator->generate();
+        $this->logger->logMessage("=== Minify templates ===");
+        $this->count = 0;
+        foreach ($this->filesUtil->getPhtmlFiles(false, false) as $template) {
+            $this->htmlMinifier->minify($template);
+            $this->logger->logDebug($template . " minified\n", '.');
+            $this->count++;
+        }
+        $this->logger->logMessage("\nSuccessful: {$this->count} files modified\n---\n");
+        $version = (new \DateTime())->getTimestamp();
         $this->logger->logMessage("New version of deployed files: {$version}");
         if (!$this->isDryRun) {
             $this->versionStorage->save($version);
@@ -168,47 +197,41 @@ class Deployer
     /**
      * Emulate application area and various services that are necessary for populating files
      *
-     * @param string $rootPath
      * @param string $areaCode
      * @return void
      */
-    private function emulateApplicationArea($rootPath, $areaCode)
+    private function emulateApplicationArea($areaCode)
     {
-        $objectManager = $this->omFactory->create(
-            $rootPath,
+        $this->objectManager = $this->omFactory->create(
             [\Magento\Framework\App\State::PARAM_MODE => \Magento\Framework\App\State::MODE_DEFAULT]
         );
         /** @var \Magento\Framework\App\State $appState */
-        $appState = $objectManager->get('Magento\Framework\App\State');
+        $appState = $this->objectManager->get('Magento\Framework\App\State');
         $appState->setAreaCode($areaCode);
         /** @var \Magento\Framework\App\ObjectManager\ConfigLoader $configLoader */
-        $configLoader = $objectManager->get('Magento\Framework\App\ObjectManager\ConfigLoader');
-        $objectManager->configure($configLoader->load($areaCode));
-        $this->assetRepo = $objectManager->get('Magento\Framework\View\Asset\Repository');
-        $this->assetPublisher = $objectManager->get('Magento\Framework\App\View\Asset\Publisher');
+        $configLoader = $this->objectManager->get('Magento\Framework\App\ObjectManager\ConfigLoader');
+        $this->objectManager->configure($configLoader->load($areaCode));
+        $this->assetRepo = $this->objectManager->get('Magento\Framework\View\Asset\Repository');
+
+        $this->assetPublisher = $this->objectManager->create('Magento\Framework\App\View\Asset\Publisher');
+        $this->htmlMinifier = $this->objectManager->get('Magento\Framework\View\Template\Html\MinifierInterface');
+        $this->bundleManager = $this->objectManager->get('Magento\Framework\View\Asset\Bundle\Manager');
+
     }
 
     /**
-     * Deploy a static view file that belongs to the application
+     * Set application locale and load translation for area
      *
-     * @param string $area
-     * @param string $fileArea
-     * @param string $themePath
-     * @param string $fileThemePath
      * @param string $locale
-     * @param string $module
-     * @param string $filePath
+     * @param string $area
      * @return void
      */
-    private function deployAppFile($area, $fileArea, $themePath, $fileThemePath, $locale, $module, $filePath)
+    protected function emulateApplicationLocale($locale, $area)
     {
-        if ($fileArea && $fileArea != $area) {
-            return;
-        }
-        if ($fileThemePath && $fileThemePath != $themePath) {
-            return;
-        }
-        $this->deployFile($filePath, $area, $themePath, $locale, $module);
+        /** @var \Magento\Framework\TranslateInterface $translator */
+        $translator = $this->objectManager->get('Magento\Framework\TranslateInterface');
+        $translator->setLocale($locale);
+        $translator->loadData($area, true);
     }
 
     /**
@@ -227,21 +250,38 @@ class Deployer
         if (substr($filePath, -5) == '.less') {
             $requestedPath = preg_replace('/.less$/', '.css', $filePath);
         }
-        $logModule = $module ? "<{$module}>" : (null === $module ? '<lib>' : '<theme>');
+        $logMessage = "Processing file '$filePath' for area '$area', theme '$themePath', locale '$locale'";
+        if ($module) {
+            $logMessage .= ", module '$module'";
+        }
+        $this->logger->logDebug($logMessage);
         try {
             $asset = $this->assetRepo->createAsset(
                 $requestedPath,
                 ['area' => $area, 'theme' => $themePath, 'locale' => $locale, 'module' => $module]
             );
-            $this->logger->logDebug("{$logModule} {$filePath} -> {$asset->getPath()}");
+            $asset = $this->minifyService->getAssets([$asset], true)[0];
+            $this->logger->logDebug("\tDeploying the file to '{$asset->getPath()}'", '.');
             if ($this->isDryRun) {
                 $asset->getContent();
             } else {
                 $this->assetPublisher->publish($asset);
+                $this->bundleManager->addAsset($asset);
             }
             $this->count++;
+        } catch (\Magento\Framework\View\Asset\File\NotFoundException $e) {
+            // File was not found by Fallback (possibly because it's wrong context for it) - there is nothing to publish
+            $this->logger->logDebug(
+                "\tNotice: Could not find file '$filePath'. This file may not be relevant for the theme or area."
+            );
+        } catch (\Less_Exception_Compiler $e) {
+            $this->logger->logDebug(
+                "\tNotice: Could not parse LESS file '$filePath'. "
+                . "This may indicate that the file is incomplete, but this is acceptable. "
+                . "The file '$filePath' will be combined with another LESS file."
+            );
         } catch (\Exception $e) {
-            $this->logger->logError("{$logModule} {$filePath}");
+            $this->logger->logError($e->getMessage() . " ($logMessage)");
             $this->logger->logDebug((string)$e);
             $this->errorCount++;
         }

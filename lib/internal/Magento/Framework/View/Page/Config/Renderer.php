@@ -1,37 +1,25 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
-
 namespace Magento\Framework\View\Page\Config;
 
-use Magento\Framework\View\Page\Config;
 use Magento\Framework\View\Asset\GroupedCollection;
+use Magento\Framework\View\Page\Config;
 
 /**
  * Page config Renderer model
+ *
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class Renderer
+class Renderer implements RendererInterface
 {
+    /**
+     * @var array
+     */
+    protected $assetTypeOrder = ['css', 'ico', 'js'];
+
     /**
      * @var \Magento\Framework\View\Page\Config
      */
@@ -58,7 +46,7 @@ class Renderer
     protected $string;
 
     /**
-     * @var \Magento\Framework\Logger
+     * @var \Psr\Log\LoggerInterface
      */
     protected $logger;
 
@@ -68,19 +56,13 @@ class Renderer
     protected $urlBuilder;
 
     /**
-     * @var \Magento\Framework\App\Action\Title
-     */
-    protected $titles;
-
-    /**
      * @param \Magento\Framework\View\Page\Config $pageConfig
      * @param \Magento\Framework\View\Asset\MinifyService $assetMinifyService
      * @param \Magento\Framework\View\Asset\MergeService $assetMergeService
      * @param \Magento\Framework\UrlInterface $urlBuilder
      * @param \Magento\Framework\Escaper $escaper
      * @param \Magento\Framework\Stdlib\String $string
-     * @param \Magento\Framework\Logger $logger
-     * @param \Magento\Framework\App\Action\Title $titles
+     * @param \Psr\Log\LoggerInterface $logger
      */
     public function __construct(
         Config $pageConfig,
@@ -89,8 +71,7 @@ class Renderer
         \Magento\Framework\UrlInterface $urlBuilder,
         \Magento\Framework\Escaper $escaper,
         \Magento\Framework\Stdlib\String $string,
-        \Magento\Framework\Logger $logger,
-        \Magento\Framework\App\Action\Title $titles
+        \Psr\Log\LoggerInterface $logger
     ) {
         $this->pageConfig = $pageConfig;
         $this->assetMinifyService = $assetMinifyService;
@@ -99,7 +80,6 @@ class Renderer
         $this->escaper = $escaper;
         $this->string = $string;
         $this->logger = $logger;
-        $this->titles = $titles;
     }
 
     /**
@@ -124,7 +104,7 @@ class Renderer
         $result .= $this->renderMetadata();
         $result .= $this->renderTitle();
         $this->prepareFavicon();
-        $result .= $this->renderAssets();
+        $result .= $this->renderAssets($this->getAvailableResultGroups());
         $result .= $this->pageConfig->getIncludes();
         return $result;
     }
@@ -134,10 +114,7 @@ class Renderer
      */
     public function renderTitle()
     {
-        $title = $this->pageConfig->getTitle();
-        $this->titles->add($title, true);
-        $this->pageConfig->setTitle(array_reverse($this->titles->get()));
-        return '<title>' . $this->pageConfig->getTitle() . '</title>' . "\n";
+        return '<title>' . $this->pageConfig->getTitle()->get() . '</title>' . "\n";
     }
 
     /**
@@ -179,7 +156,7 @@ class Renderer
      */
     protected function getMetadataTemplate($name)
     {
-        switch($name) {
+        switch ($name) {
             case 'charset':
                 $metadataTemplate = '<meta charset="%content"/>' . "\n";
                 break;
@@ -211,13 +188,13 @@ class Renderer
         if ($this->pageConfig->getFaviconFile()) {
             $this->pageConfig->addRemotePageAsset(
                 $this->pageConfig->getFaviconFile(),
-                Generator::VIRTUAL_CONTENT_TYPE_LINK,
+                Generator\Head::VIRTUAL_CONTENT_TYPE_LINK,
                 ['attributes' => ['rel' => 'icon', 'type' => 'image/x-icon']],
                 'icon'
             );
             $this->pageConfig->addRemotePageAsset(
                 $this->pageConfig->getFaviconFile(),
-                Generator::VIRTUAL_CONTENT_TYPE_LINK,
+                Generator\Head::VIRTUAL_CONTENT_TYPE_LINK,
                 ['attributes' => ['rel' => 'shortcut icon', 'type' => 'image/x-icon']],
                 'shortcut-icon'
             );
@@ -236,31 +213,49 @@ class Renderer
     }
 
     /**
+     * Returns rendered HTML for all Assets (CSS before)
+     *
+     * @param array $resultGroups
+     *
      * @return string
      */
-    public function renderAssets()
+    public function renderAssets($resultGroups = [])
     {
-        $result = '';
         /** @var $group \Magento\Framework\View\Asset\PropertyGroup */
         foreach ($this->pageConfig->getAssetCollection()->getGroups() as $group) {
-            $groupAssets = $this->assetMinifyService->getAssets($group->getAll());
-            $groupAssets = $this->processMerge($groupAssets, $group);
-
-            $attributes = $this->getGroupAttributes($group);
-            $attributes = $this->addDefaultAttributes(
-                $group->getProperty(GroupedCollection::PROPERTY_CONTENT_TYPE),
-                $attributes
-            );
-
-            $groupTemplate = $this->getAssetTemplate(
-                $group->getProperty(GroupedCollection::PROPERTY_CONTENT_TYPE),
-                $attributes
-            );
-            $groupHtml = $this->renderAssetHtml($groupTemplate, $groupAssets);
-            $groupHtml = $this->processIeCondition($groupHtml, $group);
-            $result .= $groupHtml;
+            $type = $group->getProperty(GroupedCollection::PROPERTY_CONTENT_TYPE);
+            if (!isset($resultGroups[$type])) {
+                $resultGroups[$type] = '';
+            }
+            $resultGroups[$type] .= $this->renderAssetGroup($group);
         }
-        return $result;
+        return implode('', $resultGroups);
+    }
+
+    /**
+     * Returns rendered HTML for an Asset Group
+     *
+     * @param \Magento\Framework\View\Asset\PropertyGroup $group
+     * @return string
+     */
+    protected function renderAssetGroup(\Magento\Framework\View\Asset\PropertyGroup $group)
+    {
+        $groupAssets = $this->assetMinifyService->getAssets($group->getAll());
+        $groupAssets = $this->processMerge($groupAssets, $group);
+
+        $attributes = $this->getGroupAttributes($group);
+        $attributes = $this->addDefaultAttributes(
+            $group->getProperty(GroupedCollection::PROPERTY_CONTENT_TYPE),
+            $attributes
+        );
+
+        $groupTemplate = $this->getAssetTemplate(
+            $group->getProperty(GroupedCollection::PROPERTY_CONTENT_TYPE),
+            $attributes
+        );
+        $groupHtml = $this->renderAssetHtml($groupTemplate, $groupAssets);
+        $groupHtml = $this->processIeCondition($groupHtml, $group);
+        return $groupHtml;
     }
 
     /**
@@ -368,10 +363,18 @@ class Renderer
             foreach ($assets as $asset) {
                 $result .= sprintf($template, $asset->getUrl());
             }
-        } catch (\Magento\Framework\Exception $e) {
-            $this->logger->logException($e);
+        } catch (\Magento\Framework\Exception\LocalizedException $e) {
+            $this->logger->critical($e);
             $result .= sprintf($template, $this->urlBuilder->getUrl('', ['_direct' => 'core/index/notFound']));
         }
         return $result;
+    }
+
+    /**
+     * @return array
+     */
+    public function getAvailableResultGroups()
+    {
+        return array_fill_keys($this->assetTypeOrder, '');
     }
 }

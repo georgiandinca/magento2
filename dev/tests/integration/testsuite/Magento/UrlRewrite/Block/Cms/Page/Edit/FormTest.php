@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\UrlRewrite\Block\Cms\Page\Edit;
 
@@ -35,7 +17,7 @@ class FormTest extends \PHPUnit_Framework_TestCase
      * @param array $args
      * @return \Magento\Framework\Data\Form
      */
-    protected function _getFormInstance($args = array())
+    protected function _getFormInstance($args = [])
     {
         /** @var $layout \Magento\Framework\View\Layout */
         $layout = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get(
@@ -45,7 +27,7 @@ class FormTest extends \PHPUnit_Framework_TestCase
         $block = $layout->createBlock(
             'Magento\UrlRewrite\Block\Cms\Page\Edit\Form',
             'block',
-            array('data' => $args)
+            ['data' => $args]
         );
         $block->setTemplate(null);
         $block->toHtml();
@@ -68,11 +50,11 @@ class FormTest extends \PHPUnit_Framework_TestCase
      */
     public function testFormPostInit($cmsPageData, $action, $requestPath, $targetPath)
     {
-        $args = array();
+        $args = [];
         if ($cmsPageData) {
             $args['cms_page'] = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
                 'Magento\Cms\Model\Page',
-                array('data' => $cmsPageData)
+                ['data' => $cmsPageData]
             );
         }
         $form = $this->_getFormInstance($args);
@@ -88,20 +70,20 @@ class FormTest extends \PHPUnit_Framework_TestCase
      * Test entity stores
      *
      * @magentoAppIsolation enabled
-     * @magentoDataFixture Magento/Core/_files/store.php
+     * @magentoDataFixture Magento/Store/_files/core_fixturestore.php
      */
     public function testGetEntityStores()
     {
-        $args = array('cms_page' => $this->_getCmsPageWithStoresMock(array(1)));
+        $args = ['cms_page' => $this->_getCmsPageWithStoresMock([1])];
         $form = $this->_getFormInstance($args);
 
-        $expectedStores = array(
-            array('label' => 'Main Website', 'value' => array()),
-            array(
+        $expectedStores = [
+            ['label' => 'Main Website', 'value' => []],
+            [
                 'label' => '    Main Website Store',
-                'value' => array(array('label' => '    Default Store View', 'value' => 1))
-            )
-        );
+                'value' => [['label' => '    Default Store View', 'value' => 1]]
+            ],
+        ];
         $this->assertEquals($expectedStores, $form->getElement('store_id')->getValues());
     }
 
@@ -109,15 +91,17 @@ class FormTest extends \PHPUnit_Framework_TestCase
      * Check exception is thrown when product does not associated with stores
      *
      * @magentoAppIsolation enabled
-     * @magentoDataFixture Magento/Core/_files/store.php
-     *
-     * @expectedException \Magento\Framework\App\InitException
-     * @expectedExceptionMessage Chosen cms page does not associated with any website.
+     * @magentoDataFixture Magento/Store/_files/core_fixturestore.php
      */
     public function testGetEntityStoresProductStoresException()
     {
-        $args = array('cms_page' => $this->_getCmsPageWithStoresMock(array()));
-        $this->_getFormInstance($args);
+        $args = ['cms_page' => $this->_getCmsPageWithStoresMock([])];
+        $form = $this->_getFormInstance($args);
+        $this->assertEquals([], $form->getElement('store_id')->getValues());
+        $this->assertEquals(
+            'Chosen cms page does not associated with any website.',
+            $form->getElement('store_id')->getAfterElementHtml()
+        );
     }
 
     /**
@@ -129,14 +113,14 @@ class FormTest extends \PHPUnit_Framework_TestCase
      */
     public static function formPostInitDataProvider()
     {
-        return array(
-            array(
-                array('page_id' => 3, 'identifier' => 'cms-page'),
+        return [
+            [
+                ['page_id' => 3, 'identifier' => 'cms-page'],
                 'cms_page/3',
                 'cms-page',
-                'cms/page/view/page_id/3'
-            )
-        );
+                'cms/page/view/page_id/3',
+            ]
+        ];
     }
 
     /**
@@ -150,14 +134,14 @@ class FormTest extends \PHPUnit_Framework_TestCase
         $resourceMock = $this->getMockBuilder(
             'Magento\Cms\Model\Resource\Page'
         )->setMethods(
-            array('lookupStoreIds')
+            ['lookupStoreIds']
         )->disableOriginalConstructor()->getMock();
         $resourceMock->expects($this->any())->method('lookupStoreIds')->will($this->returnValue($stores));
 
         $cmsPageMock = $this->getMockBuilder(
             'Magento\Cms\Model\Page'
         )->setMethods(
-            array('getResource', 'getId')
+            ['getResource', 'getId']
         )->disableOriginalConstructor()->getMock();
         $cmsPageMock->expects($this->any())->method('getId')->will($this->returnValue(1));
         $cmsPageMock->expects($this->any())->method('getResource')->will($this->returnValue($resourceMock));

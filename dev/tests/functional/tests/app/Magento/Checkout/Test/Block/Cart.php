@@ -1,35 +1,18 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Checkout\Test\Block;
 
 use Exception;
-use Mtf\Block\Block;
-use Mtf\Factory\Factory;
-use Mtf\Client\Element\Locator;
+use Magento\Checkout\Test\Block\Cart\CartItem;
 use Magento\Checkout\Test\Block\Onepage\Link;
-use Mtf\Fixture\FixtureInterface;
+use Magento\Mtf\Block\Block;
+use Magento\Mtf\Client\Locator;
+use Magento\Mtf\Factory\Factory;
+use Magento\Mtf\Fixture\FixtureInterface;
 
 /**
  * Class Cart
@@ -65,13 +48,27 @@ class Cart extends Block
      *
      * @var string
      */
-    protected $updateShoppingCart = '[name="update_cart_action"]';
+    protected $updateShoppingCart = '.update[name="update_cart_action"]';
+
+    /**
+     * Cart empty block selector
+     *
+     * @var string
+     */
+    protected $cartEmpty = '.cart-empty';
+
+    /**
+     * Cart container selector
+     *
+     * @var string
+     */
+    protected $cartContainer = '.cart-container';
 
     /**
      * Get cart item block
      *
      * @param FixtureInterface $product
-     * @return \Magento\Checkout\Test\Block\Cart\CartItem
+     * @return CartItem
      */
     public function getCartItem(FixtureInterface $product)
     {
@@ -127,7 +124,7 @@ class Cart extends Block
     {
         $element = $this->_rootElement->find(
             '//table[@id="shopping-cart-totals-table"]' .
-            '//tr[normalize-space(td)="Discount"]' .
+            '//tr[@class="totals"]' .
             '//td[@class="amount"]//span[@class="price"]',
             Locator::SELECTOR_XPATH
         );
@@ -169,5 +166,23 @@ class Cart extends Block
     public function updateShoppingCart()
     {
         $this->_rootElement->find($this->updateShoppingCart, Locator::SELECTOR_CSS)->click();
+    }
+
+    /**
+     * Check that cart is empty
+     *
+     * @return bool
+     */
+    public function cartIsEmpty()
+    {
+        return $this->_rootElement->find($this->cartEmpty, Locator::SELECTOR_CSS)->isVisible();
+    }
+
+    /**
+     * Wait while cart container is loaded
+     */
+    public function waitCartContainerLoading()
+    {
+        $this->waitForElementVisible($this->cartContainer);
     }
 }

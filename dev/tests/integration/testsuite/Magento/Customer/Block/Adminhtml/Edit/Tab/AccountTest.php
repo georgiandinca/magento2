@@ -1,30 +1,12 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Customer\Block\Adminhtml\Edit\Tab;
 
+use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Controller\RegistryConstants;
-use Magento\Customer\Service\V1\CustomerAccountServiceInterface;
 
 /**
  * Test for Account
@@ -36,7 +18,7 @@ class AccountTest extends \PHPUnit_Framework_TestCase
     /** @var Account */
     protected $accountBlock;
 
-    /** @var \Magento\Framework\ObjectManager */
+    /** @var \Magento\Framework\ObjectManagerInterface */
     protected $objectManager;
 
     /** @var \Magento\Framework\Registry */
@@ -48,8 +30,11 @@ class AccountTest extends \PHPUnit_Framework_TestCase
     /** @var  \Magento\Backend\Block\Template\Context */
     protected $context;
 
-    /** @var CustomerAccountServiceInterface */
-    protected $customerAccountService;
+    /** @var CustomerRepositoryInterface */
+    protected $customerRepository;
+
+    /** @var \Magento\Framework\Reflection\DataObjectProcessor */
+    protected $dataObjectProcessor;
 
     public function setUp()
     {
@@ -57,10 +42,11 @@ class AccountTest extends \PHPUnit_Framework_TestCase
         $this->coreRegistry = $this->objectManager->get('Magento\Framework\Registry');
         $this->coreRegistry->register(RegistryConstants::CURRENT_CUSTOMER_ID, 1);
         $this->backendSession = $this->objectManager->get('Magento\Backend\Model\Session');
+        $this->dataObjectProcessor = $this->objectManager->get('Magento\Framework\Reflection\DataObjectProcessor');
 
         $this->context = $this->objectManager->get(
             'Magento\Backend\Block\Template\Context',
-            array('backendSession' => $this->backendSession)
+            ['backendSession' => $this->backendSession]
         );
 
         $this->accountBlock = $this->objectManager->get(
@@ -68,11 +54,11 @@ class AccountTest extends \PHPUnit_Framework_TestCase
         )->createBlock(
             'Magento\Customer\Block\Adminhtml\Edit\Tab\Account',
             '',
-            array('context' => $this->context)
+            ['context' => $this->context]
         );
 
-        $this->customerAccountService = $this->objectManager->get(
-            'Magento\Customer\Service\V1\CustomerAccountServiceInterface'
+        $this->customerRepository = $this->objectManager->get(
+            'Magento\Customer\Api\CustomerRepositoryInterface'
         );
     }
 
@@ -90,15 +76,18 @@ class AccountTest extends \PHPUnit_Framework_TestCase
      */
     public function testToHtml()
     {
+        /** @var \Magento\Customer\Api\Data\CustomerInterface $customer */
+        $customer = $this->customerRepository->getById(1);
+        $customerData = $this->dataObjectProcessor->buildOutputDataArray($customer, get_class($customer));
         $this->backendSession->setCustomerData(
-            array('customer_id' => 1, 'account' => $this->customerAccountService->getCustomer(1)->__toArray())
+            ['customer_id' => 1, 'account' => $customerData]
         );
 
         $result = $this->accountBlock->initForm()->toHtml();
 
         // Verify account email
         $this->assertRegExp('/id="_accountemail"[^>]*value="customer@example.com"/', $result);
-        $this->assertRegExp('/input id="_accountfirstname"[^>]*value="Firstname"/', $result);
+        $this->assertRegExp('/input id="_accountfirstname"[^>]*value="John"/', $result);
 
         // Verify confirmation controls are not present
         $this->assertNotContains('field-confirmation', $result);
@@ -117,8 +106,11 @@ class AccountTest extends \PHPUnit_Framework_TestCase
      */
     public function testNeedsConfirmation()
     {
+        /** @var \Magento\Customer\Api\Data\CustomerInterface $customer */
+        $customer = $this->customerRepository->getById(1);
+        $customerData = $this->dataObjectProcessor->buildOutputDataArray($customer, get_class($customer));
         $this->backendSession->setCustomerData(
-            array('customer_id' => 1, 'account' => $this->customerAccountService->getCustomer(1)->__toArray())
+            ['customer_id' => 1, 'account' => $customerData]
         );
 
         $result = $this->accountBlock->initForm()->toHtml();
@@ -133,14 +125,17 @@ class AccountTest extends \PHPUnit_Framework_TestCase
      */
     public function testPrefix()
     {
+        /** @var \Magento\Customer\Api\Data\CustomerInterface $customer */
+        $customer = $this->customerRepository->getById(1);
+        $customerData = $this->dataObjectProcessor->buildOutputDataArray($customer, get_class($customer));
         $this->backendSession->setCustomerData(
-            array(
+            [
                 'customer_id' => 1,
                 'account' => array_merge(
-                    $this->customerAccountService->getCustomer(1)->__toArray(),
-                    array('prefix' => 'Mr')
-                )
-            )
+                    $customerData,
+                    ['prefix' => 'Mr']
+                ),
+            ]
         );
         $result = $this->accountBlock->initForm()->toHtml();
 
@@ -153,15 +148,18 @@ class AccountTest extends \PHPUnit_Framework_TestCase
      */
     public function testNotReadOnly()
     {
+        /** @var \Magento\Customer\Api\Data\CustomerInterface $customer */
+        $customer = $this->customerRepository->getById(1);
+        $customerData = $this->dataObjectProcessor->buildOutputDataArray($customer, get_class($customer));
         $this->backendSession->setCustomerData(
-            array('customer_id' => 1, 'account' => $this->customerAccountService->getCustomer(1)->__toArray())
+            ['customer_id' => 1, 'account' => $customerData]
         );
 
         $this->accountBlock->initForm()->toHtml();
         $element = $this->accountBlock->getForm()->getElement('firstname');
 
         // Make sure readonly has not been set (is null) or set to false
-        $this->assertTrue(is_null($element->getReadonly()) || !$element->getReadonly());
+        $this->assertTrue($element->getReadonly() === null || !$element->getReadonly());
     }
 
     /**
@@ -169,9 +167,12 @@ class AccountTest extends \PHPUnit_Framework_TestCase
      */
     public function testNewCustomer()
     {
-        $customerBuilder = $this->objectManager->get('\Magento\Customer\Service\V1\Data\CustomerBuilder');
+        /** @var \Magento\Customer\Api\Data\CustomerInterfaceFactory $customerFactory */
+        $customerFactory = $this->objectManager->get('Magento\Customer\Api\Data\CustomerInterfaceFactory');
+        $customerData = $this->dataObjectProcessor
+            ->buildOutputDataArray($customerFactory->create(), '\Magento\Customer\Api\Data\CustomerInterface');
         $this->backendSession->setCustomerData(
-            array('customer_id' => 0, 'account' => $customerBuilder->create()->__toArray())
+            ['customer_id' => 0, 'account' => $customerData]
         );
         $result = $this->accountBlock->initForm()->toHtml();
 

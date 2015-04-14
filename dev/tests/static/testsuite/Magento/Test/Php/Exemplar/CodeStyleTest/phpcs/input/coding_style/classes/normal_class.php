@@ -3,8 +3,11 @@
  * Doc block for this file
  */
 
+// @codingStandardsIgnoreFile
+
 /**
  * Doc block for this class
+ * @SuppressWarnings(PHPMD.UnusedPrivateField)
  */
 class Magento_Test_Php_Exemplar_CodeStyleTest_phpcs_input_coding_style_classes_normal_class
 {
@@ -58,7 +61,7 @@ class Magento_Test_Php_Exemplar_CodeStyleTest_phpcs_input_coding_style_classes_n
      * @param string $string
      * return int
      */
-    static protected function _customCrc($string)
+    protected static function _customCrc($string)
     {
         return crc32($string);
     }

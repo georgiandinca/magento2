@@ -1,33 +1,19 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
 namespace Magento\Framework\Model;
+
+use Magento\Framework\Phrase;
 
 /**
  * Abstract model class
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @SuppressWarnings(PHPMD.NumberOfChildren)
+ * @SuppressWarnings(PHPMD.TooManyFields)
  */
 abstract class AbstractModel extends \Magento\Framework\Object
 {
@@ -127,7 +113,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
     protected $_registry;
 
     /**
-     * @var \Magento\Framework\Logger
+     * @var \Psr\Log\LoggerInterface
      */
     protected $_logger;
 
@@ -142,7 +128,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
     protected $_actionValidator;
 
     /**
-     * @param Context $context
+     * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
@@ -153,7 +139,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
         \Magento\Framework\Registry $registry,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->_registry = $registry;
         $this->_appState = $context->getAppState();
@@ -201,7 +187,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
     public function __sleep()
     {
         $properties = array_keys(get_object_vars($this));
-        $properties = array_diff($properties, array('_eventManager', '_cacheManager', '_registry', '_appState'));
+        $properties = array_diff($properties, ['_eventManager', '_cacheManager', '_registry', '_appState']);
         return $properties;
     }
 
@@ -234,8 +220,8 @@ abstract class AbstractModel extends \Magento\Framework\Object
     protected function _setResourceModel($resourceName, $collectionName = null)
     {
         $this->_resourceName = $resourceName;
-        if (is_null($collectionName)) {
-            $collectionName = $resourceName . \Magento\Framework\Autoload\IncludePath::NS_SEPARATOR . 'Collection';
+        if ($collectionName === null) {
+            $collectionName = $resourceName . '\\' . 'Collection';
         }
         $this->_collectionName = $collectionName;
     }
@@ -243,16 +229,18 @@ abstract class AbstractModel extends \Magento\Framework\Object
     /**
      * Get resource instance
      *
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @return \Magento\Framework\Model\Resource\Db\AbstractDb
      */
     protected function _getResource()
     {
         if (empty($this->_resourceName) && empty($this->_resource)) {
-            throw new \Magento\Framework\Model\Exception(__('Resource is not set.'));
+            throw new \Magento\Framework\Exception\LocalizedException(
+                new \Magento\Framework\Phrase('Resource is not set.')
+            );
         }
 
-        return $this->_resource ? : \Magento\Framework\App\ObjectManager::getInstance()->get($this->_resourceName);
+        return $this->_resource ?: \Magento\Framework\App\ObjectManager::getInstance()->get($this->_resourceName);
     }
 
     /**
@@ -268,14 +256,17 @@ abstract class AbstractModel extends \Magento\Framework\Object
     /**
      * Get collection instance
      *
-     * @deplacated
-     * @throws \Magento\Framework\Model\Exception
+     * @deprecated
+     * @TODO MAGETWO-23541: Incorrect dependencies between Model\AbstractModel and Data\Collection\Db from Framework
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @return \Magento\Framework\Model\Resource\Db\Collection\AbstractCollection
      */
     public function getResourceCollection()
     {
         if (empty($this->_resourceCollection) && empty($this->_collectionName)) {
-            throw new \Magento\Framework\Model\Exception(__('Model collection resource name is not defined.'));
+            throw new \Magento\Framework\Exception\LocalizedException(
+                new \Magento\Framework\Phrase('Model collection resource name is not defined.')
+            );
         }
         return $this->_resourceCollection ? clone $this
             ->_resourceCollection : \Magento\Framework\App\ObjectManager::getInstance()
@@ -288,6 +279,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
      * Retrieve collection instance
      *
      * @deprecated
+     * @TODO MAGETWO-23541: Incorrect dependencies between Model\AbstractModel and Data\Collection\Db from Framework
      * @return \Magento\Framework\Model\Resource\Db\Collection\AbstractCollection
      */
     public function getCollection()
@@ -319,10 +311,10 @@ abstract class AbstractModel extends \Magento\Framework\Object
      */
     protected function _getEventData()
     {
-        return array(
+        return [
             'data_object' => $this,
             $this->_eventObject => $this,
-        );
+        ];
     }
 
     /**
@@ -334,7 +326,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
      */
     protected function _beforeLoad($modelId, $field = null)
     {
-        $params = array('object' => $this, 'field' => $field, 'value' => $modelId);
+        $params = ['object' => $this, 'field' => $field, 'value' => $modelId];
         $this->_eventManager->dispatch('model_load_before', $params);
         $params = array_merge($params, $this->_getEventData());
         $this->_eventManager->dispatch($this->_eventPrefix . '_load_before', $params);
@@ -348,7 +340,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
      */
     protected function _afterLoad()
     {
-        $this->_eventManager->dispatch('model_load_after', array('object' => $this));
+        $this->_eventManager->dispatch('model_load_after', ['object' => $this]);
         $this->_eventManager->dispatch($this->_eventPrefix . '_load_after', $this->_getEventData());
         return $this;
     }
@@ -378,6 +370,23 @@ abstract class AbstractModel extends \Magento\Framework\Object
     }
 
     /**
+     * @return bool
+     */
+    public function isSaveAllowed()
+    {
+        return (bool) $this->_dataSaveAllowed;
+    }
+
+    /**
+     * @param bool $flag
+     * @return void
+     */
+    public function setHasDataChanges($flag)
+    {
+        $this->_hasDataChanges = $flag;
+    }
+
+    /**
      * Save object data
      *
      * @return $this
@@ -385,30 +394,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
      */
     public function save()
     {
-        /**
-         * Direct deleted items to delete method
-         */
-        if ($this->isDeleted()) {
-            return $this->delete();
-        }
-        if (!$this->_hasModelChanged()) {
-            return $this;
-        }
-        $this->_getResource()->beginTransaction();
-        try {
-            $this->_validateBeforeSave();
-            $this->_beforeSave();
-            if ($this->_dataSaveAllowed) {
-                $this->_getResource()->save($this);
-                $this->_afterSave();
-            }
-            $this->_getResource()->addCommitCallback(array($this, 'afterCommitCallback'))->commit();
-            $this->_hasDataChanges = false;
-        } catch (\Exception $e) {
-            $this->_getResource()->rollBack();
-            $this->_hasDataChanges = true;
-            throw $e;
-        }
+        $this->_getResource()->save($this);
         return $this;
     }
 
@@ -419,7 +405,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
      */
     public function afterCommitCallback()
     {
-        $this->_eventManager->dispatch('model_save_commit_after', array('object' => $this));
+        $this->_eventManager->dispatch('model_save_commit_after', ['object' => $this]);
         $this->_eventManager->dispatch($this->_eventPrefix . '_save_commit_after', $this->_getEventData());
         return $this;
     }
@@ -449,12 +435,12 @@ abstract class AbstractModel extends \Magento\Framework\Object
      *
      * @return $this
      */
-    protected function _beforeSave()
+    public function beforeSave()
     {
         if (!$this->getId()) {
             $this->isObjectNew(true);
         }
-        $this->_eventManager->dispatch('model_save_before', array('object' => $this));
+        $this->_eventManager->dispatch('model_save_before', ['object' => $this]);
         $this->_eventManager->dispatch($this->_eventPrefix . '_save_before', $this->_getEventData());
         return $this;
     }
@@ -463,14 +449,16 @@ abstract class AbstractModel extends \Magento\Framework\Object
      * Validate model before saving it
      *
      * @return $this
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Validator\Exception
      */
-    protected function _validateBeforeSave()
+    public function validateBeforeSave()
     {
         $validator = $this->_getValidatorBeforeSave();
         if ($validator && !$validator->isValid($this)) {
             $errors = $validator->getMessages();
-            $exception = new \Magento\Framework\Model\Exception(implode(PHP_EOL, $errors));
+            $exception = new \Magento\Framework\Validator\Exception(
+                new Phrase(implode(PHP_EOL, $errors))
+            );
             foreach ($errors as $errorMessage) {
                 $exception->addMessage(new \Magento\Framework\Message\Error($errorMessage));
             }
@@ -541,12 +529,12 @@ abstract class AbstractModel extends \Magento\Framework\Object
         $tags = false;
         if ($this->_cacheTag) {
             if ($this->_cacheTag === true) {
-                $tags = array();
+                $tags = [];
             } else {
                 if (is_array($this->_cacheTag)) {
                     $tags = $this->_cacheTag;
                 } else {
-                    $tags = array($this->_cacheTag);
+                    $tags = [$this->_cacheTag];
                 }
             }
         }
@@ -572,11 +560,11 @@ abstract class AbstractModel extends \Magento\Framework\Object
      *
      * @return $this
      */
-    protected function _afterSave()
+    public function afterSave()
     {
         $this->cleanModelCache();
-        $this->_eventManager->dispatch('model_save_after', array('object' => $this));
-        $this->_eventManager->dispatch('clean_cache_by_tags', array('object' => $this));
+        $this->_eventManager->dispatch('model_save_after', ['object' => $this]);
+        $this->_eventManager->dispatch('clean_cache_by_tags', ['object' => $this]);
         $this->_eventManager->dispatch($this->_eventPrefix . '_save_after', $this->_getEventData());
         return $this;
     }
@@ -589,19 +577,7 @@ abstract class AbstractModel extends \Magento\Framework\Object
      */
     public function delete()
     {
-        $this->_getResource()->beginTransaction();
-        try {
-            $this->_beforeDelete();
-            $this->_getResource()->delete($this);
-            $this->isDeleted(true);
-            $this->_afterDelete();
-
-            $this->_getResource()->commit();
-            $this->_afterDeleteCommit();
-        } catch (\Exception $e) {
-            $this->_getResource()->rollBack();
-            throw $e;
-        }
+        $this->_getResource()->delete($this);
         return $this;
     }
 
@@ -609,15 +585,17 @@ abstract class AbstractModel extends \Magento\Framework\Object
      * Processing object before delete data
      *
      * @return $this
-     * @throws Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
-    protected function _beforeDelete()
+    public function beforeDelete()
     {
         if (!$this->_actionValidator->isAllowed($this)) {
-            throw new Exception(__('Delete operation is forbidden for current area'));
+            throw new \Magento\Framework\Exception\LocalizedException(
+                new \Magento\Framework\Phrase('Delete operation is forbidden for current area')
+            );
         }
 
-        $this->_eventManager->dispatch('model_delete_before', array('object' => $this));
+        $this->_eventManager->dispatch('model_delete_before', ['object' => $this]);
         $this->_eventManager->dispatch($this->_eventPrefix . '_delete_before', $this->_getEventData());
         $this->cleanModelCache();
         return $this;
@@ -628,10 +606,10 @@ abstract class AbstractModel extends \Magento\Framework\Object
      *
      * @return $this
      */
-    protected function _afterDelete()
+    public function afterDelete()
     {
-        $this->_eventManager->dispatch('model_delete_after', array('object' => $this));
-        $this->_eventManager->dispatch('clean_cache_by_tags', array('object' => $this));
+        $this->_eventManager->dispatch('model_delete_after', ['object' => $this]);
+        $this->_eventManager->dispatch('clean_cache_by_tags', ['object' => $this]);
         $this->_eventManager->dispatch($this->_eventPrefix . '_delete_after', $this->_getEventData());
         return $this;
     }
@@ -641,9 +619,9 @@ abstract class AbstractModel extends \Magento\Framework\Object
      *
      * @return $this
      */
-    protected function _afterDeleteCommit()
+    public function afterDeleteCommit()
     {
-        $this->_eventManager->dispatch('model_delete_commit_after', array('object' => $this));
+        $this->_eventManager->dispatch('model_delete_commit_after', ['object' => $this]);
         $this->_eventManager->dispatch($this->_eventPrefix . '_delete_commit_after', $this->_getEventData());
         return $this;
     }
@@ -666,6 +644,17 @@ abstract class AbstractModel extends \Magento\Framework\Object
     public function getEntityId()
     {
         return $this->_getData('entity_id');
+    }
+
+    /**
+     * Set entity id
+     *
+     * @param int $entityId
+     * @return $this
+     */
+    public function setEntityId($entityId)
+    {
+        return $this->setData('entity_id', $entityId);
     }
 
     /**

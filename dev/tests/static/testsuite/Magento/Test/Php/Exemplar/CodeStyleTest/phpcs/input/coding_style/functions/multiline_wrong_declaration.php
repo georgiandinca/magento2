@@ -8,10 +8,14 @@
  * @param int $moreEvenLongerParamForAllThatRoutineStuff
  * @param float $andThereGoesOneParameter
  * @return string
+ * @SuppressWarnings(PHPMD.UnusedFormalParameter)
  */
+
+// @codingStandardsIgnoreFile
+
 function thereGoesFunc($someLongParam, $anotherLongParam, $moreEvenLongerParamForAllThatRoutineStuff,
     $andThereGoesOneParameter
-){
+) {
     if ($someLongParam === null) {
         $someLongParam = 'Stranger';
     }
@@ -27,6 +31,7 @@ function thereGoesFunc($someLongParam, $anotherLongParam, $moreEvenLongerParamFo
  * @param int $moreEvenLongerParamForAllThatRoutineStuff
  * @param float $andThereGoesOneParameter
  * @return string
+ * @SuppressWarnings(PHPMD.UnusedFormalParameter)
  */
 function thereGoesAnotherFunc($someLongParam, $anotherLongParam, $moreEvenLongerParamForAllThatRoutineStuff,
     $andThereGoesOneParameter
@@ -46,11 +51,11 @@ function thereGoesAnotherFunc($someLongParam, $anotherLongParam, $moreEvenLonger
  * @param int $moreEvenLongerParamForAllThatRoutineStuff
  * @param float $andThereGoesOneParameter
  * @return string
+ * @SuppressWarnings(PHPMD.UnusedFormalParameter)
  */
 function thereGoesThirdFunc($someLongParam, $anotherLongParam, $moreEvenLongerParamForAllThatRoutineStuff,
     $andThereGoesOneParameter
-)
-{
+) {
     if ($someLongParam === null) {
         $someLongParam = 'Stranger';
     }
@@ -66,6 +71,7 @@ function thereGoesThirdFunc($someLongParam, $anotherLongParam, $moreEvenLongerPa
  * @param int $moreEvenLongerParamForAllThatRoutineStuff
  * @param float $andThereGoesOneParameter
  * @return string
+ * @SuppressWarnings(PHPMD.UnusedFormalParameter)
  */
 function thereGoesFourthFunc($someLongParam, $anotherLongParam, $moreEvenLongerParamForAllThatRoutineStuff,
     $andThereGoesOneParameter)
@@ -85,9 +91,11 @@ function thereGoesFourthFunc($someLongParam, $anotherLongParam, $moreEvenLongerP
  * @param int $moreEvenLongerParamForAllThatRoutineStuff
  * @param float $andThereGoesOneParameter
  * @return string
+ * @SuppressWarnings(PHPMD.UnusedFormalParameter)
  */
 function thereGoesFifthFunc($someLongParam, $anotherLongParam, $moreEvenLongerParamForAllThatRoutineStuff,
-    $andThereGoesOneParameter) {
+    $andThereGoesOneParameter)
+{
     if ($someLongParam === null) {
         $someLongParam = 'Stranger';
     }

@@ -1,35 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Customer\Block\Adminhtml\Edit\Tab;
 
-use Magento\Customer\Controller\RegistryConstants;
-use Magento\Customer\Service\V1\CustomerAddressServiceInterface;
-use Magento\Customer\Service\V1\CustomerAccountServiceInterface;
-use Magento\Customer\Service\V1\Data\Customer;
-use Magento\Customer\Service\V1\Data\Address;
+use Magento\Customer\Api\CustomerRepositoryInterface;
+use Magento\Customer\Model\Customer\Mapper;
 use Magento\TestFramework\Helper\Bootstrap;
-use Magento\Customer\Service\V1\Data\AddressConverter;
 
 /**
  * Test Magento\Customer\Block\Adminhtml\Edit\Tab\Addresses
@@ -39,43 +17,48 @@ use Magento\Customer\Service\V1\Data\AddressConverter;
  */
 class AddressesTest extends \PHPUnit_Framework_TestCase
 {
-    /** @var CustomerAccountServiceInterface */
-    private $_customerAccountService;
-
-    /** @var CustomerAddressServiceInterface */
-    private $_addressService;
-
-    /** @var  \Magento\Framework\Registry */
-    private $_coreRegistry;
+    /** @var CustomerRepositoryInterface */
+    private $_customerRepository;
 
     /** @var \Magento\Backend\Model\Session */
     private $_backendSession;
 
-    /** @var  \Magento\Framework\ObjectManager */
+    /** @var  \Magento\Framework\ObjectManagerInterface */
     private $_objectManager;
 
     /** @var  array */
     private $_customerData;
 
+    /**
+     * @var Mapper
+     */
+    private $customerMapper;
+
+    /**
+     * @var \Magento\Customer\Model\Address\Mapper
+     */
+    private $addressMapper;
+
     public function setUp()
     {
         $this->_objectManager = Bootstrap::getObjectManager();
-        $this->_customerAccountService = $this->_objectManager->get(
-            'Magento\Customer\Service\V1\CustomerAccountServiceInterface'
+        $this->_customerRepository = $this->_objectManager->get(
+            'Magento\Customer\Api\CustomerRepositoryInterface'
         );
-        $this->_addressService = $this->_objectManager->get(
-            'Magento\Customer\Service\V1\CustomerAddressServiceInterface'
-        );
-        $this->_coreRegistry = $this->_objectManager->get('Magento\Framework\Registry');
         $this->_backendSession = $this->_objectManager->get('Magento\Backend\Model\Session');
 
-        $this->_coreRegistry->register(RegistryConstants::CURRENT_CUSTOMER_ID, 1);
+        $this->customerMapper = $this->_objectManager->get(
+            'Magento\Customer\Model\Customer\Mapper'
+        );
+
+        $this->addressMapper = $this->_objectManager->get(
+            'Magento\Customer\Model\Address\Mapper'
+        );
     }
 
     public function tearDown()
     {
         $this->_backendSession->unsCustomerData();
-        $this->_coreRegistry->unregister(RegistryConstants::CURRENT_CUSTOMER_ID);
     }
 
     /**
@@ -84,7 +67,7 @@ class AddressesTest extends \PHPUnit_Framework_TestCase
     public function testInitFormEmpty()
     {
         $block = $this->_objectManager->create('Magento\Customer\Block\Adminhtml\Edit\Tab\Addresses');
-        $this->_backendSession->setCustomerData(array('account' => array(), 'address' => array()));
+        $this->_backendSession->setCustomerData(['account' => [], 'address' => []]);
 
         /** @var Addresses $block */
         $block = $block->initForm();
@@ -163,17 +146,17 @@ class AddressesTest extends \PHPUnit_Framework_TestCase
      */
     protected function setupExistingCustomerData()
     {
-        /** @var Customer $customer */
-        $customer = $this->_customerAccountService->getCustomer(1);
-        $this->_customerData = array(
+        /** @var \Magento\Customer\Api\Data\CustomerInterface $customer */
+        $customer = $this->_customerRepository->getById(1);
+        $this->_customerData = [
             'customer_id' => $customer->getId(),
-            'account' => \Magento\Framework\Service\ExtensibleDataObjectConverter::toFlatArray($customer)
-        );
+            'account' => $this->customerMapper->toFlatArray($customer),
+        ];
         $this->_customerData['account']['id'] = $customer->getId();
-        /** @var Address[] $addresses */
-        $addresses = $this->_addressService->getAddresses(1);
+        /** @var \Magento\Customer\Api\Data\AddressInterface[] $addresses */
+        $addresses = $customer->getAddresses();
         foreach ($addresses as $addressData) {
-            $this->_customerData['address'][$addressData->getId()] = AddressConverter::toFlatArray($addressData);
+            $this->_customerData['address'][$addressData->getId()] = $this->addressMapper->toFlatArray($addressData);
             $this->_customerData['address'][$addressData->getId()]['id'] = $addressData->getId();
         }
         $this->_backendSession->setCustomerData($this->_customerData);

@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -50,11 +32,6 @@ class Config
     protected $_applicationUrlPath;
 
     /**
-     * @var array
-     */
-    protected $_adminOptions = array();
-
-    /**
      * @var string
      */
     protected $_reportDir;
@@ -62,12 +39,17 @@ class Config
     /**
      * @var array
      */
-    protected $_installOptions = array();
+    protected $_installOptions = [];
 
     /**
      * @var array
      */
-    protected $_scenarios = array();
+    protected $_installOptionsNoValue = [];
+
+    /**
+     * @var array
+     */
+    protected $_scenarios = [];
 
     /**
      * Constructor
@@ -76,14 +58,16 @@ class Config
      * @param string $testsBaseDir
      * @param string $appBaseDir
      * @throws \InvalidArgumentException
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function __construct(array $configData, $testsBaseDir, $appBaseDir)
     {
         $this->_validateData($configData);
 
         if (!is_dir($testsBaseDir)) {
-            throw new \Magento\Framework\Exception("Base directory '{$testsBaseDir}' does not exist.");
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __("Base directory '%1' does not exist.", $testsBaseDir)
+            );
         }
         $this->_testsBaseDir = $testsBaseDir;
         $this->_reportDir = $this->_getTestsRelativePath($configData['report_dir']);
@@ -92,10 +76,13 @@ class Config
         $this->_applicationBaseDir = $appBaseDir;
         $this->_applicationUrlHost = $applicationOptions['url_host'];
         $this->_applicationUrlPath = $applicationOptions['url_path'];
-        $this->_adminOptions = $applicationOptions['admin'];
 
         if (isset($applicationOptions['installation']['options'])) {
             $this->_installOptions = $applicationOptions['installation']['options'];
+        }
+
+        if (isset($applicationOptions['installation']['options_no_value'])) {
+            $this->_installOptionsNoValue = $applicationOptions['installation']['options_no_value'];
         }
 
         $this->_parseScenarios($configData['scenario']);
@@ -115,23 +102,27 @@ class Config
      * Validate high-level configuration structure
      *
      * @param array $configData
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function _validateData(array $configData)
     {
         // Validate 1st-level options data
-        $requiredKeys = array('application', 'scenario', 'report_dir');
+        $requiredKeys = ['application', 'scenario', 'report_dir'];
         foreach ($requiredKeys as $requiredKeyName) {
             if (empty($configData[$requiredKeyName])) {
-                throw new \Magento\Framework\Exception("Configuration array must define '{$requiredKeyName}' key.");
+                throw new \Magento\Framework\Exception\LocalizedException(
+                    __("Configuration array must define '%1' key.", $requiredKeyName)
+                );
             }
         }
 
         // Validate admin options data
-        $requiredAdminKeys = array('frontname', 'username', 'password');
+        $requiredAdminKeys = ['admin_username', 'admin_password', 'backend_frontname'];
         foreach ($requiredAdminKeys as $requiredKeyName) {
-            if (empty($configData['application']['admin'][$requiredKeyName])) {
-                throw new \Magento\Framework\Exception("Admin options array must define '{$requiredKeyName}' key.");
+            if (empty($configData['application']['installation']['options'][$requiredKeyName])) {
+                throw new \Magento\Framework\Exception\LocalizedException(
+                    __("Installation options array must define '%1' key.", $requiredKeyName)
+                );
             }
         }
     }
@@ -162,7 +153,7 @@ class Config
             throw new \InvalidArgumentException("'scenario' => 'scenarios' option must be an array");
         }
 
-        $commonConfig = isset($scenarios['common_config']) ? $scenarios['common_config'] : array();
+        $commonConfig = isset($scenarios['common_config']) ? $scenarios['common_config'] : [];
         if (!is_array($commonConfig)) {
             throw new \InvalidArgumentException("Common scenario config must be represented by an array'");
         }
@@ -229,7 +220,7 @@ class Config
      */
     protected function _validateScenarioSubArrays($title, array $config, array $commonConfig)
     {
-        foreach (array('arguments', 'settings', 'fixtures') as $configKey) {
+        foreach (['arguments', 'settings', 'fixtures'] as $configKey) {
             if (isset($config[$configKey]) && !is_array($config[$configKey])) {
                 throw new \InvalidArgumentException(
                     "'{$configKey}' for scenario '{$title}' must be represented by an array"
@@ -240,15 +231,15 @@ class Config
         // Compose arguments, settings and fixtures
         $config = $this->_extendScenarioConfig($config, $commonConfig);
 
-        $arguments = isset($config['arguments']) ? $config['arguments'] : array();
+        $arguments = isset($config['arguments']) ? $config['arguments'] : [];
         $arguments = array_merge($arguments, $this->_getFixedScenarioArguments());
 
-        $settings = isset($config['settings']) ? $config['settings'] : array();
+        $settings = isset($config['settings']) ? $config['settings'] : [];
 
-        $fixtures = isset($config['fixtures']) ? $config['fixtures'] : array();
+        $fixtures = isset($config['fixtures']) ? $config['fixtures'] : [];
         $fixtures = $this->_expandFixtures($fixtures);
 
-        return array('arguments' => $arguments, 'settings' => $settings, 'fixtures' => $fixtures);
+        return ['arguments' => $arguments, 'settings' => $settings, 'fixtures' => $fixtures];
     }
 
     /**
@@ -281,16 +272,16 @@ class Config
      */
     protected function _getFixedScenarioArguments()
     {
-        $adminOptions = $this->getAdminOptions();
-        return array(
+        $options = $this->getInstallOptions();
+        return [
             \Magento\TestFramework\Performance\Scenario::ARG_HOST => $this->getApplicationUrlHost(),
             \Magento\TestFramework\Performance\Scenario::ARG_PATH => $this->getApplicationUrlPath(),
             \Magento\TestFramework\Performance\Scenario::ARG_BASEDIR => $this->getApplicationBaseDir(),
-            \Magento\TestFramework\Performance\Scenario::ARG_BACKEND_FRONTNAME => $adminOptions['frontname'],
-            \Magento\TestFramework\Performance\Scenario::ARG_ADMIN_USERNAME => $adminOptions['username'],
-            \Magento\TestFramework\Performance\Scenario::ARG_ADMIN_PASSWORD => $adminOptions['password'],
+            \Magento\TestFramework\Performance\Scenario::ARG_BACKEND_FRONTNAME => $options['backend_frontname'],
+            \Magento\TestFramework\Performance\Scenario::ARG_ADMIN_USERNAME => $options['admin_username'],
+            \Magento\TestFramework\Performance\Scenario::ARG_ADMIN_PASSWORD => $options['admin_password'],
             'jmeter.save.saveservice.output_format' => 'xml',
-        );
+        ];
     }
 
     /**
@@ -302,7 +293,7 @@ class Config
      */
     protected function _expandFixtures(array $fixtures)
     {
-        $result = array();
+        $result = [];
         foreach ($fixtures as $fixtureName) {
             $fixtureFile = realpath($this->_getTestsRelativePath($fixtureName));
             if (!file_exists($fixtureFile)) {
@@ -346,16 +337,6 @@ class Config
     }
 
     /**
-     * Retrieve admin options - backend path and admin user credentials
-     *
-     * @return array
-     */
-    public function getAdminOptions()
-    {
-        return $this->_adminOptions;
-    }
-
-    /**
      * Retrieve application installation options
      *
      * @return array
@@ -363,6 +344,16 @@ class Config
     public function getInstallOptions()
     {
         return $this->_installOptions;
+    }
+
+    /**
+     * Retrieve application installation options that have no value
+     *
+     * @return array
+     */
+    public function getInstallOptionsNoValue()
+    {
+        return $this->_installOptionsNoValue;
     }
 
     /**

@@ -1,56 +1,85 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Test\Constraint;
 
-use Mtf\Constraint\AbstractConstraint;
+use Magento\Catalog\Test\Fixture\CatalogProductAttribute;
+use Magento\Catalog\Test\Fixture\CatalogProductSimple;
+use Magento\Catalog\Test\Page\Adminhtml\CatalogProductEdit;
+use Magento\Catalog\Test\Page\Adminhtml\CatalogProductIndex;
+use Magento\Mtf\Constraint\AbstractConstraint;
+use Magento\Mtf\Fixture\FixtureFactory;
 
 /**
- * Class AssertProductAttributeIsUnique
+ * Check whether the attribute is unique.
  */
 class AssertProductAttributeIsUnique extends AbstractConstraint
 {
-    /**
-     * Constraint severeness
-     *
-     * @var string
-     */
-    protected $severeness = 'low';
+    /* tags */
+    const SEVERITY = 'low';
+    /* end tags */
 
     /**
+     * Expected message.
+     */
+    const UNIQUE_MESSAGE = 'The value of attribute "%s" must be unique';
+
+    /**
+     * Check whether the attribute is unique.
+     *
+     * @param CatalogProductIndex $catalogProductIndex
+     * @param CatalogProductEdit $catalogProductEdit
+     * @param CatalogProductAttribute $attribute
+     * @param CatalogProductSimple $product,
+     * @param FixtureFactory $fixtureFactory
+     * @throws \Exception
      * @return void
      */
-    public function processAssert()
-    {
-        //
+    public function processAssert(
+        CatalogProductIndex $catalogProductIndex,
+        CatalogProductEdit $catalogProductEdit,
+        CatalogProductAttribute $attribute,
+        CatalogProductSimple $product,
+        FixtureFactory $fixtureFactory
+    ) {
+        $simpleProduct = $fixtureFactory->createByCode(
+            'catalogProductSimple',
+            [
+                'dataSet' => 'product_with_category_with_anchor',
+                'data' => [
+                    'attribute_set_id' => [
+                        'attribute_set' => $product->getDataFieldConfig('attribute_set_id')['source']->getAttributeSet()
+                    ],
+                    'custom_attribute' => $attribute,
+                ],
+            ]
+        );
+        $catalogProductIndex->open()->getGridPageActionBlock()->addProduct('simple');
+        $productForm = $catalogProductEdit->getProductForm();
+        $productForm->fill($simpleProduct);
+        $catalogProductEdit->getFormPageActions()->save();
+        $failedAttributes = $productForm->getRequireNoticeAttributes($simpleProduct);
+        $actualMessage = isset($failedAttributes['product-details'][$attribute->getFrontendLabel()])
+            ? $failedAttributes['product-details'][$attribute->getFrontendLabel()]
+            : null;
+
+        \PHPUnit_Framework_Assert::assertEquals(
+            sprintf(self::UNIQUE_MESSAGE, $attribute->getFrontendLabel()),
+            $actualMessage,
+            'JS error notice on product edit page is not equal to expected.'
+        );
     }
 
     /**
+     * Return string representation of object.
+     *
      * @return string
      */
     public function toString()
     {
-        //
+        return 'Attribute is unique.';
     }
 }

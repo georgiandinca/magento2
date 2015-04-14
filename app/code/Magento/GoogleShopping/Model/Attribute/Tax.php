@@ -1,36 +1,19 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GoogleShopping\Model\Attribute;
 
-use Magento\Store\Model\Store;
 use Magento\Framework\Parse\Zip;
-use Magento\Tax\Service\V1\Data\TaxClassKey;
+use Magento\Store\Model\Store;
+use Magento\Tax\Api\Data\TaxClassKeyInterface;
 
 /**
  * Tax attribute model
  *
  * @author     Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
 {
@@ -52,39 +35,25 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
     protected $_config;
 
     /**
-     * Tax Rule Service
+     * Tax Rate Management
      *
-     * @var \Magento\Tax\Service\V1\TaxRuleService
+     * @var \Magento\Tax\Api\TaxRateManagementInterface
      */
-    protected $_taxRuleService;
+    protected $_taxRateManagement;
 
     /**
      * Tax Calculation Service
      *
-     * @var \Magento\Tax\Service\V1\TaxCalculationService
+     * @var \Magento\Tax\Api\TaxCalculationInterface
      */
     protected $_taxCalculationService;
 
     /**
-     * Quote Details Builder
+     * Quote Details Factory
      *
-     * @var \Magento\Tax\Service\V1\Data\QuoteDetailsBuilder
+     * @var \Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory
      */
-    protected $_quoteDetailsBuilder;
-
-    /**
-     * Quote Details Item Builder
-     *
-     * @var \Magento\Tax\Service\V1\Data\QuoteDetails\ItemBuilder
-     */
-    protected $_quoteDetailsItemBuilder;
-
-    /**
-     * Group Service Interface
-     *
-     * @var \Magento\Customer\Service\V1\CustomerGroupServiceInterface
-     */
-    protected $_groupService;
+    protected $_quoteDetailsFactory;
 
     /**
      * Default customer tax classId
@@ -101,6 +70,11 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
     protected $_regionFactory;
 
     /**
+     * @var \Magento\Framework\Api\DataObjectHelper
+     */
+    protected $dataObjectHelper;
+
+    /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Catalog\Model\ProductFactory $productFactory
@@ -110,14 +84,15 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
      * @param \Magento\GoogleShopping\Model\Resource\Attribute $resource
      * @param \Magento\GoogleShopping\Model\Config $config
      * @param \Magento\Tax\Helper\Data $taxData
-     * @param \Magento\Tax\Service\V1\TaxRuleService $taxRuleService
-     * @param \Magento\Tax\Service\V1\TaxCalculationService $taxCalculationService
-     * @param \Magento\Tax\Service\V1\Data\QuoteDetailsBuilder $quoteDetailsBuilder
-     * @param \Magento\Tax\Service\V1\Data\QuoteDetails\ItemBuilder $quoteDetailsItemBuilder
-     * @param \Magento\Customer\Service\V1\CustomerGroupServiceInterface $groupServiceInterface
+     * @param \Magento\Tax\Api\TaxRateManagementInterface $taxRateManagement
+     * @param \Magento\Tax\Api\TaxCalculationInterface $taxCalculationService
+     * @param \Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory $quoteDetailsFactory
      * @param \Magento\Directory\Model\RegionFactory $regionFactory
+     * @param \Magento\Customer\Api\GroupManagementInterface $groupManagement
+     * @param \Magento\Framework\Api\DataObjectHelper $dataObjectHelper
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
@@ -129,23 +104,23 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
         \Magento\GoogleShopping\Model\Resource\Attribute $resource,
         \Magento\GoogleShopping\Model\Config $config,
         \Magento\Tax\Helper\Data $taxData,
-        \Magento\Tax\Service\V1\TaxRuleService $taxRuleService,
-        \Magento\Tax\Service\V1\TaxCalculationService $taxCalculationService,
-        \Magento\Tax\Service\V1\Data\QuoteDetailsBuilder $quoteDetailsBuilder,
-        \Magento\Tax\Service\V1\Data\QuoteDetails\ItemBuilder $quoteDetailsItemBuilder,
-        \Magento\Customer\Service\V1\CustomerGroupServiceInterface $groupServiceInterface,
+        \Magento\Tax\Api\TaxRateManagementInterface $taxRateManagement,
+        \Magento\Tax\Api\TaxCalculationInterface $taxCalculationService,
+        \Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory $quoteDetailsFactory,
         \Magento\Directory\Model\RegionFactory $regionFactory,
+        \Magento\Customer\Api\GroupManagementInterface $groupManagement,
+        \Magento\Framework\Api\DataObjectHelper $dataObjectHelper,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->_config = $config;
         $this->_taxData = $taxData;
-        $this->_taxRuleService = $taxRuleService;
+        $this->_taxRateManagement = $taxRateManagement;
         $this->_taxCalculationService = $taxCalculationService;
-        $this->_quoteDetailsBuilder = $quoteDetailsBuilder;
-        $this->_quoteDetailsItemBuilder = $quoteDetailsItemBuilder;
-        $this->_groupService = $groupServiceInterface;
+        $this->_quoteDetailsFactory = $quoteDetailsFactory;
         $this->_regionFactory = $regionFactory;
+        $this->groupManagement = $groupManagement;
+        $this->dataObjectHelper = $dataObjectHelper;
         parent::__construct(
             $context,
             $registry,
@@ -165,7 +140,7 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
      * @param \Magento\Catalog\Model\Product $product
      * @param \Magento\Framework\Gdata\Gshopping\Entry $entry
      * @return \Magento\Framework\Gdata\Gshopping\Entry
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function convertAttribute($product, $entry)
     {
@@ -175,21 +150,21 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
         }
 
         $defaultCustomerTaxClassId = $this->_getDefaultCustomerTaxClassId($product->getStoreId());
-        $rates = $this->_taxRuleService->getRatesByCustomerAndProductTaxClassId(
+        $rates = $this->_taxRateManagement->getRatesByCustomerAndProductTaxClassId(
             $defaultCustomerTaxClassId,
             $product->getTaxClassId()
         );
         $targetCountry = $this->_config->getTargetCountry($product->getStoreId());
         $ratesTotal = 0;
         foreach ($rates as $rate) {
-            $countryId = $rate->getCountryId();
-            $postcode = $rate->getPostcode();
+            $countryId = $rate->getTaxCountryId();
+            $postcode = $rate->getTaxPostcode();
             if ($targetCountry == $countryId) {
-                $regions = $this->_getRegionsByRegionId($rate->getRegionId(), $postcode);
+                $regions = $this->_getRegionsByRegionId($rate->getTaxRegionId(), $postcode);
                 $ratesTotal += count($regions);
                 if ($ratesTotal > self::RATES_MAX) {
-                    throw new \Magento\Framework\Model\Exception(
-                        __("Google shopping only supports %1 tax rates per product", self::RATES_MAX)
+                    throw new \Magento\Framework\Exception\LocalizedException(
+                        __('Google shopping only supports %1 tax rates per product', self::RATES_MAX)
                     );
                 }
                 foreach ($regions as $region) {
@@ -204,8 +179,8 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
                         'code' => $product->getSku(),
                         'type' => 'product',
                         'tax_class_key' => [
-                            TaxClassKey::KEY_TYPE => TaxClassKey::TYPE_ID,
-                            TaxClassKey::KEY_VALUE => $product->getTaxClassId(),
+                            TaxClassKeyInterface::KEY_TYPE => TaxClassKeyInterface::TYPE_ID,
+                            TaxClassKeyInterface::KEY_VALUE => $product->getTaxClassId(),
                         ],
                         'unit_price' => $product->getPrice(),
                         'quantity' => 1,
@@ -215,13 +190,13 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
 
                     $billingAddressDataArray = [
                         'country_id' => $countryId,
-                        'region' => ['region_id' => $rate->getRegionId()],
+                        'region' => ['region_id' => $rate->getTaxRegionId()],
                         'postcode' => $postcode,
                     ];
 
                     $shippingAddressDataArray = [
                         'country_id' => $countryId,
-                        'region' => ['region_id' => $rate->getRegionId()],
+                        'region' => ['region_id' => $rate->getTaxRegionId()],
                         'postcode' => $postcode,
                     ];
 
@@ -229,17 +204,20 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
                         'billing_address' => $billingAddressDataArray,
                         'shipping_address' => $shippingAddressDataArray,
                         'customer_tax_class_key' => [
-                            TaxClassKey::KEY_TYPE => TaxClassKey::TYPE_ID,
-                            TaxClassKey::KEY_VALUE => $defaultCustomerTaxClassId,
+                            TaxClassKeyInterface::KEY_TYPE => TaxClassKeyInterface::TYPE_ID,
+                            TaxClassKeyInterface::KEY_VALUE => $defaultCustomerTaxClassId,
                         ],
                         'items' => [
                             $quoteDetailsItemDataArray,
                         ],
                     ];
 
-                    $quoteDetailsObject = $this->_quoteDetailsBuilder
-                        ->populateWithArray($quoteDetailsDataArray)
-                        ->create();
+                    $quoteDetailsObject = $this->_quoteDetailsFactory->create();
+                    $this->dataObjectHelper->populateWithArray(
+                        $quoteDetailsObject,
+                        $quoteDetailsDataArray,
+                        '\Magento\Tax\Api\Data\QuoteDetailsInterface'
+                    );
 
                     $taxDetails = $this->_taxCalculationService
                         ->calculateTax($quoteDetailsObject, $product->getStoreId());
@@ -268,9 +246,9 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
      */
     private function _getDefaultCustomerTaxClassId($store = null)
     {
-        if (is_null($this->_defaultCustomerTaxClassId)) {
-            //Not catching the exception here since default group is expected
-            $defaultCustomerGroup = $this->_groupService->getDefaultGroup($store);
+        if ($this->_defaultCustomerTaxClassId === null) {
+            // Not catching the exception here since default group is expected
+            $defaultCustomerGroup = $this->groupManagement->getDefaultGroup($store);
             $this->_defaultCustomerTaxClassId = $defaultCustomerGroup->getTaxClassId();
         }
         return $this->_defaultCustomerTaxClassId;
@@ -287,7 +265,7 @@ class Tax extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribute
     {
         $regions = [];
         $regionCode = $this->_regionFactory->create()->load($regionId)->getCode();
-        if (!is_null($regionCode)) {
+        if ($regionCode !== null) {
             $regions = Zip::parseRegions($regionCode, $postalCode);
         }
         return $regions;

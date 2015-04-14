@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\DesignEditor\Model\Config\Control;
 
@@ -33,7 +15,7 @@ abstract class AbstractControl extends \Magento\Framework\Config\AbstractXml
      *
      * @var string[]
      */
-    protected $_controlAttributes = array();
+    protected $_controlAttributes = [];
 
     /**
      * Extract configuration data from the DOM structure
@@ -54,7 +36,7 @@ abstract class AbstractControl extends \Magento\Framework\Config\AbstractXml
      */
     protected function _extractControls(\DOMNodeList $controls)
     {
-        $result = array();
+        $result = [];
         /** @var $control \DOMElement */
         foreach ($controls as $control) {
             if (!$control instanceof \DOMElement) {
@@ -85,7 +67,7 @@ abstract class AbstractControl extends \Magento\Framework\Config\AbstractXml
      */
     protected function _extractLayoutParams(\DOMElement $control)
     {
-        $layoutParams = array();
+        $layoutParams = [];
         foreach ($this->_controlAttributes as $attributeName) {
             $controlTitle = $control->getAttribute($attributeName);
             if (!empty($controlTitle)) {
@@ -104,7 +86,7 @@ abstract class AbstractControl extends \Magento\Framework\Config\AbstractXml
      */
     protected function _extractParams(\DOMElement $control, $useKeyIdentifier = true)
     {
-        $result = array();
+        $result = [];
         /** @var $paramNode \DOMElement */
         foreach ($control->childNodes as $paramNode) {
             if (!$paramNode instanceof \DOMElement) {
@@ -130,12 +112,12 @@ abstract class AbstractControl extends \Magento\Framework\Config\AbstractXml
      *
      * @param string $controlName
      * @return array
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function getControlData($controlName)
     {
         if (!isset($this->_data[$controlName])) {
-            throw new \Magento\Framework\Exception("Unknown control: \"{$controlName}\"");
+            throw new \Magento\Framework\Exception\LocalizedException(__('Unknown control: "%1', $controlName));
         }
         return $this->_data[$controlName];
     }
@@ -167,6 +149,6 @@ abstract class AbstractControl extends \Magento\Framework\Config\AbstractXml
      */
     protected function _getIdAttributes()
     {
-        return array('/controls/control' => 'name', '/controls/control/components/control' => 'name');
+        return ['/controls/control' => 'name', '/controls/control/components/control' => 'name'];
     }
 }

@@ -1,28 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
-
 namespace Magento\RequireJs\Model;
+
+use Magento\Framework\App\Filesystem\DirectoryList;
 
 /**
  * A service for handling RequireJS files in the application
@@ -35,7 +18,7 @@ class FileManager
     private $config;
 
     /**
-     * @var \Magento\Framework\App\Filesystem
+     * @var \Magento\Framework\Filesystem
      */
     private $filesystem;
 
@@ -51,13 +34,13 @@ class FileManager
 
     /**
      * @param \Magento\Framework\RequireJs\Config $config
-     * @param \Magento\Framework\App\Filesystem $appFilesystem
+     * @param \Magento\Framework\Filesystem $appFilesystem
      * @param \Magento\Framework\App\State $appState
      * @param \Magento\Framework\View\Asset\Repository $assetRepo
      */
     public function __construct(
         \Magento\Framework\RequireJs\Config $config,
-        \Magento\Framework\App\Filesystem $appFilesystem,
+        \Magento\Framework\Filesystem $appFilesystem,
         \Magento\Framework\App\State $appState,
         \Magento\Framework\View\Asset\Repository $assetRepo
     ) {
@@ -72,11 +55,21 @@ class FileManager
      *
      * @return \Magento\Framework\View\Asset\File
      */
-    public function createRequireJsAsset()
+    public function createRequireJsConfigAsset()
     {
         $relPath = $this->config->getConfigFileRelativePath();
         $this->ensureSourceFile($relPath);
         return $this->assetRepo->createArbitrary($relPath, '');
+    }
+
+    /**
+     * Create a view asset representing the aggregated configuration file
+     *
+     * @return \Magento\Framework\View\Asset\File
+     */
+    public function createRequireJsAsset()
+    {
+        return $this->assetRepo->createArbitrary($this->config->getRequireJsFileRelativePath(), '');
     }
 
     /**
@@ -89,9 +82,55 @@ class FileManager
      */
     private function ensureSourceFile($relPath)
     {
-        $dir = $this->filesystem->getDirectoryWrite(\Magento\Framework\App\Filesystem::STATIC_VIEW_DIR);
+        $dir = $this->filesystem->getDirectoryWrite(DirectoryList::STATIC_VIEW);
         if ($this->appState->getMode() == \Magento\Framework\App\State::MODE_DEVELOPER || !$dir->isExist($relPath)) {
             $dir->writeFile($relPath, $this->config->getConfig());
         }
+    }
+
+    /**
+     * Create a view asset representing the static js functionality
+     *
+     * @return \Magento\Framework\View\Asset\File
+     */
+    public function createStaticJsAsset()
+    {
+        if ($this->appState->getMode() != \Magento\Framework\App\State::MODE_PRODUCTION) {
+            return false;
+        }
+        $libDir = $this->filesystem->getDirectoryRead(DirectoryList::STATIC_VIEW);
+        $relPath = $libDir->getRelativePath(\Magento\Framework\RequireJs\Config::STATIC_FILE_NAME);
+        /** @var $context \Magento\Framework\View\Asset\File\FallbackContext */
+        $context = $this->assetRepo->getStaticViewFileContext();
+
+        return $this->assetRepo->createArbitrary($relPath, $context->getPath());
+    }
+
+    /**
+     * Create a view assets representing the bundle js functionality
+     *
+     * @return \Magento\Framework\View\Asset\File[]
+     */
+    public function createBundleJsPool()
+    {
+        $bundles = [];
+        if ($this->appState->getMode() == \Magento\Framework\App\State::MODE_PRODUCTION) {
+            $libDir = $this->filesystem->getDirectoryRead(DirectoryList::STATIC_VIEW);
+            /** @var $context \Magento\Framework\View\Asset\File\FallbackContext */
+            $context = $this->assetRepo->getStaticViewFileContext();
+
+            $bundleDir = $context->getPath() . '/' .\Magento\Framework\RequireJs\Config::BUNDLE_JS_DIR;
+
+            if (!$libDir->isExist($bundleDir)) {
+                return [];
+            }
+
+            foreach ($libDir->read($bundleDir) as $bundleFile) {
+                $relPath = $libDir->getRelativePath($bundleFile);
+                $bundles[] = $this->assetRepo->createArbitrary($relPath, '');
+            }
+        }
+
+        return $bundles;
     }
 }

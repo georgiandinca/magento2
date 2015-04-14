@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\ImportExport\Model\Import\Entity;
 
@@ -27,6 +9,8 @@ use Magento\ImportExport\Model\Import\AbstractSource;
 
 /**
  * Import entity abstract model
+ * @SuppressWarnings(PHPMD.TooManyFields)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 abstract class AbstractEntity
 {
@@ -74,7 +58,7 @@ abstract class AbstractEntity
      *
      * @var array
      */
-    protected $_errors = array();
+    protected $_errors = [];
 
     /**
      * Error counter.
@@ -102,49 +86,49 @@ abstract class AbstractEntity
      *
      * @var array
      */
-    protected $_indexValueAttributes = array();
+    protected $_indexValueAttributes = [];
 
     /**
      * Array of invalid rows numbers.
      *
      * @var array
      */
-    protected $_invalidRows = array();
+    protected $_invalidRows = [];
 
     /**
      * Validation failure message template definitions.
      *
      * @var array
      */
-    protected $_messageTemplates = array();
+    protected $_messageTemplates = [];
 
     /**
      * Notice messages.
      *
      * @var string[]
      */
-    protected $_notices = array();
+    protected $_notices = [];
 
     /**
      * Entity model parameters.
      *
      * @var array
      */
-    protected $_parameters = array();
+    protected $_parameters = [];
 
     /**
      * Column names that holds values with particular meaning.
      *
      * @var string[]
      */
-    protected $_specialAttributes = array();
+    protected $_specialAttributes = [];
 
     /**
      * Permanent entity columns.
      *
      * @var string[]
      */
-    protected $_permanentAttributes = array();
+    protected $_permanentAttributes = [];
 
     /**
      * Number of entities processed by validation.
@@ -169,14 +153,14 @@ abstract class AbstractEntity
      *
      * @var array
      */
-    protected $_rowsToSkip = array();
+    protected $_rowsToSkip = [];
 
     /**
      * Array of numbers of validated rows as keys and boolean TRUE as values.
      *
      * @var array
      */
-    protected $_validatedRows = array();
+    protected $_validatedRows = [];
 
     /**
      * Source model.
@@ -190,7 +174,7 @@ abstract class AbstractEntity
      *
      * @var array
      */
-    protected $_uniqueAttributes = array();
+    protected $_uniqueAttributes = [];
 
     /**
      * Import export data
@@ -200,11 +184,11 @@ abstract class AbstractEntity
     protected $_importExportData;
 
     /**
-     * Core data
+     * Json Helper
      *
-     * @var \Magento\Core\Helper\Data
+     * @var \Magento\Framework\Json\Helper\Data
      */
-    protected $_coreData;
+    protected $jsonHelper;
 
     /**
      * Magento string lib
@@ -219,7 +203,7 @@ abstract class AbstractEntity
     protected $_resourceHelper;
 
     /**
-     * @param \Magento\Core\Helper\Data $coreData
+     * @param \Magento\Framework\Json\Helper\Data $jsonHelper
      * @param \Magento\ImportExport\Helper\Data $importExportData
      * @param \Magento\ImportExport\Model\Resource\Import\Data $importData
      * @param \Magento\Eav\Model\Config $config
@@ -228,7 +212,7 @@ abstract class AbstractEntity
      * @param \Magento\Framework\Stdlib\String $string
      */
     public function __construct(
-        \Magento\Core\Helper\Data $coreData,
+        \Magento\Framework\Json\Helper\Data $jsonHelper,
         \Magento\ImportExport\Helper\Data $importExportData,
         \Magento\ImportExport\Model\Resource\Import\Data $importData,
         \Magento\Eav\Model\Config $config,
@@ -236,7 +220,7 @@ abstract class AbstractEntity
         \Magento\ImportExport\Model\Resource\Helper $resourceHelper,
         \Magento\Framework\Stdlib\String $string
     ) {
-        $this->_coreData = $coreData;
+        $this->jsonHelper = $jsonHelper;
         $this->_importExportData = $importExportData;
         $this->_resourceHelper = $resourceHelper;
         $this->string = $string;
@@ -252,12 +236,12 @@ abstract class AbstractEntity
      * Inner source object getter.
      *
      * @return AbstractSource
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function _getSource()
     {
         if (!$this->_source) {
-            throw new \Magento\Framework\Model\Exception(__('Please specify a source.'));
+            throw new \Magento\Framework\Exception\LocalizedException(__('Please specify a source.'));
         }
         return $this->_source;
     }
@@ -275,6 +259,7 @@ abstract class AbstractEntity
      *
      * @param array $rowData
      * @return bool
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     protected function _isRowScopeDefault(array $rowData)
     {
@@ -306,14 +291,15 @@ abstract class AbstractEntity
      * Validate data rows and save bunches to DB.
      *
      * @return $this|void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function _saveValidatedBunches()
     {
         $source = $this->_getSource();
         $currentDataSize = 0;
-        $bunchRows = array();
+        $bunchRows = [];
         $startNewBunch = false;
-        $nextRowBackup = array();
+        $nextRowBackup = [];
         $maxDataSize = $this->_resourceHelper->getMaxDataSize();
         $bunchSize = $this->_importExportData->getBunchSize();
 
@@ -327,7 +313,7 @@ abstract class AbstractEntity
                 $bunchRows = $nextRowBackup;
                 $currentDataSize = strlen(serialize($bunchRows));
                 $startNewBunch = false;
-                $nextRowBackup = array();
+                $nextRowBackup = [];
             }
             if ($source->valid()) {
                 if ($this->_errorsCount >= $this->_errorsLimit) {
@@ -341,13 +327,13 @@ abstract class AbstractEntity
                 if ($this->validateRow($rowData, $source->key())) {
                     // add row to bunch for save
                     $rowData = $this->_prepareRowForDb($rowData);
-                    $rowSize = strlen($this->_coreData->jsonEncode($rowData));
+                    $rowSize = strlen($this->jsonHelper->jsonEncode($rowData));
 
                     $isBunchSizeExceeded = $bunchSize > 0 && count($bunchRows) >= $bunchSize;
 
                     if ($currentDataSize + $rowSize >= $maxDataSize || $isBunchSizeExceeded) {
                         $startNewBunch = true;
-                        $nextRowBackup = array($source->key() => $rowData);
+                        $nextRowBackup = [$source->key() => $rowData];
                     } else {
                         $bunchRows[$source->key()] = $rowData;
                         $currentDataSize += $rowSize;
@@ -370,7 +356,7 @@ abstract class AbstractEntity
     public function addRowError($errorCode, $errorRowNum, $colName = null)
     {
         $errorCode = (string)$errorCode;
-        $this->_errors[$errorCode][] = array($errorRowNum + 1, $colName);
+        $this->_errors[$errorCode][] = [$errorRowNum + 1, $colName];
         // one added for human readability
         $this->_invalidRows[$errorRowNum] = true;
         $this->_errorsCount++;
@@ -401,9 +387,9 @@ abstract class AbstractEntity
      */
     public function getAttributeOptions(
         \Magento\Eav\Model\Entity\Attribute\AbstractAttribute $attribute,
-        $indexValAttrs = array()
+        $indexValAttrs = []
     ) {
-        $options = array();
+        $options = [];
 
         if ($attribute->usesSource()) {
             // merge global entity index value attributes
@@ -417,7 +403,7 @@ abstract class AbstractEntity
 
             try {
                 foreach ($attribute->getSource()->getAllOptions(false) as $option) {
-                    $value = is_array($option['value']) ? $option['value'] : array($option);
+                    $value = is_array($option['value']) ? $option['value'] : [$option];
                     foreach ($value as $innerOption) {
                         if (strlen($innerOption['value'])) {
                             // skip ' -- Please Select -- ' option
@@ -476,10 +462,10 @@ abstract class AbstractEntity
      */
     public function getErrorMessages()
     {
-        $messages = array();
+        $messages = [];
         foreach ($this->_errors as $errorCode => $errorRows) {
             if (isset($this->_messageTemplates[$errorCode])) {
-                $errorCode = __($this->_messageTemplates[$errorCode]);
+                $errorCode = (string)__($this->_messageTemplates[$errorCode]);
             }
             foreach ($errorRows as $errorRowData) {
                 $key = $errorRowData[1] ? sprintf($errorCode, $errorRowData[1]) : $errorCode;
@@ -553,12 +539,12 @@ abstract class AbstractEntity
      * Source object getter.
      *
      * @return AbstractSource
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function getSource()
     {
         if (!$this->_source) {
-            throw new \Magento\Framework\Model\Exception(__('Source is not set'));
+            throw new \Magento\Framework\Exception\LocalizedException(__('Source is not set'));
         }
         return $this->_source;
     }
@@ -592,6 +578,7 @@ abstract class AbstractEntity
      * @param array $rowData Row data
      * @param int $rowNum
      * @return boolean
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function isAttributeValid($attrCode, array $attrParams, array $rowData, $rowNum)
     {
@@ -709,22 +696,22 @@ abstract class AbstractEntity
      * Validate data.
      *
      * @return $this
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function validateData()
     {
         if (!$this->_dataValidated) {
             // do all permanent columns exist?
             if ($absentColumns = array_diff($this->_permanentAttributes, $this->getSource()->getColNames())) {
-                throw new \Magento\Framework\Model\Exception(
+                throw new \Magento\Framework\Exception\LocalizedException(
                     __('Cannot find required columns: %1', implode(', ', $absentColumns))
                 );
             }
 
             // check attribute columns names validity
             $columnNumber = 0;
-            $emptyHeaderColumns = array();
-            $invalidColumns = array();
+            $emptyHeaderColumns = [];
+            $invalidColumns = [];
             foreach ($this->getSource()->getColNames() as $columnName) {
                 $columnNumber++;
                 if (!$this->isAttributeParticular($columnName)) {
@@ -737,19 +724,19 @@ abstract class AbstractEntity
             }
 
             if ($emptyHeaderColumns) {
-                throw new \Magento\Framework\Model\Exception(
+                throw new \Magento\Framework\Exception\LocalizedException(
                     __('Columns number: "%1" have empty headers', implode('", "', $emptyHeaderColumns))
                 );
             }
             if ($invalidColumns) {
-                throw new \Magento\Framework\Model\Exception(
+                throw new \Magento\Framework\Exception\LocalizedException(
                     __('Column names: "%1" are invalid', implode('", "', $invalidColumns))
                 );
             }
 
             // initialize validation related attributes
-            $this->_errors = array();
-            $this->_invalidRows = array();
+            $this->_errors = [];
+            $this->_invalidRows = [];
             $this->_saveValidatedBunches();
             $this->_dataValidated = true;
         }

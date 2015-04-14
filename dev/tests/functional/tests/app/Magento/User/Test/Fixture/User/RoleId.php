@@ -1,36 +1,17 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\User\Test\Fixture\User;
 
-use Mtf\Fixture\FixtureFactory;
-use Mtf\Fixture\FixtureInterface;
-use Mtf\Util\Protocol\CurlTransport;
-use Magento\User\Test\Fixture\AdminUserRole;
+use Magento\User\Test\Fixture\Role;
+use Magento\Mtf\Fixture\FixtureFactory;
+use Magento\Mtf\Fixture\FixtureInterface;
 
 /**
- * Class RoleId
+ * Source for Role of User.
  *
  * Data keys:
  *  - dataSet
@@ -39,14 +20,14 @@ use Magento\User\Test\Fixture\AdminUserRole;
 class RoleId implements FixtureInterface
 {
     /**
-     * Admin User Role
+     * Admin User Role.
      *
-     * @var AdminUserRole
+     * @var Role
      */
     protected $role;
 
     /**
-     * User role name
+     * User role name.
      *
      * @var string
      */
@@ -62,20 +43,23 @@ class RoleId implements FixtureInterface
     {
         $this->params = $params;
         if (isset($data['dataSet']) && $data['dataSet'] !== '-') {
-                $this->role = $fixtureFactory->createByCode('adminUserRole', ['dataSet' => $data['dataSet']]);
+            list($fixtureCode, $dataSet) = explode('::', $data['dataSet']);
+            $this->role = $fixtureFactory->createByCode($fixtureCode, ['dataSet' => $dataSet]);
             if (!$this->role->hasData('role_id')) {
                 $this->role->persist();
             }
             $this->data = $this->role->getRoleName();
         }
-        if (isset($data['role']) && $data['role'] instanceof AdminUserRole) {
+        if (isset($data['role']) && $data['role'] instanceof Role) {
             $this->role = $data['role'];
             $this->data = $data['role']->getRoleName();
+        } elseif (isset($data['value'])) {
+            $this->data = $data['value'];
         }
     }
 
     /**
-     * Persist user role
+     * Persist user role.
      *
      * @return void
      */
@@ -85,7 +69,7 @@ class RoleId implements FixtureInterface
     }
 
     /**
-     * Return prepared data set
+     * Return prepared data set.
      *
      * @param string $key [optional]
      * @return string|null
@@ -98,7 +82,7 @@ class RoleId implements FixtureInterface
     }
 
     /**
-     * Return data set configuration settings
+     * Return data set configuration settings.
      *
      * @return array
      */
@@ -108,9 +92,9 @@ class RoleId implements FixtureInterface
     }
 
     /**
-     * Return role fixture
+     * Return role fixture.
      *
-     * @return AdminUserRole
+     * @return Role
      */
     public function getRole()
     {

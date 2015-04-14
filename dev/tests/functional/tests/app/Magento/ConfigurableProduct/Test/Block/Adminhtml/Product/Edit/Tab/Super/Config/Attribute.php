@@ -1,37 +1,19 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\ConfigurableProduct\Test\Block\Adminhtml\Product\Edit\Tab\Super\Config;
 
-use Mtf\Client\Element\Locator;
-use Mtf\Client\Driver\Selenium\Element;
 use Magento\Backend\Test\Block\Widget\Form;
 use Magento\ConfigurableProduct\Test\Block\Adminhtml\Product\Edit\Tab\Super\Config\Attribute\AttributeSelector;
+use Magento\Mtf\Client\Element\SimpleElement;
+use Magento\Mtf\Client\Locator;
+use Magento\Mtf\ObjectManager;
 
 /**
- * Class Attribute
- * Attribute block in Variation section
+ * Attribute block in Variation section.
  */
 class Attribute extends Form
 {
@@ -43,8 +25,8 @@ class Attribute extends Form
     protected $mappingGetFields = [
         'label' => [
             'selector' => 'td[data-column="name"]',
-            'strategy' => Locator::SELECTOR_CSS
-        ]
+            'strategy' => Locator::SELECTOR_CSS,
+        ],
     ];
 
     /**
@@ -139,6 +121,13 @@ class Attribute extends Form
     protected $attributeLabel = '[name$="[label]"]';
 
     /**
+     * Config content selector
+     *
+     * @var string
+     */
+    protected $configContent = '#super_config-content';
+
+    /**
      * Fill attributes
      *
      * @param array $attributes
@@ -151,6 +140,7 @@ class Attribute extends Form
 
             if (!$isExistAttribute && empty($attribute['attribute_id'])) {
                 $this->createNewVariationSet($attribute);
+                $this->waitBlock($this->newAttributeFrame);
                 $this->fillOptions($attribute);
             } else {
                 if (!$isExistAttribute) {
@@ -162,21 +152,39 @@ class Attribute extends Form
     }
 
     /**
-     * Create new variation set
+     * Create new variation set.
      *
      * @param array $attribute
      * @return void
      */
     protected function createNewVariationSet(array $attribute)
     {
+        $attributeFixture = ObjectManager::getInstance()->create(
+            'Magento\Catalog\Test\Fixture\CatalogProductAttribute',
+            ['data' => $attribute]
+        );
+
         $this->_rootElement->find($this->createNewVariationSet)->click();
-        $this->browser->switchToFrame(new Locator($this->newAttributeFrame));
+        $this->getEditAttributeForm()->fill($attributeFixture);
+        $this->getEditAttributeForm()->saveAttributeForm();
+    }
 
-        $newAttribute = $this->getEditAttributeForm();
-        $newAttribute->getTabElement('properties')->fillFormTab($attribute);
-        $newAttribute->_rootElement->find($this->saveAttribute)->click();
-
-        $this->browser->switchToFrame();
+    /**
+     * Wait that element is not visible.
+     *
+     * @param string $selector
+     * @param mixed $browser [optional]
+     * @param string $strategy [optional]
+     * @return mixed
+     */
+    protected function waitBlock($selector, $browser = null, $strategy = Locator::SELECTOR_CSS)
+    {
+        $browser = ($browser != null) ? $browser : $this->browser;
+        return $browser->waitUntil(
+            function () use ($browser, $selector, $strategy) {
+                return $browser->find($selector, $strategy)->isVisible() == false ? true : null;
+            }
+        );
     }
 
     /**
@@ -235,7 +243,7 @@ class Attribute extends Form
                 Locator::SELECTOR_XPATH
             );
 
-            if (!$optionContainer->isVisible() && $this->isVisibleOption($attributeBlock, $count-1)) {
+            if (!$optionContainer->isVisible() && $this->isVisibleOption($attributeBlock, $count - 1)) {
                 $attributeBlock->find($this->addOption)->click();
             }
             $mapping = $this->dataMapping($option);
@@ -246,11 +254,11 @@ class Attribute extends Form
     /**
      * Check is visible option
      *
-     * @param Element $attributeBlock
+     * @param SimpleElement $attributeBlock
      * @param int $number
      * @return bool
      */
-    protected function isVisibleOption(Element $attributeBlock, $number)
+    protected function isVisibleOption(SimpleElement $attributeBlock, $number)
     {
         return $attributeBlock->find(
             sprintf($this->optionContainerByNumber, $number),
@@ -261,12 +269,12 @@ class Attribute extends Form
     /**
      * Get attribute form block
      *
-     * @return \Magento\Catalog\Test\Block\Adminhtml\Product\Attribute\Edit\AttributeForm
+     * @return \Magento\Catalog\Test\Block\Adminhtml\Product\Attribute\AttributeForm
      */
     protected function getEditAttributeForm()
     {
         return $this->blockFactory->create(
-            'Magento\Catalog\Test\Block\Adminhtml\Product\Attribute\Edit\AttributeForm',
+            'Magento\Catalog\Test\Block\Adminhtml\Product\Attribute\AttributeForm',
             ['element' => $this->browser->find($this->newAttribute)]
         );
     }
@@ -296,19 +304,18 @@ class Attribute extends Form
         $optionMapping = $this->dataMapping();
 
         $count = 1;
+        /** @var SimpleElement $attributeBlock */
         $attributeBlock = $this->_rootElement->find(sprintf($this->attributeBlock, $count), Locator::SELECTOR_XPATH);
         while ($attributeBlock->isVisible()) {
+            $this->showAttributeContent($attributeBlock);
             $attribute = [
                 'frontend_label' => $attributeBlock->find($this->attributeTitle)->getText(),
                 'label' => $attributeBlock->find($this->attributeLabel)->getValue(),
-                'options' => []
+                'options' => [],
             ];
-
-            /** @var Element $attributeBlock */
-            $this->showAttributeContent($attributeBlock);
-            $options = $attributeBlock->find($this->optionContainer, Locator::SELECTOR_XPATH)->getElements();
+            $options = $attributeBlock->getElements($this->optionContainer, Locator::SELECTOR_XPATH);
             foreach ($options as $optionKey => $option) {
-                /** @var Element $option */
+                /** @var SimpleElement $option */
                 if ($option->isVisible()) {
                     $attribute['options'][$optionKey] = $this->_getData($optionMapping, $option);
                     $attribute['options'][$optionKey] += $this->getOptionalFields($option);
@@ -329,12 +336,13 @@ class Attribute extends Form
     /**
      * Show attribute content
      *
-     * @param Element $attribute
+     * @param SimpleElement $attribute
      * @return void
      */
-    protected function showAttributeContent(Element $attribute)
+    protected function showAttributeContent(SimpleElement $attribute)
     {
         if (!$attribute->find($this->attributeContent)->isVisible()) {
+            $this->_rootElement->find($this->configContent)->click();
             $attribute->find($this->attributeTitle)->click();
 
             $browser = $attribute;
@@ -364,11 +372,11 @@ class Attribute extends Form
     /**
      * Get optional fields
      *
-     * @param Element $context
+     * @param SimpleElement $context
      * @param array $fields
      * @return array
      */
-    protected function getOptionalFields(Element $context, array $fields = [])
+    protected function getOptionalFields(SimpleElement $context, array $fields = [])
     {
         $data = [];
 
@@ -376,6 +384,7 @@ class Attribute extends Form
         foreach ($fields as $name => $params) {
             $data[$name] = $context->find($params['selector'], $params['strategy'])->getText();
         }
+
         return $data;
     }
 }

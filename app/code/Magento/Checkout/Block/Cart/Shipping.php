@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Checkout\Block\Cart;
 
@@ -37,14 +19,14 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
      * Estimate Rates
      * @var array
      */
-    protected $_rates = array();
+    protected $_rates = [];
 
     /**
      * Address Model
      *
      * @var array
      */
-    protected $_address = array();
+    protected $_address = [];
 
     /**
      * @var \Magento\Directory\Block\Data
@@ -52,7 +34,7 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
     protected $_directoryBlock;
 
     /**
-     * @var \Magento\Sales\Model\Quote\Address\CarrierFactoryInterface
+     * @var \Magento\Quote\Model\Quote\Address\CarrierFactoryInterface
      */
     protected $_carrierFactory;
 
@@ -66,7 +48,7 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
      * @param \Magento\Customer\Model\Session $customerSession
      * @param \Magento\Checkout\Model\Session $checkoutSession
      * @param \Magento\Directory\Block\Data $directoryBlock
-     * @param \Magento\Sales\Model\Quote\Address\CarrierFactoryInterface $carrierFactory
+     * @param \Magento\Quote\Model\Quote\Address\CarrierFactoryInterface $carrierFactory
      * @param PriceCurrencyInterface $priceCurrency
      * @param array $data
      */
@@ -75,9 +57,9 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
         \Magento\Customer\Model\Session $customerSession,
         \Magento\Checkout\Model\Session $checkoutSession,
         \Magento\Directory\Block\Data $directoryBlock,
-        \Magento\Sales\Model\Quote\Address\CarrierFactoryInterface $carrierFactory,
+        \Magento\Quote\Model\Quote\Address\CarrierFactoryInterface $carrierFactory,
         PriceCurrencyInterface $priceCurrency,
-        array $data = array()
+        array $data = []
     ) {
         $this->priceCurrency = $priceCurrency;
         $this->_directoryBlock = $directoryBlock;
@@ -122,7 +104,7 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
     /**
      * Get Address Model
      *
-     * @return \Magento\Sales\Model\Quote\Address
+     * @return \Magento\Quote\Model\Quote\Address
      */
     public function getAddress()
     {
@@ -214,6 +196,7 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
      * Show City in Shipping Estimation
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getCityActive()
     {
@@ -224,6 +207,7 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
      * Show State in Shipping Estimation. Result updated using plugins
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getStateActive()
     {
@@ -254,7 +238,7 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
     public function getCarriers()
     {
         if (null === $this->_carriers) {
-            $this->_carriers = array();
+            $this->_carriers = [];
             $this->getEstimateRates();
             foreach ($this->_rates as $rateGroup) {
                 if (!empty($rateGroup)) {
@@ -315,10 +299,10 @@ class Shipping extends \Magento\Checkout\Block\Cart\AbstractCart
     /**
      * Get shipping price html
      *
-     * @param \Magento\Sales\Model\Quote\Address\Rate $shippingRate
+     * @param \Magento\Quote\Model\Quote\Address\Rate $shippingRate
      * @return string
      */
-    public function getShippingPriceHtml(\Magento\Sales\Model\Quote\Address\Rate $shippingRate)
+    public function getShippingPriceHtml(\Magento\Quote\Model\Quote\Address\Rate $shippingRate)
     {
         /** @var \Magento\Checkout\Block\Shipping\Price $block */
         $block = $this->getLayout()->getBlock('checkout.shipping.price');

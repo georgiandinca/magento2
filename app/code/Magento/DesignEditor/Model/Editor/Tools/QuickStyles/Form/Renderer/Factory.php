@@ -1,26 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\DesignEditor\Model\Editor\Tools\QuickStyles\Form\Renderer;
 
 use Magento\Framework\Data\Form\Element\Renderer\RendererInterface;
@@ -46,7 +31,7 @@ class Factory
      *
      * @var array
      */
-    protected $_rendererByElement = array(
+    protected $_rendererByElement = [
         'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Element\Column' => 'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Renderer\Column',
         'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Element\ColorPicker' => 'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Renderer\ColorPicker',
         'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Element\Logo' => 'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Renderer\Composite',
@@ -56,8 +41,8 @@ class Factory
         'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Element\FontPicker' => 'Magento\Backend\Block\Widget\Form\Renderer\Fieldset\Element',
         'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Element\BackgroundUploader' => 'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Renderer\BackgroundUploader',
         'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Element\ImageUploader' => 'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Renderer\ImageUploader',
-        'Magento\Framework\Data\Form\Element\Checkbox' => 'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Renderer\Checkbox'
-    );
+        'Magento\Framework\Data\Form\Element\Checkbox' => 'Magento\DesignEditor\Block\Adminhtml\Editor\Form\Renderer\Checkbox',
+    ];
 
     /**
      * Storage of renderers that could be shared between elements
@@ -65,7 +50,7 @@ class Factory
      * @var array
      * @see self::create()
      */
-    protected $_sharedRenderers = array();
+    protected $_sharedRenderers = [];
 
     /**
      * @param \Magento\Framework\View\LayoutInterface $layout
@@ -81,13 +66,13 @@ class Factory
      * @param string $elementClassName
      * @param string $rendererName
      * @return RendererInterface
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function create($elementClassName, $rendererName)
     {
         if (!isset($this->_rendererByElement[$elementClassName])) {
-            throw new \Magento\Framework\Model\Exception(
-                sprintf('No renderer registered for elements of class "%s"', $elementClassName)
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __('No renderer registered for elements of class "%1"', $elementClassName)
             );
         }
         $rendererClass = $this->_rendererByElement[$elementClassName];

@@ -1,26 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\GoogleShopping\Model;
 
 /**
@@ -52,13 +37,6 @@ class Service extends \Magento\Framework\Object
     protected $_config;
 
     /**
-     * Log adapter factory
-     *
-     * @var \Magento\Framework\Logger\AdapterFactory
-     */
-    protected $_logAdapterFactory;
-
-    /**
      * Service
      * @var \Magento\Framework\Gdata\Gshopping\Content
      */
@@ -71,25 +49,25 @@ class Service extends \Magento\Framework\Object
     protected $_contentFactory;
 
     /**
-     * Constructor
-     *
-     * By default is looking for first argument as array and assigns it as object
-     * attributes This behavior may change in child classes
-     *
-     * @param \Magento\Framework\Logger\AdapterFactory $logAdapterFactory
+     * @var \Psr\Log\LoggerInterface
+     */
+    protected $logger;
+
+    /**
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Registry $coreRegistry
-     * @param \Magento\GoogleShopping\Model\Config $config
+     * @param Config $config
      * @param \Magento\Framework\Gdata\Gshopping\ContentFactory $contentFactory
      * @param array $data
      */
     public function __construct(
-        \Magento\Framework\Logger\AdapterFactory $logAdapterFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Registry $coreRegistry,
         \Magento\GoogleShopping\Model\Config $config,
         \Magento\Framework\Gdata\Gshopping\ContentFactory $contentFactory,
-        array $data = array()
+        array $data = []
     ) {
-        $this->_logAdapterFactory = $logAdapterFactory;
+        $this->logger = $logger;
         $this->_coreRegistry = $coreRegistry;
         $this->_config = $config;
         $this->_contentFactory = $contentFactory;
@@ -102,7 +80,7 @@ class Service extends \Magento\Framework\Object
      * @param int $storeId
      * @param string $loginToken
      * @param string $loginCaptcha
-     * @throws \Magento\Framework\Model\Exception On http connection failure
+     * @throws \Magento\Framework\Exception\LocalizedException On http connection failure
      * @return \Zend_Http_Client
      */
     public function getClient($storeId = null, $loginToken = null, $loginCaptcha = null)
@@ -112,9 +90,8 @@ class Service extends \Magento\Framework\Object
         $type = $this->getConfig()->getAccountType($storeId);
 
         // Create an authenticated HTTP client
-        $errorMsg = __(
-            'Sorry, but we can\'t connect to Google Content. Please check the account settings in your store configuration.'
-        );
+        $errorMsg = 'Sorry, but we can\'t connect to Google Content.'
+            . 'Please check the account settings in your store configuration.';
         try {
             if (!$this->_coreRegistry->registry($this->_clientRegistryId)) {
                 $client = \Zend_Gdata_ClientLogin::getHttpClient(
@@ -128,16 +105,16 @@ class Service extends \Magento\Framework\Object
                     \Zend_Gdata_ClientLogin::CLIENTLOGIN_URI,
                     $type
                 );
-                $configTimeout = array('timeout' => 60);
+                $configTimeout = ['timeout' => 60];
                 $client->setConfig($configTimeout);
                 $this->_coreRegistry->register($this->_clientRegistryId, $client);
             }
         } catch (\Zend_Gdata_App_CaptchaRequiredException $e) {
             throw $e;
         } catch (\Zend_Gdata_App_HttpException $e) {
-            throw new \Magento\Framework\Model\Exception($errorMsg . __('Error: %1', $e->getMessage()));
+            throw new \Magento\Framework\Exception\LocalizedException(__('%1 Error: %2', $errorMsg, $e->getMessage()));
         } catch (\Zend_Gdata_App_AuthException $e) {
-            throw new \Magento\Framework\Model\Exception($errorMsg . __('Error: %1', $e->getMessage()));
+            throw new \Magento\Framework\Exception\LocalizedException(__('%1 Error: %2', $errorMsg, $e->getMessage()));
         }
 
         return $this->_coreRegistry->registry($this->_clientRegistryId);
@@ -168,12 +145,7 @@ class Service extends \Magento\Framework\Object
             $this->_service = $this->_connect($storeId);
 
             if ($this->getConfig()->getIsDebug($storeId)) {
-                $this->_service->setLogAdapter(
-                    $this->_logAdapterFactory->create(array('fileName' => 'googleshopping.log')),
-                    'log'
-                )->setDebug(
-                    true
-                );
+                $this->_service->setLogAdapter($this->logger, 'debug')->setDebug(true);
             }
         }
         return $this->_service;
@@ -211,7 +183,7 @@ class Service extends \Magento\Framework\Object
     {
         $accountId = $this->getConfig()->getAccountId($storeId);
         $client = $this->getClient($storeId);
-        $service = $this->_contentFactory->create(array('client' => $client, 'accountId' => $accountId));
+        $service = $this->_contentFactory->create(['client' => $client, 'accountId' => $accountId]);
         return $service;
     }
 }

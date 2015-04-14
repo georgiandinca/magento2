@@ -1,31 +1,40 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\GoogleShopping\Controller\Adminhtml\Googleshopping\Items;
+
+use Magento\Backend\App\Action;
+use Magento\Framework\Notification\NotifierInterface;
 
 class Index extends \Magento\GoogleShopping\Controller\Adminhtml\Googleshopping\Items
 {
+    /**
+     * @var \Magento\Framework\Url\DecoderInterface
+     */
+    protected $urlDecoder;
+
+    /**
+     * @param Action\Context $context
+     * @param NotifierInterface $notifier
+     * @param \Magento\Framework\Url\EncoderInterface $urlEncoder
+     * @param \Magento\Framework\Url\DecoderInterface $urlDecoder
+     */
+    public function __construct(
+        Action\Context $context,
+        NotifierInterface $notifier,
+        \Magento\Framework\Url\EncoderInterface $urlEncoder,
+        \Magento\Framework\Url\DecoderInterface $urlDecoder
+    ) {
+        parent::__construct($context, $notifier, $urlEncoder);
+        $this->urlDecoder = $urlDecoder;
+    }
+
     /**
      * Initialize general settings for action
      *
@@ -53,22 +62,21 @@ class Index extends \Magento\GoogleShopping\Controller\Adminhtml\Googleshopping\
      */
     public function execute()
     {
-        $this->_title->add(__('Google Content Items'));
-
         if (0 === (int)$this->getRequest()->getParam('store')) {
             $this->_redirect(
                 'adminhtml/*/',
-                array(
+                [
                     'store' => $this->_objectManager->get(
-                        'Magento\Framework\StoreManagerInterface'
+                        'Magento\Store\Model\StoreManagerInterface'
                     )->getStore()->getId(),
                     '_current' => true
-                )
+                ]
             );
             return;
         }
 
         $this->_initAction();
+        $this->_view->getPage()->getConfig()->getTitle()->prepend(__('Google Content Items'));
 
         $contentBlock = $this->_view->getLayout()->createBlock(
             'Magento\GoogleShopping\Block\Adminhtml\Items'
@@ -78,16 +86,12 @@ class Index extends \Magento\GoogleShopping\Controller\Adminhtml\Googleshopping\
 
         if ($this->getRequest()->getParam('captcha_token') && $this->getRequest()->getParam('captcha_url')) {
             $contentBlock->setGcontentCaptchaToken(
-                $this->_objectManager->get(
-                    'Magento\Core\Helper\Data'
-                )->urlDecode(
+                $this->urlDecoder->decode(
                     $this->getRequest()->getParam('captcha_token')
                 )
             );
             $contentBlock->setGcontentCaptchaUrl(
-                $this->_objectManager->get(
-                    'Magento\Core\Helper\Data'
-                )->urlDecode(
+                $this->urlDecoder->decode(
                     $this->getRequest()->getParam('captcha_url')
                 )
             );

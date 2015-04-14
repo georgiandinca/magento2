@@ -1,31 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Sales\Model\Resource;
 
-use Magento\Framework\Model\Resource\Db\AbstractDb;
-use Magento\Framework\DB\Adapter\AdapterInterface;
 use Magento\Framework\App\Resource as AppResource;
+use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\Model\Resource\Db\AbstractDb;
 
 /**
  * Class AbstractGrid
@@ -45,20 +27,12 @@ abstract class AbstractGrid extends AbstractDb implements GridInterface
     /**
      * @var string
      */
-    protected $orderTableName = 'sales_flat_order';
+    protected $orderTableName = 'sales_order';
 
     /**
      * @var string
      */
-    protected $addressTableName = 'sales_flat_order_address';
-
-    /**
-     * @param AppResource $resource
-     */
-    public function __construct(AppResource $resource)
-    {
-        parent::__construct($resource);
-    }
+    protected $addressTableName = 'sales_order_address';
 
     /**
      * Resource initialization
@@ -96,5 +70,25 @@ abstract class AbstractGrid extends AbstractDb implements GridInterface
             $this->getTable($this->gridTableName),
             [($field ?: 'entity_id') . ' = ?' => $value]
         );
+    }
+
+    /**
+     * Returns update time of the last row in the grid.
+     *
+     * If there are no rows in the grid, default value will be returned.
+     *
+     * @param string $default
+     * @return string
+     */
+    protected function getLastUpdatedAtValue($default = '0000-00-00 00:00:00')
+    {
+        $select = $this->getConnection()->select()
+            ->from($this->getTable($this->gridTableName), ['updated_at'])
+            ->order('updated_at DESC')
+            ->limit(1);
+
+        $row = $this->getConnection()->fetchRow($select);
+
+        return isset($row['updated_at']) ? $row['updated_at'] : $default;
     }
 }

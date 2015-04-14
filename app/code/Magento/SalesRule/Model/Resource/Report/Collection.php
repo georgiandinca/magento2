@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\SalesRule\Model\Resource\Report;
 
@@ -42,14 +24,14 @@ class Collection extends \Magento\Sales\Model\Resource\Report\Collection\Abstrac
      *
      * @var string
      */
-    protected $_aggregationTable = 'coupon_aggregated';
+    protected $_aggregationTable = 'salesrule_coupon_aggregated';
 
     /**
      * Array of columns that should be aggregated
      *
      * @var array
      */
-    protected $_selectedColumns = array();
+    protected $_selectedColumns = [];
 
     /**
      * Array where rules ids stored
@@ -59,17 +41,22 @@ class Collection extends \Magento\Sales\Model\Resource\Report\Collection\Abstrac
     protected $_rulesIdsFilter;
 
     /**
-     * @param \Magento\Core\Model\EntityFactory $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @var \Magento\SalesRule\Model\Resource\Report\RuleFactory $ruleFactory
+     */
+    protected $_ruleFactory;
+
+    /**
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
-     * @param \Magento\Sales\Model\Resource\Report $resource
      * @param \Magento\SalesRule\Model\Resource\Report\RuleFactory $ruleFactory
+     * @param \Magento\Sales\Model\Resource\Report $resource
      * @param mixed $connection
      */
     public function __construct(
-        \Magento\Core\Model\EntityFactory $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Sales\Model\Resource\Report $resource,
@@ -101,7 +88,7 @@ class Collection extends \Magento\Sales\Model\Resource\Report\Collection\Abstrac
         }
 
         if (!$this->isTotals() && !$this->isSubTotals()) {
-            $this->_selectedColumns = array(
+            $this->_selectedColumns = [
                 'period' => $this->_periodFormat,
                 'coupon_code',
                 'rule_name',
@@ -111,8 +98,8 @@ class Collection extends \Magento\Sales\Model\Resource\Report\Collection\Abstrac
                 'total_amount' => 'SUM(total_amount)',
                 'subtotal_amount_actual' => 'SUM(subtotal_amount_actual)',
                 'discount_amount_actual' => 'SUM(discount_amount_actual)',
-                'total_amount_actual' => 'SUM(total_amount_actual)'
-            );
+                'total_amount_actual' => 'SUM(total_amount_actual)',
+            ];
         }
 
         if ($this->isTotals()) {
@@ -120,7 +107,7 @@ class Collection extends \Magento\Sales\Model\Resource\Report\Collection\Abstrac
         }
 
         if ($this->isSubTotals()) {
-            $this->_selectedColumns = $this->getAggregatedColumns() + array('period' => $this->_periodFormat);
+            $this->_selectedColumns = $this->getAggregatedColumns() + ['period' => $this->_periodFormat];
         }
 
         return $this->_selectedColumns;
@@ -129,32 +116,32 @@ class Collection extends \Magento\Sales\Model\Resource\Report\Collection\Abstrac
     /**
      * Add selected data
      *
-     * @return $this
+     * @return Collection
      */
-    protected function _initSelect()
+    protected function _applyAggregatedTable()
     {
         $this->getSelect()->from($this->getResource()->getMainTable(), $this->_getSelectedColumns());
         if ($this->isSubTotals()) {
             $this->getSelect()->group($this->_periodFormat);
         } elseif (!$this->isTotals()) {
             $this->getSelect()->group(
-                array(
+                [
                     $this->_periodFormat,
-                    'coupon_code'
-                )
+                    'coupon_code',
+                ]
             );
         }
 
-        return parent::_initSelect();
+        return parent::_applyAggregatedTable();
     }
 
     /**
      * Add filtering by rules ids
      *
      * @param array $rulesList
-     * @return $this
+     * @return Collection
      */
-    public function addRuleFilter($rulesList)
+    public function addRuleFilter(array $rulesList)
     {
         $this->_rulesIdsFilter = $rulesList;
         return $this;
@@ -171,9 +158,9 @@ class Collection extends \Magento\Sales\Model\Resource\Report\Collection\Abstrac
             return $this;
         }
 
-        $rulesList = $this->_ruleFactory->getUniqRulesNamesList();
+        $rulesList = $this->_ruleFactory->create()->getUniqRulesNamesList();
 
-        $rulesFilterSqlParts = array();
+        $rulesFilterSqlParts = [];
         foreach ($this->_rulesIdsFilter as $ruleId) {
             if (!isset($rulesList[$ruleId])) {
                 continue;
@@ -183,7 +170,7 @@ class Collection extends \Magento\Sales\Model\Resource\Report\Collection\Abstrac
         }
 
         if (!empty($rulesFilterSqlParts)) {
-            $this->getSelect()->where(implode($rulesFilterSqlParts, ' OR '));
+            $this->getSelect()->where(implode(' OR ', $rulesFilterSqlParts));
         }
         return $this;
     }

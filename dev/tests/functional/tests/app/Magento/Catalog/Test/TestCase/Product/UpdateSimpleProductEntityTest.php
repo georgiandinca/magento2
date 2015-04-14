@@ -1,44 +1,23 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Test\TestCase\Product;
 
-use Mtf\TestCase\Injectable;
-use Mtf\Fixture\FixtureFactory;
 use Magento\Catalog\Test\Fixture\CatalogProductSimple;
-use Magento\Catalog\Test\Fixture\CatalogCategory;
 use Magento\Catalog\Test\Page\Adminhtml\CatalogProductEdit;
 use Magento\Catalog\Test\Page\Adminhtml\CatalogProductIndex;
+use Magento\Mtf\ObjectManager;
+use Magento\Mtf\TestCase\Injectable;
 
 /**
- * Test Creation for UpdateProductSimpleEntity
- *
  * Test Flow:
  *
  * Precondition:
- * Category is created.
- * Product is created and assigned to created category.
+ * 1. Category is created.
+ * 2. Product is created and assigned to created category.
  *
  * Steps:
  * 1. Login to backend.
@@ -48,17 +27,16 @@ use Magento\Catalog\Test\Page\Adminhtml\CatalogProductIndex;
  * 5. Click "Save".
  * 6. Perform asserts.
  *
- * @group Products_(CS)
+ * @group Products_(MX)
  * @ZephyrId MAGETWO-23544
  */
 class UpdateSimpleProductEntityTest extends Injectable
 {
-    /**
-     * Simple product fixture
-     *
-     * @var CatalogProductSimple
-     */
-    protected $product;
+    /* tags */
+    const TEST_TYPE = 'acceptance_test';
+    const MVP = 'yes';
+    const DOMAIN = 'MX';
+    /* end tags */
 
     /**
      * Product page with a grid
@@ -75,47 +53,16 @@ class UpdateSimpleProductEntityTest extends Injectable
     protected $editProductPage;
 
     /**
-     * Prepare data
-     *
-     * @param CatalogCategory $category
-     * @return array
-     */
-    public function __prepare(CatalogCategory $category)
-    {
-        $category->persist();
-        return [
-            'category' => $category
-        ];
-    }
-
-    /**
      * Injection data
      *
      * @param CatalogProductIndex $productGrid
      * @param CatalogProductEdit $editProductPage
-     * @param CatalogCategory $category
-     * @param FixtureFactory $fixtureFactory
      * @return void
      */
     public function __inject(
         CatalogProductIndex $productGrid,
-        CatalogProductEdit $editProductPage,
-        CatalogCategory $category,
-        FixtureFactory $fixtureFactory
+        CatalogProductEdit $editProductPage
     ) {
-        $this->product = $fixtureFactory->createByCode(
-            'catalogProductSimple',
-            [
-                'dataSet' => 'default',
-                'data' => [
-                    'category_ids' => [
-                        'category' => $category
-                    ]
-                ]
-            ]
-        );
-        $this->product->persist();
-
         $this->productGrid = $productGrid;
         $this->editProductPage = $editProductPage;
     }
@@ -123,14 +70,29 @@ class UpdateSimpleProductEntityTest extends Injectable
     /**
      * Run update product simple entity test
      *
+     * @param CatalogProductSimple $initialProduct
      * @param CatalogProductSimple $product
-     * @return void
+     * @return array
      */
-    public function testUpdate(CatalogProductSimple $product)
+    public function test(CatalogProductSimple $initialProduct, CatalogProductSimple $product)
     {
-        $filter = ['sku' => $this->product->getSku()];
-        $this->productGrid->open()->getProductGrid()->searchAndOpen($filter);
+        // Preconditions
+        $initialProduct->persist();
+        $initialCategory = $initialProduct->hasData('category_ids')
+            ? $initialProduct->getDataFieldConfig('category_ids')['source']->getCategories()[0]
+            : null;
+        $category = $product->hasData('category_ids') && $product->getCategoryIds()[0]
+            ? $product->getDataFieldConfig('category_ids')['source']->getCategories()[0]
+            : $initialCategory;
+
+        // Steps
+        $filter = ['sku' => $initialProduct->getSku()];
+
+        $this->productGrid->open();
+        $this->productGrid->getProductGrid()->searchAndOpen($filter);
         $this->editProductPage->getProductForm()->fill($product);
         $this->editProductPage->getFormPageActions()->save();
+
+        return ['category' => $category];
     }
 }

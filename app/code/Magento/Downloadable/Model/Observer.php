@@ -1,41 +1,21 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Downloadable\Model;
+
+use Magento\Store\Model\ScopeInterface;
 
 /**
  * Downloadable Products Observer
  *
  * @author      Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Observer
 {
     const XML_PATH_DISABLE_GUEST_CHECKOUT = 'catalog/downloadable/disable_guest_checkout';
-
-    /**
-     * @var \Magento\Core\Helper\Data
-     */
-    protected $_helper;
 
     /**
      * Core store config
@@ -75,7 +55,6 @@ class Observer
     protected $_objectCopyService;
 
     /**
-     * @param \Magento\Core\Helper\Data $coreData
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Downloadable\Model\Link\PurchasedFactory $purchasedFactory
      * @param \Magento\Catalog\Model\ProductFactory $productFactory
@@ -85,7 +64,6 @@ class Observer
      * @param \Magento\Framework\Object\Copy $objectCopyService
      */
     public function __construct(
-        \Magento\Core\Helper\Data $coreData,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         \Magento\Downloadable\Model\Link\PurchasedFactory $purchasedFactory,
         \Magento\Catalog\Model\ProductFactory $productFactory,
@@ -94,7 +72,6 @@ class Observer
         \Magento\Downloadable\Model\Resource\Link\Purchased\Item\CollectionFactory $itemsFactory,
         \Magento\Framework\Object\Copy $objectCopyService
     ) {
-        $this->_helper = $coreData;
         $this->_scopeConfig = $scopeConfig;
         $this->_purchasedFactory = $purchasedFactory;
         $this->_productFactory = $productFactory;
@@ -127,6 +104,8 @@ class Observer
      *
      * @param \Magento\Framework\Object $observer
      * @return $this
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function saveDownloadableOrderItem($observer)
     {
@@ -171,7 +150,7 @@ class Observer
                     ->_scopeConfig
                     ->getValue(
                         \Magento\Downloadable\Model\Link::XML_PATH_LINKS_TITLE,
-                        \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+                        ScopeInterface::SCOPE_STORE
                     );
                 $linkPurchased->setLinkSectionTitle($linkSectionTitle)->save();
                 foreach ($linkIds as $linkId) {
@@ -246,6 +225,8 @@ class Observer
      *
      * @param \Magento\Framework\Object $observer
      * @return $this
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function setLinkStatus($observer)
     {
@@ -258,18 +239,18 @@ class Observer
 
         /* @var $order \Magento\Sales\Model\Order */
         $status = '';
-        $linkStatuses = array(
+        $linkStatuses = [
             'pending' => \Magento\Downloadable\Model\Link\Purchased\Item::LINK_STATUS_PENDING,
             'expired' => \Magento\Downloadable\Model\Link\Purchased\Item::LINK_STATUS_EXPIRED,
             'avail' => \Magento\Downloadable\Model\Link\Purchased\Item::LINK_STATUS_AVAILABLE,
             'payment_pending' => \Magento\Downloadable\Model\Link\Purchased\Item::LINK_STATUS_PENDING_PAYMENT,
-            'payment_review' => \Magento\Downloadable\Model\Link\Purchased\Item::LINK_STATUS_PAYMENT_REVIEW
-        );
+            'payment_review' => \Magento\Downloadable\Model\Link\Purchased\Item::LINK_STATUS_PAYMENT_REVIEW,
+        ];
 
-        $downloadableItemsStatuses = array();
+        $downloadableItemsStatuses = [];
         $orderItemStatusToEnable = $this->_scopeConfig->getValue(
             \Magento\Downloadable\Model\Link\Purchased\Item::XML_PATH_ORDER_ITEM_STATUS,
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+            ScopeInterface::SCOPE_STORE,
             $order->getStoreId()
         );
 
@@ -279,10 +260,10 @@ class Observer
             || $order->getState() == \Magento\Sales\Model\Order::STATE_CLOSED
             || $order->getState() == \Magento\Sales\Model\Order::STATE_COMPLETE
         ) {
-            $expiredStatuses = array(
+            $expiredStatuses = [
                 \Magento\Sales\Model\Order\Item::STATUS_CANCELED,
-                \Magento\Sales\Model\Order\Item::STATUS_REFUNDED
-            );
+                \Magento\Sales\Model\Order\Item::STATUS_REFUNDED,
+            ];
             foreach ($order->getAllItems() as $item) {
                 if ($item->getProductType() == \Magento\Downloadable\Model\Product\Type::TYPE_DOWNLOADABLE
                     || $item->getRealProductType() == \Magento\Downloadable\Model\Product\Type::TYPE_DOWNLOADABLE
@@ -299,7 +280,7 @@ class Observer
         } elseif ($order->getState() == \Magento\Sales\Model\Order::STATE_PAYMENT_REVIEW) {
             $status = $linkStatuses['payment_review'];
         } else {
-            $availableStatuses = array($orderItemStatusToEnable, \Magento\Sales\Model\Order\Item::STATUS_INVOICED);
+            $availableStatuses = [$orderItemStatusToEnable, \Magento\Sales\Model\Order\Item::STATUS_INVOICED];
             foreach ($order->getAllItems() as $item) {
                 if ($item->getProductType() == \Magento\Downloadable\Model\Product\Type::TYPE_DOWNLOADABLE
                     || $item->getRealProductType() == \Magento\Downloadable\Model\Product\Type::TYPE_DOWNLOADABLE
@@ -334,7 +315,7 @@ class Observer
         if ($downloadableItemsStatuses) {
             $linkPurchased = $this->_createItemsCollection()->addFieldToFilter(
                 'order_item_id',
-                array('in' => array_keys($downloadableItemsStatuses))
+                ['in' => array_keys($downloadableItemsStatuses)]
             );
             foreach ($linkPurchased as $link) {
                 if ($link->getStatus() != $linkStatuses['expired']
@@ -355,29 +336,29 @@ class Observer
      */
     public function isAllowedGuestCheckout(\Magento\Framework\Event\Observer $observer)
     {
-        $quote = $observer->getEvent()->getQuote();
-        /* @var $quote \Magento\Sales\Model\Quote */
         $store = $observer->getEvent()->getStore();
         $result = $observer->getEvent()->getResult();
 
-        $isContain = false;
+        $result->setIsAllowed(true);
+
+        if (!$this->_scopeConfig->isSetFlag(
+            self::XML_PATH_DISABLE_GUEST_CHECKOUT,
+            ScopeInterface::SCOPE_STORE,
+            $store
+        )) {
+            return $this;
+        }
+
+        /* @var $quote \Magento\Quote\Model\Quote */
+        $quote = $observer->getEvent()->getQuote();
 
         foreach ($quote->getAllItems() as $item) {
             if (($product = $item->getProduct())
                 && $product->getTypeId() == \Magento\Downloadable\Model\Product\Type::TYPE_DOWNLOADABLE
             ) {
-                $isContain = true;
+                $result->setIsAllowed(false);
+                break;
             }
-        }
-
-        if ($isContain
-            && $this->_scopeConfig->isSetFlag(
-                self::XML_PATH_DISABLE_GUEST_CHECKOUT,
-                \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
-                $store
-            )
-        ) {
-            $result->setIsAllowed(false);
         }
 
         return $this;

@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Eav\Model\Resource\Attribute;
 
@@ -52,38 +34,32 @@ abstract class Collection extends \Magento\Eav\Model\Resource\Entity\Attribute\C
     protected $_entityType;
 
     /**
-     * @var \Magento\Eav\Model\Config
-     */
-    protected $_eavConfig;
-
-    /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
     /**
-     * @param \Magento\Core\Model\EntityFactory $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Eav\Model\Config $eavConfig
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param mixed $connection
      * @param \Magento\Framework\Model\Resource\Db\AbstractDb $resource
      */
     public function __construct(
-        \Magento\Core\Model\EntityFactory $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Eav\Model\Config $eavConfig,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         $connection = null,
         \Magento\Framework\Model\Resource\Db\AbstractDb $resource = null
     ) {
         $this->_storeManager = $storeManager;
-        $this->_eavConfig = $eavConfig;
-        parent::__construct($entityFactory, $logger, $fetchStrategy, $eventManager, $connection, $resource);
+        parent::__construct($entityFactory, $logger, $fetchStrategy, $eventManager, $eavConfig, $connection, $resource);
     }
 
     /**
@@ -121,7 +97,7 @@ abstract class Collection extends \Magento\Eav\Model\Resource\Entity\Attribute\C
     public function getEntityType()
     {
         if ($this->_entityType === null) {
-            $this->_entityType = $this->_eavConfig->getEntityType($this->_getEntityTypeCode());
+            $this->_entityType = $this->eavConfig->getEntityType($this->_getEntityTypeCode());
         }
         return $this->_entityType;
     }
@@ -164,17 +140,17 @@ abstract class Collection extends \Magento\Eav\Model\Resource\Entity\Attribute\C
         $entityType = $this->getEntityType();
         $extraTable = $entityType->getAdditionalAttributeTable();
         $mainDescribe = $this->getConnection()->describeTable($this->getResource()->getMainTable());
-        $mainColumns = array();
+        $mainColumns = [];
 
         foreach (array_keys($mainDescribe) as $columnName) {
             $mainColumns[$columnName] = $columnName;
         }
 
-        $select->from(array('main_table' => $this->getResource()->getMainTable()), $mainColumns);
+        $select->from(['main_table' => $this->getResource()->getMainTable()], $mainColumns);
 
         // additional attribute data table
         $extraDescribe = $connection->describeTable($this->getTable($extraTable));
-        $extraColumns = array();
+        $extraColumns = [];
         foreach (array_keys($extraDescribe) as $columnName) {
             if (isset($mainColumns[$columnName])) {
                 continue;
@@ -184,7 +160,7 @@ abstract class Collection extends \Magento\Eav\Model\Resource\Entity\Attribute\C
 
         $this->addBindParam('mt_entity_type_id', (int)$entityType->getId());
         $select->join(
-            array('additional_table' => $this->getTable($extraTable)),
+            ['additional_table' => $this->getTable($extraTable)],
             'additional_table.attribute_id = main_table.attribute_id',
             $extraColumns
         )->where(
@@ -195,7 +171,7 @@ abstract class Collection extends \Magento\Eav\Model\Resource\Entity\Attribute\C
 
         $scopeDescribe = $connection->describeTable($this->_getEavWebsiteTable());
         unset($scopeDescribe['attribute_id']);
-        $scopeColumns = array();
+        $scopeColumns = [];
         foreach (array_keys($scopeDescribe) as $columnName) {
             if ($columnName == 'website_id') {
                 $scopeColumns['scope_website_id'] = $columnName;
@@ -221,7 +197,7 @@ abstract class Collection extends \Magento\Eav\Model\Resource\Entity\Attribute\C
         }
 
         $select->joinLeft(
-            array('scope_table' => $this->_getEavWebsiteTable()),
+            ['scope_table' => $this->_getEavWebsiteTable()],
             'scope_table.attribute_id = main_table.attribute_id AND scope_table.website_id = :scope_website_id',
             $scopeColumns
         );
@@ -237,6 +213,7 @@ abstract class Collection extends \Magento\Eav\Model\Resource\Entity\Attribute\C
      *
      * @param  int $type
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function setEntityTypeFilter($type)
     {
@@ -297,6 +274,6 @@ abstract class Collection extends \Magento\Eav\Model\Resource\Entity\Attribute\C
      */
     public function addExcludeHiddenFrontendFilter()
     {
-        return $this->addFieldToFilter('main_table.frontend_input', array('neq' => 'hidden'));
+        return $this->addFieldToFilter('main_table.frontend_input', ['neq' => 'hidden']);
     }
 }

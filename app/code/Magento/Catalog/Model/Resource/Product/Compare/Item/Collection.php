@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Model\Resource\Product\Compare\Item;
 
@@ -28,6 +10,7 @@ namespace Magento\Catalog\Model\Resource\Product\Compare\Item;
  *
  * @author      Magento Core Team <core@magentocommerce.com>
  * @SuppressWarnings(PHPMD.LongVariable)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
 {
@@ -67,8 +50,8 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
     protected $_catalogProductCompareItem;
 
     /**
-     * @param \Magento\Core\Model\EntityFactory $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Eav\Model\Config $eavConfig
@@ -76,7 +59,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      * @param \Magento\Eav\Model\EntityFactory $eavEntityFactory
      * @param \Magento\Catalog\Model\Resource\Helper $resourceHelper
      * @param \Magento\Framework\Validator\UniversalFactory $universalFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Module\Manager $moduleManager
      * @param \Magento\Catalog\Model\Indexer\Product\Flat\State $catalogProductFlatState
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
@@ -85,15 +68,16 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\Customer\Model\Session $customerSession
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
+     * @param \Magento\Customer\Api\GroupManagementInterface $groupManagement
      * @param \Magento\Catalog\Model\Resource\Product\Compare\Item $catalogProductCompareItem
      * @param \Magento\Catalog\Helper\Product\Compare $catalogProductCompare
      * @param \Zend_Db_Adapter_Abstract $connection
-     * 
+     *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        \Magento\Core\Model\EntityFactory $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Eav\Model\Config $eavConfig,
@@ -101,7 +85,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
         \Magento\Eav\Model\EntityFactory $eavEntityFactory,
         \Magento\Catalog\Model\Resource\Helper $resourceHelper,
         \Magento\Framework\Validator\UniversalFactory $universalFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Module\Manager $moduleManager,
         \Magento\Catalog\Model\Indexer\Product\Flat\State $catalogProductFlatState,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -110,6 +94,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Customer\Model\Session $customerSession,
         \Magento\Framework\Stdlib\DateTime $dateTime,
+        \Magento\Customer\Api\GroupManagementInterface $groupManagement,
         \Magento\Catalog\Model\Resource\Product\Compare\Item $catalogProductCompareItem,
         \Magento\Catalog\Helper\Product\Compare $catalogProductCompare,
         $connection = null
@@ -135,6 +120,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
             $localeDate,
             $customerSession,
             $dateTime,
+            $groupManagement,
             $connection
         );
     }
@@ -204,14 +190,14 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
     public function getConditionForJoin()
     {
         if ($this->getCustomerId()) {
-            return array('customer_id' => $this->getCustomerId());
+            return ['customer_id' => $this->getCustomerId()];
         }
 
         if ($this->getVisitorId()) {
-            return array('visitor_id' => $this->getVisitorId());
+            return ['visitor_id' => $this->getVisitorId()];
         }
 
-        return array('customer_id' => array('null' => true), 'visitor_id' => '0');
+        return ['customer_id' => ['null' => true], 'visitor_id' => '0'];
     }
 
     /**
@@ -222,15 +208,15 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
     public function _addJoinToSelect()
     {
         $this->joinTable(
-            array('t_compare' => 'catalog_compare_item'),
+            ['t_compare' => 'catalog_compare_item'],
             'product_id=entity_id',
-            array(
+            [
                 'product_id' => 'product_id',
                 'customer_id' => 'customer_id',
                 'visitor_id' => 'visitor_id',
                 'item_store_id' => 'store_id',
                 'catalog_compare_item_id' => 'catalog_compare_item_id'
-            ),
+            ],
             $this->getConditionForJoin()
         );
 
@@ -247,7 +233,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
     protected function _getAttributeSetIds()
     {
         // prepare compare items table conditions
-        $compareConds = array('compare.product_id=entity.entity_id');
+        $compareConds = ['compare.product_id=entity.entity_id'];
         if ($this->getCustomerId()) {
             $compareConds[] = $this->getConnection()->quoteInto('compare.customer_id = ?', $this->getCustomerId());
         } else {
@@ -256,25 +242,25 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
 
         // prepare website filter
         $websiteId = (int)$this->_storeManager->getStore($this->getStoreId())->getWebsiteId();
-        $websiteConds = array(
+        $websiteConds = [
             'website.product_id = entity.entity_id',
-            $this->getConnection()->quoteInto('website.website_id = ?', $websiteId)
-        );
+            $this->getConnection()->quoteInto('website.website_id = ?', $websiteId),
+        ];
 
         // retrieve attribute sets
         $select = $this->getConnection()->select()->distinct(
             true
         )->from(
-            array('entity' => $this->getEntity()->getEntityTable()),
+            ['entity' => $this->getEntity()->getEntityTable()],
             'attribute_set_id'
         )->join(
-            array('website' => $this->getTable('catalog_product_website')),
+            ['website' => $this->getTable('catalog_product_website')],
             join(' AND ', $websiteConds),
-            array()
+            []
         )->join(
-            array('compare' => $this->getTable('catalog_compare_item')),
+            ['compare' => $this->getTable('catalog_compare_item')],
             join(' AND ', $compareConds),
-            array()
+            []
         );
         return $this->getConnection()->fetchCol($select);
     }
@@ -306,27 +292,27 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      */
     public function getComparableAttributes()
     {
-        if (is_null($this->_comparableAttributes)) {
-            $this->_comparableAttributes = array();
+        if ($this->_comparableAttributes === null) {
+            $this->_comparableAttributes = [];
             $setIds = $this->_getAttributeSetIds();
             if ($setIds) {
                 $attributeIds = $this->_getAttributeIdsBySetIds($setIds);
 
                 $select = $this->getConnection()->select()->from(
-                    array('main_table' => $this->getTable('eav_attribute'))
+                    ['main_table' => $this->getTable('eav_attribute')]
                 )->join(
-                    array('additional_table' => $this->getTable('catalog_eav_attribute')),
+                    ['additional_table' => $this->getTable('catalog_eav_attribute')],
                     'additional_table.attribute_id=main_table.attribute_id'
                 )->joinLeft(
-                    array('al' => $this->getTable('eav_attribute_label')),
+                    ['al' => $this->getTable('eav_attribute_label')],
                     'al.attribute_id = main_table.attribute_id AND al.store_id = ' . (int)$this->getStoreId(),
-                    array(
+                    [
                         'store_label' => $this->getConnection()->getCheckSql(
                             'al.value IS NULL',
                             'main_table.frontend_label',
                             'al.value'
                         )
-                    )
+                    ]
                 )->where(
                     'additional_table.is_comparable=?',
                     1
@@ -357,7 +343,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
     public function loadComparableAttributes()
     {
         $comparableAttributes = $this->getComparableAttributes();
-        $attributes = array();
+        $attributes = [];
         foreach ($comparableAttributes as $attribute) {
             $attributes[] = $attribute->getAttributeCode();
         }
@@ -388,7 +374,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      */
     public function getProductIds()
     {
-        $ids = array();
+        $ids = [];
         foreach ($this->getItems() as $item) {
             $ids[] = $item->getProductId();
         }

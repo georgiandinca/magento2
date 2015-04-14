@@ -1,33 +1,15 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Pricing\Render;
 
+use Magento\Catalog\Pricing\Price;
+use Magento\Framework\Pricing\Render;
 use Magento\Framework\Pricing\Render\PriceBox as BasePriceBox;
 use Magento\Msrp\Pricing\Price\MsrpPrice;
-use Magento\Framework\Pricing\Render;
-use Magento\Catalog\Pricing\Price;
 
 /**
  * Class for final_price rendering
@@ -42,13 +24,17 @@ class FinalPriceBox extends BasePriceBox
      */
     protected function _toHtml()
     {
+        if (!$this->getSaleableItem() || $this->getSaleableItem()->getCanShowPrice() === false) {
+            return '';
+        }
+
         $result = parent::_toHtml();
 
         try {
             /** @var MsrpPrice $msrpPriceType */
             $msrpPriceType = $this->getSaleableItem()->getPriceInfo()->getPrice('msrp_price');
         } catch (\InvalidArgumentException $e) {
-            $this->_logger->logException($e);
+            $this->_logger->critical($e);
             return $this->wrapResult($result);
         }
 
@@ -60,7 +46,8 @@ class FinalPriceBox extends BasePriceBox
                 MsrpPrice::PRICE_CODE,
                 $this->getSaleableItem(),
                 [
-                    'real_price_html' => $result
+                    'real_price_html' => $result,
+                    'zone' => $this->getZone(),
                 ]
             );
             $result = $msrpBlock->toHtml();
@@ -77,7 +64,10 @@ class FinalPriceBox extends BasePriceBox
      */
     protected function wrapResult($html)
     {
-        return '<div class="price-box ' . $this->getData('css_classes') . '">' . $html . '</div>';
+        return '<div class="price-box ' . $this->getData('css_classes') . '" ' .
+            'data-role="priceBox" ' .
+            'data-product-id="' . $this->getSaleableItem()->getId() . '"' .
+            '>' . $html . '</div>';
     }
 
     /**

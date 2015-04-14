@@ -1,40 +1,19 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *   
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\CatalogUrlRewrite\Model\Product\Plugin;
 
-use Magento\UrlRewrite\Model\UrlPersistInterface;
-use Magento\Catalog\Model\ProductFactory;
-use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
+use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\CatalogImportExport\Model\Import\Product as ImportProduct;
 use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator;
 use Magento\ImportExport\Model\Import as ImportExport;
-use Magento\CatalogImportExport\Model\Import\Product as ImportProduct;
+use Magento\UrlRewrite\Model\UrlPersistInterface;
+use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
 
 class Import
 {
-    /** @var ProductFactory  */
-    protected $productFactory;
-
     /** @var UrlPersistInterface */
     protected $urlPersist;
 
@@ -42,18 +21,23 @@ class Import
     protected $productUrlRewriteGenerator;
 
     /**
-     * @param ProductFactory $productFactory
+     * @var ProductRepositoryInterface
+     */
+    protected $productRepository;
+
+    /**
      * @param UrlPersistInterface $urlPersist
      * @param ProductUrlRewriteGenerator $productUrlRewriteGenerator
+     * @param ProductRepositoryInterface $productRepository
      */
     public function __construct(
-        ProductFactory $productFactory,
         UrlPersistInterface $urlPersist,
-        ProductUrlRewriteGenerator $productUrlRewriteGenerator
+        ProductUrlRewriteGenerator $productUrlRewriteGenerator,
+        ProductRepositoryInterface $productRepository
     ) {
-        $this->productFactory = $productFactory;
         $this->urlPersist = $urlPersist;
         $this->productUrlRewriteGenerator = $productUrlRewriteGenerator;
+        $this->productRepository = $productRepository;
     }
 
     /**
@@ -65,7 +49,7 @@ class Import
     {
         if ($import->getAffectedEntityIds()) {
             foreach ($import->getAffectedEntityIds() as $productId) {
-                $product = $this->productFactory->create()->load($productId);
+                $product = $this->productRepository->getById($productId);
                 $productUrls = $this->productUrlRewriteGenerator->generate($product);
                 if ($productUrls) {
                     $this->urlPersist->replace($productUrls);

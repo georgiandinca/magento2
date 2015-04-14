@@ -1,30 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Newsletter\Model\Resource\Subscriber;
 
 use Magento\Newsletter\Model\Queue as ModelQueue;
-use Magento\Customer\Service\V1\CustomerMetadataServiceInterface as CustomerMetadataService;
 
 /**
  * Newsletter subscribers collection
@@ -66,7 +47,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      *
      * @var array
      */
-    protected $_countFilterPart = array();
+    protected $_countFilterPart = [];
 
     /**
      * Customer Eav data
@@ -76,8 +57,8 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     protected $_customerHelperData;
 
     /**
-     * @param \Magento\Core\Model\EntityFactory $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Eav\Helper\Data $customerHelperData
@@ -85,8 +66,8 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      * @param \Magento\Framework\Model\Resource\Db\AbstractDb $resource
      */
     public function __construct(
-        \Magento\Core\Model\EntityFactory $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Eav\Helper\Data $customerHelperData,
@@ -110,7 +91,6 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
         $this->_queueLinkTable = $this->getTable('newsletter_queue_link');
         $this->_storeTable = $this->getTable('store');
 
-
         // defining mapping for fields represented in several tables
         $this->_map['fields']['customer_lastname'] = 'customer_lastname_table.value';
         $this->_map['fields']['customer_firstname'] = 'customer_firstname_table.value';
@@ -133,9 +113,9 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     public function useQueue(ModelQueue $queue)
     {
         $this->getSelect()->join(
-            array('link' => $this->_queueLinkTable),
+            ['link' => $this->_queueLinkTable],
             "link.subscriber_id = main_table.subscriber_id",
-            array()
+            []
         )->where(
             "link.queue_id = ? ",
             $queue->getId()
@@ -152,7 +132,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     public function useOnlyUnsent()
     {
         if ($this->_queueJoinedFlag) {
-            $this->addFieldToFilter('link.letter_sent_at', array('null' => 1));
+            $this->addFieldToFilter('link.letter_sent_at', ['null' => 1]);
         }
 
         return $this;
@@ -168,32 +148,32 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
         $adapter = $this->getConnection();
 
         $lastNameData = $this->_customerHelperData->getAttributeMetadata(
-            CustomerMetadataService::ENTITY_TYPE_CUSTOMER,
+            \Magento\Customer\Api\CustomerMetadataInterface::ENTITY_TYPE_CUSTOMER,
             'lastname'
         );
         $firstNameData = $this->_customerHelperData->getAttributeMetadata(
-            CustomerMetadataService::ENTITY_TYPE_CUSTOMER,
+            \Magento\Customer\Api\CustomerMetadataInterface::ENTITY_TYPE_CUSTOMER,
             'firstname'
         );
 
         $this->getSelect()
             ->joinLeft(
-                array('customer_lastname_table' => $lastNameData['attribute_table']),
+                ['customer_lastname_table' => $lastNameData['attribute_table']],
                 $adapter->quoteInto(
                     'customer_lastname_table.entity_id=main_table.customer_id
                                      AND customer_lastname_table.attribute_id = ?',
                     (int)$lastNameData['attribute_id']
                 ),
-                array('customer_lastname' => 'value')
+                ['customer_lastname' => 'value']
             )
             ->joinLeft(
-                array('customer_firstname_table' => $firstNameData['attribute_table']),
+                ['customer_firstname_table' => $firstNameData['attribute_table']],
                 $adapter->quoteInto(
                     'customer_firstname_table.entity_id=main_table.customer_id
                                      AND customer_firstname_table.attribute_id = ?',
                     (int)$firstNameData['attribute_id']
                 ),
-                array('customer_firstname' => 'value')
+                ['customer_firstname' => 'value']
             );
 
         return $this;
@@ -206,7 +186,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     public function addSubscriberTypeField()
     {
-        $this->getSelect()->columns(array('type' => new \Zend_Db_Expr($this->_getMappedField('type'))));
+        $this->getSelect()->columns(['type' => new \Zend_Db_Expr($this->_getMappedField('type'))]);
         return $this;
     }
 
@@ -218,9 +198,9 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     public function showStoreInfo()
     {
         $this->getSelect()->join(
-            array('store' => $this->_storeTable),
+            ['store' => $this->_storeTable],
             'store.store_id = main_table.store_id',
-            array('group_id', 'website_id')
+            ['group_id', 'website_id']
         );
 
         return $this;
@@ -233,7 +213,6 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     public function getSelectCountSql()
     {
-
         $select = parent::getSelectCountSql();
         $countSelect = clone $this->getSelect();
 
@@ -249,7 +228,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     public function useOnlyCustomers()
     {
-        $this->addFieldToFilter('main_table.customer_id', array('gt' => 0));
+        $this->addFieldToFilter('main_table.customer_id', ['gt' => 0]);
 
         return $this;
     }
@@ -277,7 +256,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     public function addStoreFilter($storeIds)
     {
-        $this->addFieldToFilter('main_table.store_id', array('in' => $storeIds));
+        $this->addFieldToFilter('main_table.store_id', ['in' => $storeIds]);
         return $this;
     }
 
@@ -285,6 +264,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      * Get queue joined flag
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getQueueJoinedFlag()
     {

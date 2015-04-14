@@ -1,27 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Checkout\Block\Cart;
+
+use Magento\CatalogInventory\Helper\Stock as StockHelper;
 
 /**
  * Cart crosssell list
@@ -48,9 +32,9 @@ class Crosssell extends \Magento\Catalog\Block\Product\AbstractProduct
     protected $_productVisibility;
 
     /**
-     * @var \Magento\CatalogInventory\Model\Stock
+     * @var StockHelper
      */
-    protected $_stock;
+    protected $stockHelper;
 
     /**
      * @var \Magento\Catalog\Model\Product\LinkFactory
@@ -58,7 +42,7 @@ class Crosssell extends \Magento\Catalog\Block\Product\AbstractProduct
     protected $_productLinkFactory;
 
     /**
-     * @var \Magento\Sales\Model\Quote\Item\RelatedProducts
+     * @var \Magento\Quote\Model\Quote\Item\RelatedProducts
      */
     protected $_itemRelationsList;
 
@@ -66,27 +50,27 @@ class Crosssell extends \Magento\Catalog\Block\Product\AbstractProduct
      * @param \Magento\Catalog\Block\Product\Context $context
      * @param \Magento\Checkout\Model\Session $checkoutSession
      * @param \Magento\Catalog\Model\Product\Visibility $productVisibility
-     * @param \Magento\CatalogInventory\Model\Stock $stock
      * @param \Magento\Catalog\Model\Product\LinkFactory $productLinkFactory
-     * @param \Magento\Sales\Model\Quote\Item\RelatedProducts $itemRelationsList
+     * @param \Magento\Quote\Model\Quote\Item\RelatedProducts $itemRelationsList
+     * @param StockHelper $stockHelper
      * @param array $data
-     * 
+     *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Catalog\Block\Product\Context $context,
         \Magento\Checkout\Model\Session $checkoutSession,
         \Magento\Catalog\Model\Product\Visibility $productVisibility,
-        \Magento\CatalogInventory\Model\Stock $stock,
         \Magento\Catalog\Model\Product\LinkFactory $productLinkFactory,
-        \Magento\Sales\Model\Quote\Item\RelatedProducts $itemRelationsList,
-        array $data = array()
+        \Magento\Quote\Model\Quote\Item\RelatedProducts $itemRelationsList,
+        StockHelper $stockHelper,
+        array $data = []
     ) {
         $this->_checkoutSession = $checkoutSession;
         $this->_productVisibility = $productVisibility;
-        $this->_stock = $stock;
         $this->_productLinkFactory = $productLinkFactory;
         $this->_itemRelationsList = $itemRelationsList;
+        $this->stockHelper = $stockHelper;
         parent::__construct(
             $context,
             $data
@@ -102,8 +86,8 @@ class Crosssell extends \Magento\Catalog\Block\Product\AbstractProduct
     public function getItems()
     {
         $items = $this->getData('items');
-        if (is_null($items)) {
-            $items = array();
+        if ($items === null) {
+            $items = [];
             $ninProductIds = $this->_getCartProductIds();
             if ($ninProductIds) {
                 $lastAdded = (int)$this->_getLastAddedProductId();
@@ -161,8 +145,8 @@ class Crosssell extends \Magento\Catalog\Block\Product\AbstractProduct
     protected function _getCartProductIds()
     {
         $ids = $this->getData('_cart_product_ids');
-        if (is_null($ids)) {
-            $ids = array();
+        if ($ids === null) {
+            $ids = [];
             foreach ($this->getQuote()->getAllItems() as $item) {
                 $product = $item->getProduct();
                 if ($product) {
@@ -187,7 +171,7 @@ class Crosssell extends \Magento\Catalog\Block\Product\AbstractProduct
     /**
      * Get quote instance
      *
-     * @return \Magento\Sales\Model\Quote
+     * @return \Magento\Quote\Model\Quote
      */
     public function getQuote()
     {
@@ -211,7 +195,7 @@ class Crosssell extends \Magento\Catalog\Block\Product\AbstractProduct
         );
         $this->_addProductAttributesAndPrices($collection);
 
-        $this->_stock->addInStockFilterToCollection($collection);
+        $this->stockHelper->addInStockFilterToCollection($collection);
 
         return $collection;
     }

@@ -1,51 +1,33 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\CatalogUrlRewrite\Model\Category;
 
 use Magento\Catalog\Model\Category;
-use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator;
-use Magento\UrlRewrite\Service\V1\Data\UrlRewriteBuilder;
+use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
+use Magento\UrlRewrite\Service\V1\Data\UrlRewriteFactory;
 
 class CanonicalUrlRewriteGenerator
 {
     /** @var \Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator */
     protected $categoryUrlPathGenerator;
 
-    /** @var \Magento\UrlRewrite\Service\V1\Data\UrlRewriteBuilder */
-    protected $urlRewriteBuilder;
+    /** @var \Magento\UrlRewrite\Service\V1\Data\UrlRewriteFactory */
+    protected $urlRewriteFactory;
 
     /**
      * @param \Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator $categoryUrlPathGenerator
-     * @param \Magento\UrlRewrite\Service\V1\Data\UrlRewriteBuilder $urlRewriteBuilder
+     * @param \Magento\UrlRewrite\Service\V1\Data\UrlRewriteFactory $urlRewriteFactory
      */
     public function __construct(
         CategoryUrlPathGenerator $categoryUrlPathGenerator,
-        UrlRewriteBuilder $urlRewriteBuilder
+        UrlRewriteFactory $urlRewriteFactory
     ) {
         $this->categoryUrlPathGenerator = $categoryUrlPathGenerator;
-        $this->urlRewriteBuilder = $urlRewriteBuilder;
+        $this->urlRewriteFactory = $urlRewriteFactory;
     }
 
     /**
@@ -57,13 +39,14 @@ class CanonicalUrlRewriteGenerator
      */
     public function generate($storeId, Category $category)
     {
-        return [
-            $this->urlRewriteBuilder->setStoreId($storeId)
+        $urlPath = $this->categoryUrlPathGenerator->getUrlPathWithSuffix($category, $storeId);
+        $result = [
+            $urlPath . '_' . $storeId => $this->urlRewriteFactory->create()->setStoreId($storeId)
                 ->setEntityType(CategoryUrlRewriteGenerator::ENTITY_TYPE)
                 ->setEntityId($category->getId())
-                ->setRequestPath($this->categoryUrlPathGenerator->getUrlPathWithSuffix($category, $storeId))
+                ->setRequestPath($urlPath)
                 ->setTargetPath($this->categoryUrlPathGenerator->getCanonicalUrlPath($category))
-                ->create()
         ];
+        return $result;
     }
 }

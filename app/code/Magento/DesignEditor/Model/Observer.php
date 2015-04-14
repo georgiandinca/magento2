@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\DesignEditor\Model;
 
@@ -31,7 +13,7 @@ use Magento\Framework\Event\Observer as EventObserver;
 class Observer
 {
     /**
-     * @var \Magento\Framework\ObjectManager
+     * @var \Magento\Framework\ObjectManagerInterface
      */
     protected $objectManager;
 
@@ -46,12 +28,12 @@ class Observer
     protected $registry;
 
     /**
-     * @param \Magento\Framework\ObjectManager $objectManager
+     * @param \Magento\Framework\ObjectManagerInterface $objectManager
      * @param \Magento\DesignEditor\Helper\Data $helper
      * @param \Magento\Framework\Registry $registry
      */
     public function __construct(
-        \Magento\Framework\ObjectManager $objectManager,
+        \Magento\Framework\ObjectManagerInterface $objectManager,
         \Magento\DesignEditor\Helper\Data $helper,
         \Magento\Framework\Registry $registry
     ) {
@@ -66,6 +48,7 @@ class Observer
      *
      * @param EventObserver $event
      * @return void
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function clearJs(EventObserver $event)
     {
@@ -77,7 +60,7 @@ class Observer
             return;
         }
 
-        $vdeAssets = array();
+        $vdeAssets = [];
         foreach ($pageAssets->getGroups() as $group) {
             if ($group->getProperty('flag_name') == 'vde_design_mode') {
                 $vdeAssets = array_merge($vdeAssets, $group->getAll());
@@ -117,7 +100,7 @@ class Observer
             /** @var $singleFile \Magento\Theme\Model\Theme\SingleFile */
             $singleFile = $this->objectManager->create(
                 'Magento\Theme\Model\Theme\SingleFile',
-                array('fileService' => $cssService)
+                ['fileService' => $cssService]
             );
             $singleFile->update($theme, $content);
         }
@@ -131,7 +114,7 @@ class Observer
      */
     public function saveChangeTime($event)
     {
-        /** @var $theme \Magento\Core\Model\Theme|null */
+        /** @var $theme \Magento\Theme\Model\Theme|null */
         $theme = $event->getTheme() ?: $event->getDataObject()->getTheme();
         /** @var $change \Magento\DesignEditor\Model\Theme\Change */
         $change = $this->objectManager->create('Magento\DesignEditor\Model\Theme\Change');

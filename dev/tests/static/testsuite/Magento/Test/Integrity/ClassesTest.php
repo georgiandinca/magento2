@@ -2,26 +2,8 @@
 /**
  * Scan source code for references to classes and see if they indeed exist
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Test\Integrity;
 
@@ -32,9 +14,9 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
      *
      * @var array
      */
-    protected static $_existingClasses = array();
+    protected static $_existingClasses = [];
 
-    protected static $_keywordsBlacklist = array("String", "Array", "Boolean", "Element");
+    protected static $_keywordsBlacklist = ["String", "Array", "Boolean", "Element"];
 
     protected static $_namespaceBlacklist = null;
 
@@ -42,14 +24,14 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
 
     public function testPhpFiles()
     {
-        $invoker = new \Magento\TestFramework\Utility\AggregateInvoker($this);
+        $invoker = new \Magento\Framework\App\Utility\AggregateInvoker($this);
         $invoker(
             /**
              * @param string $file
              */
             function ($file) {
                 $contents = file_get_contents($file);
-                $classes = \Magento\TestFramework\Utility\Classes::getAllMatches(
+                $classes = \Magento\Framework\App\Utility\Classes::getAllMatches(
                     $contents,
                     '/
                 # ::getResourceModel ::getBlockSingleton ::getModel ::getSingleton
@@ -75,7 +57,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                 );
 
                 // without modifier "i". Starting from capital letter is a significant characteristic of a class name
-                \Magento\TestFramework\Utility\Classes::getAllMatches(
+                \Magento\Framework\App\Utility\Classes::getAllMatches(
                     $contents,
                     '/(?:\-> | parent\:\:)(?:_init | setType)\(\s*
                     \'([A-Z][a-z\d][A-Za-z\d\\\\]+)\'(?:,\s*\'([A-Z][a-z\d][A-Za-z\d\\\\]+)\')
@@ -87,7 +69,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
 
                 $this->_assertClassesExist($classes, $file);
             },
-            \Magento\TestFramework\Utility\Files::init()->getPhpFiles()
+            \Magento\Framework\App\Utility\Files::init()->getPhpFiles()
         );
     }
 
@@ -100,7 +82,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
     protected function _collectResourceHelpersPhp($contents, &$classes)
     {
         $regex = '/(?:\:\:|\->)getResourceHelper\(\s*\'([a-z\d\\\\]+)\'\s*\)/ix';
-        $matches = \Magento\TestFramework\Utility\Classes::getAllMatches($contents, $regex);
+        $matches = \Magento\Framework\App\Utility\Classes::getAllMatches($contents, $regex);
         foreach ($matches as $moduleName) {
             $classes[] = "{$moduleName}\\Model\\Resource\\Helper\\Mysql4";
         }
@@ -108,22 +90,22 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
 
     public function testConfigFiles()
     {
-        $invoker = new \Magento\TestFramework\Utility\AggregateInvoker($this);
+        $invoker = new \Magento\Framework\App\Utility\AggregateInvoker($this);
         $invoker(
             /**
              * @param string $path
              */
             function ($path) {
-                $classes = \Magento\TestFramework\Utility\Classes::collectClassesInConfig(simplexml_load_file($path));
+                $classes = \Magento\Framework\App\Utility\Classes::collectClassesInConfig(simplexml_load_file($path));
                 $this->_assertClassesExist($classes, $path);
             },
-            \Magento\TestFramework\Utility\Files::init()->getMainConfigFiles()
+            \Magento\Framework\App\Utility\Files::init()->getMainConfigFiles()
         );
     }
 
     public function testLayoutFiles()
     {
-        $invoker = new \Magento\TestFramework\Utility\AggregateInvoker($this);
+        $invoker = new \Magento\Framework\App\Utility\AggregateInvoker($this);
         $invoker(
             /**
              * @param string $path
@@ -131,30 +113,30 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
             function ($path) {
                 $xml = simplexml_load_file($path);
 
-                $classes = \Magento\TestFramework\Utility\Classes::getXmlNodeValues(
+                $classes = \Magento\Framework\App\Utility\Classes::getXmlNodeValues(
                     $xml,
                     '/layout//*[contains(text(), "\\\\Block\\\\") or contains(text(),
                         "\\\\Model\\\\") or contains(text(), "\\\\Helper\\\\")]'
                 );
-                foreach (\Magento\TestFramework\Utility\Classes::getXmlAttributeValues(
+                foreach (\Magento\Framework\App\Utility\Classes::getXmlAttributeValues(
                     $xml,
                     '/layout//@helper',
                     'helper'
                 ) as $class) {
-                    $classes[] = \Magento\TestFramework\Utility\Classes::getCallbackClass($class);
+                    $classes[] = \Magento\Framework\App\Utility\Classes::getCallbackClass($class);
                 }
-                foreach (\Magento\TestFramework\Utility\Classes::getXmlAttributeValues(
+                foreach (\Magento\Framework\App\Utility\Classes::getXmlAttributeValues(
                     $xml,
                     '/layout//@module',
                     'module'
                 ) as $module) {
                     $classes[] = str_replace('_', '\\', "{$module}_Helper_Data");
                 }
-                $classes = array_merge($classes, \Magento\TestFramework\Utility\Classes::collectLayoutClasses($xml));
+                $classes = array_merge($classes, \Magento\Framework\App\Utility\Classes::collectLayoutClasses($xml));
 
                 $this->_assertClassesExist(array_unique($classes), $path);
             },
-            \Magento\TestFramework\Utility\Files::init()->getLayoutFiles()
+            \Magento\Framework\App\Utility\Files::init()->getLayoutFiles()
         );
     }
 
@@ -173,8 +155,8 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
         if (!$classes) {
             return;
         }
-        $badClasses = array();
-        $badUsages = array();
+        $badClasses = [];
+        $badUsages = [];
         foreach ($classes as $class) {
             try {
                 if (strrchr($class, '\\') == false) {
@@ -184,11 +166,11 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                     $this->assertTrue(
                         isset(
                             self::$_existingClasses[$class]
-                        ) || \Magento\TestFramework\Utility\Files::init()->classFileExists(
+                        ) || \Magento\Framework\App\Utility\Files::init()->classFileExists(
                             $class
-                        ) || \Magento\TestFramework\Utility\Classes::isVirtual(
+                        ) || \Magento\Framework\App\Utility\Classes::isVirtual(
                             $class
-                        ) || \Magento\TestFramework\Utility\Classes::isAutogenerated(
+                        ) || \Magento\Framework\App\Utility\Classes::isAutogenerated(
                             $class
                         )
                     );
@@ -208,7 +190,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
 
     public function testClassNamespaces()
     {
-        $invoker = new \Magento\TestFramework\Utility\AggregateInvoker($this);
+        $invoker = new \Magento\Framework\App\Utility\AggregateInvoker($this);
         $invoker(
             /**
              * Assert PHP classes have valid formal namespaces according to file locations
@@ -217,7 +199,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
              */
             function ($file) {
                 $relativePath = str_replace(
-                    \Magento\TestFramework\Utility\Files::init()->getPathToSource() . "/",
+                    \Magento\Framework\App\Utility\Files::init()->getPathToSource() . "/",
                     "",
                     $file
                 );
@@ -231,7 +213,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
 
                 $classPattern = '/^(abstract\s)?class\s[A-Z][^\s\/]+/m';
 
-                $classNameMatch = array();
+                $classNameMatch = [];
                 $className = null;
 
                 // if no class declaration found for $file, then skip this file
@@ -243,23 +225,23 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                 $className = array_pop($classParts);
                 $this->_assertClassNamespace($file, $relativePath, $contents, $className);
             },
-            \Magento\TestFramework\Utility\Files::init()->getClassFiles()
+            \Magento\Framework\App\Utility\Files::init()->getClassFiles()
         );
     }
 
     protected function _setNamespaceBlackList()
     {
         if (!isset(self::$_namespaceBlacklist)) {
-            $blackList = array();
+            $blackList = [];
             foreach (glob(__DIR__ . '/_files/blacklist/namespace.txt') as $list) {
                 $fileList = file($list, FILE_IGNORE_NEW_LINES);
                 foreach ($fileList as $currentFile) {
-                    $absolutePath = \Magento\TestFramework\Utility\Files::init()->getPathToSource() .
+                    $absolutePath = \Magento\Framework\App\Utility\Files::init()->getPathToSource() .
                         '/' .
                         $currentFile;
                     if (is_dir($absolutePath)) {
-                        $recursiveFiles = \Magento\TestFramework\Utility\Files::getFiles(
-                            array($absolutePath),
+                        $recursiveFiles = \Magento\Framework\App\Utility\Files::getFiles(
+                            [$absolutePath],
                             '*.php',
                             true
                         );
@@ -287,8 +269,8 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
         $namespacePattern = '/(Magento|Zend)\/[a-zA-Z]+[^\.]+/';
         $formalPattern = '/^namespace\s[a-zA-Z]+(\\\\[a-zA-Z0-9]+)*/m';
 
-        $namespaceMatch = array();
-        $formalNamespaceArray = array();
+        $namespaceMatch = [];
+        $formalNamespaceArray = [];
         $namespaceFolders = null;
 
         // if no namespace pattern found according to the path of the file, skip the file
@@ -319,14 +301,14 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
 
     public function testClassReferences()
     {
-        $invoker = new \Magento\TestFramework\Utility\AggregateInvoker($this);
+        $invoker = new \Magento\Framework\App\Utility\AggregateInvoker($this);
         $invoker(
             /**
              * @param string $file
              */
             function ($file) {
                 $relativePath = str_replace(
-                    \Magento\TestFramework\Utility\Files::init()->getPathToSource(),
+                    \Magento\Framework\App\Utility\Files::init()->getPathToSource(),
                     "",
                     $file
                 );
@@ -336,7 +318,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                 }
                 $contents = file_get_contents($file);
                 $formalPattern = '/^namespace\s[a-zA-Z]+(\\\\[a-zA-Z0-9]+)*/m';
-                $formalNamespaceArray = array();
+                $formalNamespaceArray = [];
 
                 // Skip the file if the class is not defined using formal namespace
                 if (preg_match($formalPattern, $contents, $formalNamespaceArray) == 0) {
@@ -350,7 +332,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                     '|.*new\s(?<badClass>[A-Z][a-zA-Z0-9]+[a-zA-Z0-9_\\\\]*)\(.*\)\;' .
                     '|use [A-Z][a-zA-Z0-9_\\\\]+ as (?<aliasClass>[A-Z][a-zA-Z0-9]+)' .
                     '/m';
-                $result1 = array();
+                $result1 = [];
                 preg_match_all($newObjectPattern, $contents, $result1);
 
                 // Static function/variable, for example: "Foo::someStaticFunction();"
@@ -359,7 +341,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                     '|[^\\\\^a-z^A-Z^0-9^_^:](?<badClass>[A-Z][a-zA-Z0-9_]+)\:\:.*\;' .
                     '|use [A-Z][a-zA-Z0-9_\\\\]+ as (?<aliasClass>[A-Z][a-zA-Z0-9]+)' .
                     '/m';
-                $result2 = array();
+                $result2 = [];
                 preg_match_all($staticCallPattern, $contents, $result2);
 
                 // Annotation, for example: "* @return \Magento\Foo\Bar" or "* @throws Exception" or "* @return Foo"
@@ -369,7 +351,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                     '|[\s]*\*\s\@throws\s(?<exception>[A-Z][a-zA-Z0-9_\\\\]+)' .
                     '|use [A-Z][a-zA-Z0-9_\\\\]+ as (?<aliasClass>[A-Z][a-zA-Z0-9]+)' .
                     '/m';
-                $result3 = array();
+                $result3 = [];
                 preg_match_all($annotationPattern, $contents, $result3);
 
                 $vendorClasses = array_unique(
@@ -408,7 +390,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                 $badClasses = $this->removeSpecialCases($badClasses, $file, $contents, $namespacePath);
                 $this->_assertClassReferences($badClasses, $file);
             },
-            \Magento\TestFramework\Utility\Files::init()->getClassFiles()
+            \Magento\Framework\App\Utility\Files::init()->getClassFiles()
         );
     }
 
@@ -484,7 +466,7 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
             }
 
             // Remove usage of classes that do NOT using fully-qualified class names (possibly under same namespace)
-            $directories = array(
+            $directories = [
                 '/app/code/',
                 '/lib/internal/',
                 '/dev/tools/',
@@ -497,12 +479,11 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
                 '/dev/tests/performance/framework/',
                 '/dev/tests/static/framework/',
                 '/dev/tests/static/testsuite/',
-                '/dev/tests/unit/framework/',
-                '/dev/tests/unit/testsuite/'
-            );
+                '/setup/src/',
+            ];
             // Full list of directories where there may be namespace classes
             foreach ($directories as $directory) {
-                $fullPath = \Magento\TestFramework\Utility\Files::init()->getPathToSource() .
+                $fullPath = \Magento\Framework\App\Utility\Files::init()->getPathToSource() .
                     $directory .
                     $namespacePath .
                     '/' .
@@ -543,5 +524,52 @@ class ClassesTest extends \PHPUnit_Framework_TestCase
             return;
         }
         $this->fail("Incorrect namespace usage(s) found in file {$file}:\n" . implode("\n", $badClasses));
+    }
+
+    public function testCoversAnnotation()
+    {
+        $files = \Magento\Framework\App\Utility\Files::init();
+        $errors = [];
+        $fileList = $files->getFiles(
+            [
+                BP . '/dev/tests/integration',
+                BP . '/app/code/*/*/Test/Unit',
+                BP . '/lib/internal/*/*/*/Test/Unit',
+                BP . '/lib/internal/Magento/Framework/Test/Unit',
+                BP . '/dev/tools/Magento/Tools/*/Test/Unit',
+                BP . '/setup/src/Magento/Setup/Test/Unit',
+            ],
+            '*.php'
+        );
+        foreach ($fileList as $file) {
+            $code = file_get_contents($file);
+            if (preg_match_all(
+                '/@covers(DefaultClass)?\s+([\w\\\\]+)(::([\w\\\\]+))?/',
+                $code,
+                $matchesAll,
+                PREG_SET_ORDER
+            )) {
+                foreach ($matchesAll as $matches) {
+                    if ($this->isNonexistentEntityCovered($matches)) {
+                        $errors[] = $file . ': ' . $matches[0];
+                    }
+                }
+            }
+        }
+        if ($errors) {
+            $this->fail(
+                'Nonexistent classes/methods were found in @covers annotations: ' . PHP_EOL . implode(PHP_EOL, $errors)
+            );
+        }
+    }
+
+    /**
+     * @param array $matches
+     * @return bool
+     */
+    private function isNonexistentEntityCovered($matches)
+    {
+        return !empty($matches[2]) && !class_exists($matches[2])
+            || !empty($matches[4]) && !method_exists($matches[2], $matches[4]);
     }
 }

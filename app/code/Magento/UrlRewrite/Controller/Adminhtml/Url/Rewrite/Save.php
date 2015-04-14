@@ -1,34 +1,16 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite;
 
 use Magento\Catalog\Model\Category;
 use Magento\Catalog\Model\Product;
-use Magento\Framework\Model\Exception;
-use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
+use Magento\Framework\Exception\LocalizedException;
 use Magento\UrlRewrite\Model\UrlFinderInterface;
+use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
 
 class Save extends \Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite
 {
@@ -70,7 +52,7 @@ class Save extends \Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite
      *
      * @param \Magento\UrlRewrite\Model\UrlRewrite $model
      * @return void
-     * @throws Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function _handleCatalogUrlRewrite($model)
     {
@@ -79,7 +61,7 @@ class Save extends \Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite
         if ($productId || $categoryId) {
             if ($model->isObjectNew()) {
                 $model->setEntityType($productId ? self::ENTITY_TYPE_PRODUCT : self::ENTITY_TYPE_CATEGORY)
-                    ->setEntityId($productId ? : $categoryId);
+                    ->setEntityId($productId ?: $categoryId);
                 if ($productId && $categoryId) {
                     $model->setMetadata(serialize(['category_id' => $categoryId]));
                 }
@@ -93,7 +75,7 @@ class Save extends \Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite
      *
      * @param \Magento\UrlRewrite\Model\UrlRewrite $model
      * @return string
-     * @throws Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function getTargetPath($model)
     {
@@ -110,7 +92,7 @@ class Save extends \Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite
                 $message = $model->getEntityType() === self::ENTITY_TYPE_PRODUCT
                     ? __('Chosen product does not associated with the chosen store or category.')
                     : __('Chosen category does not associated with the chosen store.');
-                throw new Exception($message);
+                throw new LocalizedException($message);
             }
             $targetPath = $rewrite->getRequestPath();
         }
@@ -156,7 +138,7 @@ class Save extends \Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite
      */
     public function execute()
     {
-        $data = $this->getRequest()->getPost();
+        $data = $this->getRequest()->getPostValue();
         if ($data) {
             /** @var $session \Magento\Backend\Model\Session */
             $session = $this->_objectManager->get('Magento\Backend\Model\Session');
@@ -166,7 +148,7 @@ class Save extends \Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite
                 $requestPath = $this->getRequest()->getParam('request_path');
                 $this->_objectManager->get('Magento\UrlRewrite\Helper\UrlRewrite')->validateRequestPath($requestPath);
 
-                $model->setEntityType($this->getRequest()->getParam('entity_type', self::ENTITY_TYPE_CUSTOM))
+                $model->setEntityType($this->getRequest()->getParam('entity_type') ?: self::ENTITY_TYPE_CUSTOM)
                     ->setRequestPath($requestPath)
                     ->setTargetPath($this->getRequest()->getParam('target_path', $model->getTargetPath()))
                     ->setRedirectType($this->getRequest()->getParam('redirect_type'))
@@ -180,7 +162,7 @@ class Save extends \Magento\UrlRewrite\Controller\Adminhtml\Url\Rewrite
                 $this->messageManager->addSuccess(__('The URL Rewrite has been saved.'));
                 $this->_redirect('adminhtml/*/');
                 return;
-            } catch (Exception $e) {
+            } catch (LocalizedException $e) {
                 $this->messageManager->addError($e->getMessage());
                 $session->setUrlRewriteData($data);
             } catch (\Exception $e) {

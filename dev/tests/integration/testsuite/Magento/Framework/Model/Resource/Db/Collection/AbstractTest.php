@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework\Model\Resource\Db\Collection;
 
@@ -34,14 +16,19 @@ class AbstractTest extends \PHPUnit_Framework_TestCase
     {
         $resourceModel = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()
             ->get('Magento\Framework\App\Resource');
+        $context = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
+            '\Magento\Framework\Model\Resource\Db\Context',
+            ['resource' => $resourceModel]
+        );
+
         $resource = $this->getMockForAbstractClass(
             'Magento\Framework\Model\Resource\Db\AbstractDb',
-            array($resourceModel),
+            [$context],
             '',
             true,
             true,
             true,
-            array('getMainTable', 'getIdFieldName')
+            ['getMainTable', 'getIdFieldName']
         );
 
         $resource->expects(
@@ -60,13 +47,13 @@ class AbstractTest extends \PHPUnit_Framework_TestCase
         );
 
         $entityFactory = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get(
-            'Magento\Core\Model\EntityFactory'
+            'Magento\Framework\Data\Collection\EntityFactory'
         );
-        $logger = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get('Magento\Framework\Logger');
+        $logger = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->get('Psr\Log\LoggerInterface');
 
         $this->_model = $this->getMockForAbstractClass(
             'Magento\Framework\Model\Resource\Db\Collection\AbstractCollection',
-            array($entityFactory, $logger, $fetchStrategy, $eventManager, null, $resource)
+            [$entityFactory, $logger, $fetchStrategy, $eventManager, null, $resource]
         );
     }
 
@@ -74,13 +61,13 @@ class AbstractTest extends \PHPUnit_Framework_TestCase
     {
         $allIds = $this->_model->getAllIds();
         sort($allIds);
-        $this->assertEquals(array('0', '1'), $allIds);
+        $this->assertEquals(['0', '1'], $allIds);
     }
 
     public function testGetAllIdsWithBind()
     {
         $this->_model->getSelect()->where('code = :code');
         $this->_model->addBindParam('code', 'admin');
-        $this->assertEquals(array('0'), $this->_model->getAllIds());
+        $this->assertEquals(['0'], $this->_model->getAllIds());
     }
 }

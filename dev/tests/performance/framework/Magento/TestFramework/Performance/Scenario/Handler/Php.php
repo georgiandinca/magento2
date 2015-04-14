@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -68,7 +50,7 @@ class Php implements \Magento\TestFramework\Performance\Scenario\HandlerInterfac
      *
      * @param \Magento\TestFramework\Performance\Scenario $scenario
      * @param string|null $reportFile Report file to write results to, NULL disables report creation
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @throws \Magento\TestFramework\Performance\Scenario\FailureException
      *
      * @todo Implement execution in concurrent threads defined by the "users" scenario argument
@@ -78,7 +60,7 @@ class Php implements \Magento\TestFramework\Performance\Scenario\HandlerInterfac
         $this->_validateScenarioExecutable();
 
         $scenarioArguments = $scenario->getArguments();
-        $reportRows = array();
+        $reportRows = [];
         for ($i = 0; $i < $scenarioArguments[\Magento\TestFramework\Performance\Scenario::ARG_LOOPS]; $i++) {
             $oneReportRow = $this->_executeScenario($scenario);
             $reportRows[] = $oneReportRow;
@@ -90,7 +72,7 @@ class Php implements \Magento\TestFramework\Performance\Scenario\HandlerInterfac
         if ($reportErrors) {
             throw new \Magento\TestFramework\Performance\Scenario\FailureException(
                 $scenario,
-                implode(PHP_EOL, $reportErrors)
+                new \Magento\Framework\Phrase(implode(PHP_EOL, $reportErrors))
             );
         }
     }
@@ -104,18 +86,18 @@ class Php implements \Magento\TestFramework\Performance\Scenario\HandlerInterfac
     protected function _executeScenario(\Magento\TestFramework\Performance\Scenario $scenario)
     {
         list($scenarioCmd, $scenarioCmdArgs) = $this->_buildScenarioCmd($scenario);
-        $result = array(
+        $result = [
             'title' => $scenario->getTitle(),
             'timestamp' => time(),
             'success' => true,
             'time' => null,
             'exit_code' => 0,
-            'output' => ''
-        );
+            'output' => '',
+        ];
         $executionTime = microtime(true);
         try {
             $result['output'] = $this->_shell->execute($scenarioCmd, $scenarioCmdArgs);
-        } catch (\Magento\Framework\Exception $e) {
+        } catch (\Magento\Framework\Exception\LocalizedException $e) {
             $result['success'] = false;
             $result['exit_code'] = $e->getPrevious()->getCode();
             $result['output'] = $e->getPrevious()->getMessage();
@@ -137,12 +119,12 @@ class Php implements \Magento\TestFramework\Performance\Scenario\HandlerInterfac
     protected function _buildScenarioCmd(\Magento\TestFramework\Performance\Scenario $scenario)
     {
         $command = 'php -f %s --';
-        $arguments = array($scenario->getFile());
+        $arguments = [$scenario->getFile()];
         foreach ($scenario->getArguments() as $paramName => $paramValue) {
             $command .= " --{$paramName} %s";
             $arguments[] = $paramValue;
         }
-        return array($command, $arguments);
+        return [$command, $arguments];
     }
 
     /**
@@ -154,7 +136,7 @@ class Php implements \Magento\TestFramework\Performance\Scenario\HandlerInterfac
      */
     protected function _writeReport(array $reportRows, $reportFile)
     {
-        $xml = array();
+        $xml = [];
         $xml[] = '<?xml version="1.0" encoding="UTF-8"?>';
         $xml[] = '<testResults version="1.2">';
         foreach ($reportRows as $index => $oneReportRow) {
@@ -195,7 +177,7 @@ class Php implements \Magento\TestFramework\Performance\Scenario\HandlerInterfac
      */
     protected function _getReportErrors(array $reportRows)
     {
-        $result = array();
+        $result = [];
         foreach ($reportRows as $oneReportRow) {
             if (!$oneReportRow['success']) {
                 $result[] = $oneReportRow['output'];

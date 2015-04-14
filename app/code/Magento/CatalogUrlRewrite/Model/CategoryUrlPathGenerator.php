@@ -1,28 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\CatalogUrlRewrite\Model;
 
+use Magento\Catalog\Api\CategoryRepositoryInterface;
 use Magento\Catalog\Model\Category;
 
 class CategoryUrlPathGenerator
@@ -47,26 +30,33 @@ class CategoryUrlPathGenerator
     /** @var \Magento\Framework\App\Config\ScopeConfigInterface */
     protected $scopeConfig;
 
-    /** @var \Magento\Framework\StoreManagerInterface */
+    /** @var \Magento\Store\Model\StoreManagerInterface */
     protected $storeManager;
 
-    /** @var \Magento\Catalog\Model\CategoryFactory */
-    protected $categoryFactory;
+    /**
+     * @var CategoryRepositoryInterface
+     */
+    protected $categoryRepository;
 
+    /**
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
+     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+     * @param CategoryRepositoryInterface $categoryRepository
+     */
     public function __construct(
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Catalog\Model\CategoryFactory $categoryFactory
+        CategoryRepositoryInterface $categoryRepository
     ) {
         $this->storeManager = $storeManager;
         $this->scopeConfig = $scopeConfig;
-        $this->categoryFactory = $categoryFactory;
+        $this->categoryRepository = $categoryRepository;
     }
 
     /**
      * Build category URL path
      *
-     * @param \Magento\Catalog\Model\Category|\Magento\Framework\Object $category
+     * @param \Magento\Catalog\Api\Data\CategoryInterface|\Magento\Framework\Object $category
      * @return string
      */
     public function getUrlPath($category)
@@ -75,12 +65,15 @@ class CategoryUrlPathGenerator
             return '';
         }
         $path = $category->getUrlPath();
-        if ($path !== null && !$category->dataHasChangedFor('url_key') && !$category->dataHasChangedFor('path_ids')) {
+        if ($path !== null && !$category->dataHasChangedFor('url_key') && !$category->dataHasChangedFor('parent_id')) {
             return $path;
         }
         $path = $category->getUrlKey();
+        if ($path === false) {
+            return $category->getUrlPath();
+        }
         if ($this->isNeedToGenerateUrlPathForParent($category)) {
-            $parentPath = $this->getUrlPath($this->categoryFactory->create()->load($category->getParentId()));
+            $parentPath = $this->getUrlPath($this->categoryRepository->get($category->getParentId()));
             $path = $parentPath === '' ? $path : $parentPath . '/' . $path;
         }
         return $path;
@@ -92,7 +85,7 @@ class CategoryUrlPathGenerator
      */
     protected function isNeedToGenerateUrlPathForParent($category)
     {
-        return $category->getParentId() && $category->getLevel() >= self::MINIMAL_CATEGORY_LEVEL_FOR_PROCESSING;
+        return $category->isObjectNew() || $category->getLevel() >= self::MINIMAL_CATEGORY_LEVEL_FOR_PROCESSING;
     }
 
     /**

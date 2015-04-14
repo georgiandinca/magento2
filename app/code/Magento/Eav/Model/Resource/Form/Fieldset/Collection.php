@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 
@@ -30,13 +12,13 @@
  */
 namespace Magento\Eav\Model\Resource\Form\Fieldset;
 
-use Magento\Core\Model\EntityFactory;
+use Magento\Framework\Data\Collection\EntityFactory;
 use Magento\Eav\Model\Form\Type;
 use Magento\Framework\Event\ManagerInterface;
 use Magento\Framework\Data\Collection\Db\FetchStrategyInterface;
 use Magento\Framework\Model\Resource\Db\AbstractDb;
-use Magento\Framework\Logger;
-use Magento\Framework\StoreManagerInterface;
+use Psr\Log\LoggerInterface as Logger;
+use Magento\Store\Model\StoreManagerInterface;
 
 class Collection extends \Magento\Framework\Model\Resource\Db\Collection\AbstractCollection
 {
@@ -53,11 +35,11 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     protected $_storeId;
 
     /**
-     * @param EntityFactory $entityFactory
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
      * @param Logger $logger
      * @param FetchStrategyInterface $fetchStrategy
      * @param ManagerInterface $eventManager
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param mixed $connection
      * @param AbstractDb $resource
      */
@@ -117,7 +99,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     public function getStoreId()
     {
-        if (is_null($this->_storeId)) {
+        if ($this->_storeId === null) {
             return $this->_storeManager->getStore()->getId();
         }
         return $this->_storeId;
@@ -145,9 +127,9 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
         parent::_initSelect();
         $select = $this->getSelect();
         $select->join(
-            array('default_label' => $this->getTable('eav_form_fieldset_label')),
+            ['default_label' => $this->getTable('eav_form_fieldset_label')],
             'main_table.fieldset_id = default_label.fieldset_id AND default_label.store_id = 0',
-            array()
+            []
         );
         if ($this->getStoreId() == 0) {
             $select->columns('label', 'default_label');
@@ -158,9 +140,9 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
                 (int)$this->getStoreId()
             );
             $select->joinLeft(
-                array('store_label' => $this->getTable('eav_form_fieldset_label')),
+                ['store_label' => $this->getTable('eav_form_fieldset_label')],
                 $joinCondition,
-                array('label' => $labelExpr)
+                ['label' => $labelExpr]
             );
         }
 

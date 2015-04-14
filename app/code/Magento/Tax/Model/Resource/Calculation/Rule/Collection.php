@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Tax\Model\Resource\Calculation\Rule;
 
@@ -63,9 +45,9 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     public function joinCalculationData($alias)
     {
         $this->getSelect()->joinLeft(
-            array($alias => $this->getTable('tax_calculation')),
+            [$alias => $this->getTable('tax_calculation')],
             "main_table.tax_calculation_rule_id = {$alias}.tax_calculation_rule_id",
-            array()
+            []
         );
         $this->getSelect()->group('main_table.tax_calculation_rule_id');
 
@@ -84,19 +66,19 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      */
     protected function _add($itemTable, $primaryJoinField, $secondaryJoinField, $titleField, $dataField)
     {
-        $children = array();
+        $children = [];
         foreach ($this as $rule) {
-            $children[$rule->getId()] = array();
+            $children[$rule->getId()] = [];
         }
         if (!empty($children)) {
             $joinCondition = sprintf('item.%s = calculation.%s', $secondaryJoinField, $primaryJoinField);
             $select = $this->getConnection()->select()->from(
-                array('calculation' => $this->getTable('tax_calculation')),
-                array('calculation.tax_calculation_rule_id')
+                ['calculation' => $this->getTable('tax_calculation')],
+                ['calculation.tax_calculation_rule_id']
             )->join(
-                array('item' => $this->getTable($itemTable)),
+                ['item' => $this->getTable($itemTable)],
                 $joinCondition,
-                array("item.{$titleField}", "item.{$secondaryJoinField}")
+                ["item.{$titleField}", "item.{$secondaryJoinField}"]
             )->where(
                 'calculation.tax_calculation_rule_id IN (?)',
                 array_keys($children)
@@ -161,7 +143,7 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      * @param string $type
      * @param int $id
      * @return \Magento\Tax\Model\Resource\Calculation\Rule\Collection
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function setClassTypeFilter($type, $id)
     {
@@ -173,7 +155,8 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
                 $field = 'cd.customer_tax_class_id';
                 break;
             default:
-                throw new \Magento\Framework\Model\Exception('Invalid type supplied');
+                throw new \Magento\Framework\Exception\LocalizedException(__('Invalid type supplied'));
+                break;
         }
 
         $this->joinCalculationData('cd');

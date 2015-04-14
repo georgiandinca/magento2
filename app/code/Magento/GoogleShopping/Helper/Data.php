@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GoogleShopping\Helper;
 
@@ -40,19 +22,19 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     /**
      * Store manager
      *
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
     /**
      * @param \Magento\Framework\App\Helper\Context $context
      * @param \Magento\Framework\Stdlib\String $string
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      */
     public function __construct(
         \Magento\Framework\App\Helper\Context $context,
         \Magento\Framework\Stdlib\String $string,
-        \Magento\Framework\StoreManagerInterface $storeManager
+        \Magento\Store\Model\StoreManagerInterface $storeManager
     ) {
         $this->string = $string;
         $this->_storeManager = $storeManager;
@@ -104,10 +86,11 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      * @param string $message \Exception message to parse
      * @param null|\Magento\Catalog\Model\Product $product
      * @return string
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function parseGdataExceptionMessage($message, $product = null)
     {
-        $result = array();
+        $result = [];
         foreach (explode("\n", $message) as $row) {
             if (trim($row) == '') {
                 continue;
@@ -115,7 +98,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
 
             if (strip_tags($row) == $row) {
                 $row = preg_replace('/@ (.*)/', __('See \'\1\''), $row);
-                if (!is_null($product)) {
+                if ($product !== null) {
                     $row .= ' ' . __(
                         "for product '%1' (in '%2' store)",
                         $product->getName(),
@@ -129,13 +112,13 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
             // parse not well-formatted xml
             preg_match_all('/(reason|field|type)=\"([^\"]+)\"/', $row, $matches);
 
-            if (is_array($matches) && count($matches) == 3) {
-                if (is_array($matches[1]) && count($matches[1]) > 0) {
-                    $c = count($matches[1]);
-                    for ($i = 0; $i < $c; $i++) {
-                        if (isset($matches[2][$i])) {
-                            $result[] = ucfirst($matches[1][$i]) . ': ' . $matches[2][$i];
-                        }
+            if (is_array($matches) && count($matches) == 3
+                && is_array($matches[1]) && count($matches[1]) > 0
+            ) {
+                $c = count($matches[1]);
+                for ($i = 0; $i < $c; $i++) {
+                    if (isset($matches[2][$i])) {
+                        $result[] = ucfirst($matches[1][$i]) . ': ' . $matches[2][$i];
                     }
                 }
             }

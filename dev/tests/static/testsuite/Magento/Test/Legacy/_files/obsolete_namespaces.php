@@ -4,32 +4,13 @@
  *
  * Format: array(<namespace>[, <replacement>])
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 return [
     ['Magento\App', 'Magento\Framework\App'],
     ['Magento\Data', 'Magento\Framework\Data'],
     ['Magento\Filesystem', 'Magento\Framework\Filesystem'],
-    ['Magento\Config', 'Magento\Framework\Config'],
     ['Magento\Model', 'Magento\Framework\Model'],
     ['Magento\View', 'Magento\Framework\View'],
     ['Magento\DB', 'Magento\Framework\DB'],
@@ -39,7 +20,7 @@ return [
     ['Magento\Session', 'Magento\Framework\Session'],
     ['Magento\Cache', 'Magento\Framework\Cache'],
     ['Magento\ObjectManager', 'Magento\Framework\ObjectManager'],
-    ['Magento\Exception', 'Magento\Framework\Exception'],
+    ['Magento\Exception', 'Magento\Framework\Exception\LocalizedException'],
     ['Magento\Autoload', 'Magento\Framework\Autoload'],
     ['Magento\Translate', 'Magento\Framework\Translate'],
     ['Magento\Code', 'Magento\Framework\Code'],
@@ -47,7 +28,7 @@ return [
     ['Magento\Phrase', 'Magento\Framework\Phrase'],
     ['Magento\Locale', 'Magento\Framework\Locale'],
     ['Magento\Message', 'Magento\Framework\Message'],
-    ['Magento\Logger', 'Magento\Framework\Logger'],
+    ['Magento\Logger', 'Psr\Log\LoggerInterface'],
     ['Magento\Error', 'Magento\Framework\Error'],
     ['Magento\Filter', 'Magento\Framework\Filter'],
     ['Magento\DomDocument', 'Magento\Framework\DomDocument'],
@@ -62,7 +43,7 @@ return [
     ['Magento\Shell', 'Magento\Framework\Shell'],
     ['Magento\Encryption', 'Magento\Framework\Encryption'],
     ['Magento\Option', 'Magento\Framework\Option'],
-    ['Magento\Service', 'Magento\Framework\Service'],
+    ['Magento\Service', 'Magento\Framework\Api'],
     ['Magento\System', 'Magento\Framework\System'],
     ['Magento\Url', 'Magento\Framework\Url'],
     ['Magento\Mview', 'Magento\Framework\Mview'],
@@ -77,10 +58,29 @@ return [
     ['Magento\Mail', 'Magento\Framework\Mail'],
     ['Magento\HTTP', 'Magento\Framework\HTTP'],
     ['Magento\Math', 'Magento\Framework\Math'],
+    ['Magento\Framework\Code\Generator\CodeGenerator', 'Magento\Framework\Code\Generator'],
     ['Magento\Gdata', 'Magento\Framework\Gdata'],
     ['Magento\Image', 'Magento\Framework\Image'],
     ['Magento\Oauth', 'Magento\Framework\Oauth'],
     ['Magento\Object', 'Magento\Framework\Object'],
     ['Magento\Connect'],
     ['Magento\Framework\Connect'],
+    ['Magento\Bundle\Service'],
+    ['Magento\Tax\Service'],
+    ['Magento\RecurringPayment'],
+    ['Magento\PayPalRecurringPayment'],
+    ['Magento\ConfigurableProduct\Service'],
+    ['Magento\Core\Model\Resource\Variable', 'Magento\Variable\Model\Resource\Variable'],
+    ['Magento\Core\Model\TemplateEngine\Decorator', 'Magento\Developer\Model\TemplateEngine\Decorator'],
+    ['Magento\Core\Model\Resource\Config', 'Magento\Config\Model\Resource\Config'],
+    ['Magento\Backend\Block\System\Config', 'Magento\Config\Block\System\Config'],
+    ['Magento\Backend\Controller\Adminhtml\System\Config', 'Magento\Config\Controller\Adminhtml\System\Config'],
+    ['Magento\Backend\Model\Config', 'Magento\Config\Model\Config'],
+    ['Magento\Core\Model\Variable', 'Magento\Variable\Model\Variable'],
+    ['Magento\Catalog\Service'],
+    ['Magento\CheckoutAgreements\Service'],
+    ['Magento\Checkout\Service'],
+    ['Magento\GiftMessage\Service'],
+    ['Magento\Backend\Controller\Adminhtml\System\Variable', 'Magento\Variable\Controller\Adminhtml\System\Variable'],
+    ['Magento\Framework\Test\Utility', 'Magento\Framework\App\Utility']
 ];

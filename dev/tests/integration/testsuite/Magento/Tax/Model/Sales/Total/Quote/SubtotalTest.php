@@ -1,30 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
 
 namespace Magento\Tax\Model\Sales\Total\Quote;
 
-use Magento\Framework\Exception\InputException;
 use Magento\Tax\Model\ClassModel;
 use Magento\TestFramework\Helper\Bootstrap;
 
@@ -36,13 +19,22 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
     /**
      * Object Manager
      *
-     * @var \Magento\Framework\ObjectManager
+     * @var \Magento\Framework\ObjectManagerInterface
      */
     private $objectManager;
 
     protected function setUp()
     {
         $this->objectManager = Bootstrap::getObjectManager();
+    }
+
+    protected function getCustomerById($id)
+    {
+        /**
+         * @var $customerRepository \Magento\Customer\Api\CustomerRepositoryInterface
+         */
+        $customerRepository = $this->objectManager->create('Magento\Customer\Api\CustomerRepositoryInterface');
+        return $customerRepository->getById($id);
     }
 
     /**
@@ -79,13 +71,13 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
 
         $quoteShippingAddressDataObject = $this->getShippingAddressDataObject($fixtureCustomerId);
 
-        /** @var \Magento\Sales\Model\Quote\Address $quoteShippingAddress */
-        $quoteShippingAddress = $this->objectManager->create('Magento\Sales\Model\Quote\Address');
+        /** @var \Magento\Quote\Model\Quote\Address $quoteShippingAddress */
+        $quoteShippingAddress = $this->objectManager->create('Magento\Quote\Model\Quote\Address');
         $quoteShippingAddress->importCustomerAddressData($quoteShippingAddressDataObject);
         $quantity = 2;
 
-        /** @var \Magento\Sales\Model\Quote $quote */
-        $quote = $this->objectManager->create('Magento\Sales\Model\Quote');
+        /** @var \Magento\Quote\Model\Quote $quote */
+        $quote = $this->objectManager->create('Magento\Quote\Model\Quote');
         $quote->setStoreId(
                 1
             )->setIsActive(
@@ -93,7 +85,7 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
             )->setIsMultiShipping(
                 false
             )->assignCustomerWithAddressChange(
-                $customer
+                $this->getCustomerById($customer->getId())
             )->setShippingAddress(
                 $quoteShippingAddress
             )->setBillingAddress(
@@ -108,19 +100,19 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
             );
         $address = $quote->getShippingAddress();
 
-        /** @var \Magento\Sales\Model\Quote\Address\Total\Subtotal $addressSubtotalCollector */
-        $addressSubtotalCollector = $this->objectManager->create('\Magento\Sales\Model\Quote\Address\Total\Subtotal');
+        /** @var \Magento\Quote\Model\Quote\Address\Total\Subtotal $addressSubtotalCollector */
+        $addressSubtotalCollector = $this->objectManager->create('Magento\Quote\Model\Quote\Address\Total\Subtotal');
         $addressSubtotalCollector->collect($address);
 
         /** @var \Magento\Tax\Model\Sales\Total\Quote\Subtotal $subtotalCollector */
-        $subtotalCollector = $this->objectManager->create('\Magento\Tax\Model\Sales\Total\Quote\Subtotal');
+        $subtotalCollector = $this->objectManager->create('Magento\Tax\Model\Sales\Total\Quote\Subtotal');
         $subtotalCollector->collect($address);
 
         $this->assertEquals($expected['subtotal'], $address->getSubtotal());
         $this->assertEquals($expected['subtotal'] + $expected['tax_amount'], $address->getSubtotalInclTax());
         $this->assertEquals($expected['discount_amount'], $address->getDiscountAmount());
         $items = $address->getAllItems();
-        /** @var \Magento\Sales\Model\Quote\Address\Item $item */
+        /** @var \Magento\Quote\Model\Quote\Address\Item $item */
         $item = $items[0];
         $this->assertEquals($expected['items'][0]['price'], $item->getPrice());
         $this->assertEquals($expected['items'][0]['price_incl_tax'], $item->getPriceInclTax());
@@ -194,13 +186,13 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
 
         $quoteShippingAddressDataObject = $this->getShippingAddressDataObject($fixtureCustomerId);
 
-        /** @var \Magento\Sales\Model\Quote\Address $quoteShippingAddress */
-        $quoteShippingAddress = $this->objectManager->create('Magento\Sales\Model\Quote\Address');
+        /** @var \Magento\Quote\Model\Quote\Address $quoteShippingAddress */
+        $quoteShippingAddress = $this->objectManager->create('Magento\Quote\Model\Quote\Address');
         $quoteShippingAddress->importCustomerAddressData($quoteShippingAddressDataObject);
         $quantity = 2;
 
-        /** @var \Magento\Sales\Model\Quote $quote */
-        $quote = $this->objectManager->create('Magento\Sales\Model\Quote');
+        /** @var \Magento\Quote\Model\Quote $quote */
+        $quote = $this->objectManager->create('Magento\Quote\Model\Quote');
         $quote->setStoreId(
                 1
             )->setIsActive(
@@ -208,7 +200,7 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
             )->setIsMultiShipping(
                 false
             )->assignCustomerWithAddressChange(
-                $customer
+                $this->getCustomerById($customer->getId())
             )->setShippingAddress(
                 $quoteShippingAddress
             )->setBillingAddress(
@@ -223,19 +215,19 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
             );
         $address = $quote->getShippingAddress();
 
-        /** @var \Magento\Sales\Model\Quote\Address\Total\Subtotal $addressSubtotalCollector */
-        $addressSubtotalCollector = $this->objectManager->create('\Magento\Sales\Model\Quote\Address\Total\Subtotal');
+        /** @var \Magento\Quote\Model\Quote\Address\Total\Subtotal $addressSubtotalCollector */
+        $addressSubtotalCollector = $this->objectManager->create('Magento\Quote\Model\Quote\Address\Total\Subtotal');
         $addressSubtotalCollector->collect($address);
 
         /** @var \Magento\Tax\Model\Sales\Total\Quote\Subtotal $subtotalCollector */
-        $subtotalCollector = $this->objectManager->create('\Magento\Tax\Model\Sales\Total\Quote\Subtotal');
+        $subtotalCollector = $this->objectManager->create('Magento\Tax\Model\Sales\Total\Quote\Subtotal');
         $subtotalCollector->collect($address);
 
         $this->assertEquals($expected['subtotal'], $address->getSubtotal());
         $this->assertEquals($expected['subtotal'] + $expected['tax_amount'], $address->getSubtotalInclTax());
         $this->assertEquals($expected['discount_amount'], $address->getDiscountAmount());
         $items = $address->getAllItems();
-        /** @var \Magento\Sales\Model\Quote\Address\Item $item */
+        /** @var \Magento\Quote\Model\Quote\Address\Item $item */
         $item = $items[0];
         $this->assertEquals($expected['items'][0]['price'], $item->getPrice());
         $this->assertEquals($expected['items'][0]['price_incl_tax'], $item->getPriceInclTax());
@@ -273,7 +265,7 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param $fixtureCustomerId
-     * @return \Magento\Customer\Service\V1\Data\Address
+     * @return \Magento\Customer\Api\Data\AddressInterface
      */
     protected function getShippingAddressDataObject($fixtureCustomerId)
     {
@@ -281,9 +273,11 @@ class SubtotalTest extends \PHPUnit_Framework_TestCase
         $customerAddress = $this->objectManager->create('Magento\Customer\Model\Address')->load($fixtureCustomerId);
         /** Set data which corresponds tax class fixture */
         $customerAddress->setCountryId('US')->setRegionId(12)->save();
-        /** @var \Magento\Customer\Service\V1\CustomerAddressServiceInterface $addressService */
-        $addressService = $this->objectManager->create('Magento\Customer\Service\V1\CustomerAddressServiceInterface');
-        $quoteShippingAddressDataObject = $addressService->getAddress($fixtureCustomerAddressId);
+        /**
+         * @var $addressRepository \Magento\Customer\Api\AddressRepositoryInterface
+         */
+        $addressRepository = $this->objectManager->get('Magento\Customer\Api\AddressRepositoryInterface');
+        $quoteShippingAddressDataObject = $addressRepository->getById($fixtureCustomerAddressId);
         return $quoteShippingAddressDataObject;
     }
 }

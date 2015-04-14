@@ -1,33 +1,18 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Block\Rss;
 
+use Magento\Catalog\Api\CategoryRepositoryInterface;
 use Magento\Framework\App\Rss\DataProviderInterface;
+use Magento\Framework\Exception\NoSuchEntityException;
 
 /**
  * Class Category
  * @package Magento\Catalog\Block\Rss
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Category extends \Magento\Framework\View\Element\AbstractBlock implements DataProviderInterface
 {
@@ -52,7 +37,7 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
     protected $rssModel;
 
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $storeManager;
 
@@ -60,6 +45,11 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
      * @var \Magento\Framework\App\Rss\UrlBuilderInterface
      */
     protected $rssUrlBuilder;
+
+    /**
+     * @var CategoryRepositoryInterface
+     */
+    protected $categoryRepository;
 
     /**
      * @param \Magento\Framework\View\Element\Template\Context $context
@@ -70,7 +60,9 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
      * @param \Magento\Framework\App\Rss\UrlBuilderInterface $rssUrlBuilder
      * @param \Magento\Catalog\Helper\Image $imageHelper
      * @param \Magento\Customer\Model\Session $customerSession
+     * @param CategoryRepositoryInterface $categoryRepository
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\View\Element\Template\Context $context,
@@ -81,7 +73,8 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
         \Magento\Framework\App\Rss\UrlBuilderInterface $rssUrlBuilder,
         \Magento\Catalog\Helper\Image $imageHelper,
         \Magento\Customer\Model\Session $customerSession,
-        array $data = array()
+        CategoryRepositoryInterface $categoryRepository,
+        array $data = []
     ) {
         $this->imageHelper = $imageHelper;
         $this->categoryFactory = $categoryFactory;
@@ -89,6 +82,7 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
         $this->rssModel = $rssModel;
         $this->rssUrlBuilder = $rssUrlBuilder;
         $this->storeManager = $context->getStoreManager();
+        $this->categoryRepository = $categoryRepository;
         parent::__construct($context, $data);
     }
 
@@ -111,55 +105,54 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
      */
     public function getRssData()
     {
-        $category = $this->categoryFactory->create();
-        $category->load($this->getRequest()->getParam('cid'));
-        if ($category->getId()) {
-            $category->setIsAnchor(true);
-            $newUrl = $category->getUrl();
-            $title = $category->getName();
-            $data = array('title' => $title, 'description' => $title, 'link' => $newUrl, 'charset' => 'UTF-8');
+        try {
+            $category = $this->categoryRepository->get($this->getRequest()->getParam('cid'));
+        } catch (NoSuchEntityException $e) {
+            return [
+                'title' => 'Category Not Found',
+                'description' => 'Category Not Found',
+                'link' => $this->getUrl(''),
+                'charset' => 'UTF-8'
+            ];
+        }
 
-            /** @var $product \Magento\Catalog\Model\Product */
-            foreach ($this->rssModel->getProductCollection($category, $this->getStoreId()) as $product) {
-                $product->setAllowedInRss(true);
-                $product->setAllowedPriceInRss(true);
+        $category->setIsAnchor(true);
+        $newUrl = $category->getUrl();
+        $title = $category->getName();
+        $data = ['title' => $title, 'description' => $title, 'link' => $newUrl, 'charset' => 'UTF-8'];
 
-                $this->_eventManager->dispatch('rss_catalog_category_xml_callback', array('product' => $product));
+        /** @var $product \Magento\Catalog\Model\Product */
+        foreach ($this->rssModel->getProductCollection($category, $this->getStoreId()) as $product) {
+            $product->setAllowedInRss(true);
+            $product->setAllowedPriceInRss(true);
 
-                if (!$product->getAllowedInRss()) {
-                    continue;
-                }
+            $this->_eventManager->dispatch('rss_catalog_category_xml_callback', ['product' => $product]);
 
-                $description = '
+            if (!$product->getAllowedInRss()) {
+                continue;
+            }
+
+            $description = '
                     <table><tr>
                         <td><a href="%s"><img src="%s" border="0" align="left" height="75" width="75"></a></td>
                         <td  style="text-decoration:none;">%s %s</td>
                     </tr></table>
                 ';
 
-                $description = sprintf(
-                    $description,
-                    $product->getProductUrl(),
-                    $this->imageHelper->init($product, 'thumbnail')->resize(75, 75),
-                    $product->getDescription(),
-                    $product->getAllowedPriceInRss() ? $this->renderPriceHtml($product) : ''
-                );
-
-                $data['entries'][] = array(
-                    'title' => $product->getName(),
-                    'link' => $product->getProductUrl(),
-                    'description' => $description
-                );
-            }
-        } else {
-            $data = array(
-                'title' => 'Category Not Found',
-                'description' => 'Category Not Found',
-                'link' => $this->getUrl(''),
-                'charset' => 'UTF-8'
+            $description = sprintf(
+                $description,
+                $product->getProductUrl(),
+                $this->imageHelper->init($product, 'thumbnail')->resize(75, 75),
+                $product->getDescription(),
+                $product->getAllowedPriceInRss() ? $this->renderPriceHtml($product) : ''
             );
-        }
 
+            $data['entries'][] = [
+                'title' => $product->getName(),
+                'link' => $product->getProductUrl(),
+                'description' => $description,
+            ];
+        }
         return $data;
     }
 
@@ -177,7 +170,7 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
             $priceRender = $this->getLayout()->createBlock(
                 'Magento\Framework\Pricing\Render',
                 'product.price.render.default',
-                array('data' => array('price_render_handle' => 'catalog_product_prices'))
+                ['data' => ['price_render_handle' => 'catalog_product_prices']]
             );
         }
 
@@ -186,11 +179,11 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
             $price = $priceRender->render(
                 \Magento\Catalog\Pricing\Price\FinalPrice::PRICE_CODE,
                 $product,
-                array(
+                [
                     'display_minimal_price'  => true,
                     'use_link_for_as_low_as' => true,
                     'zone' => \Magento\Framework\Pricing\Render::ZONE_ITEM_LIST
-                )
+                ]
             );
         }
 
@@ -222,7 +215,10 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
      */
     public function isAllowed()
     {
-        return $this->_scopeConfig->isSetFlag('rss/catalog/category', \Magento\Store\Model\ScopeInterface::SCOPE_STORE);
+        return $this->_scopeConfig->isSetFlag(
+            'rss/catalog/category',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
     }
 
     /**
@@ -230,14 +226,14 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
      */
     public function getFeeds()
     {
-        $result = array();
+        $result = [];
         if ($this->isAllowed()) {
             /** @var $category \Magento\Catalog\Model\Category */
             $category = $this->categoryFactory->create();
             $treeModel = $category->getTreeModel()->loadNode($this->storeManager->getStore()->getRootCategoryId());
             $nodes = $treeModel->loadChildren()->getChildren();
 
-            $nodeIds = array();
+            $nodeIds = [];
             foreach ($nodes as $node) {
                 $nodeIds[] = $node->getId();
             }
@@ -252,15 +248,23 @@ class Category extends \Magento\Framework\View\Element\AbstractBlock implements 
                 ->addAttributeToSort('name')
                 ->load();
 
-            $feeds = array();
+            $feeds = [];
             foreach ($collection as $category) {
-                $feeds[] = array(
+                $feeds[] = [
                     'label' => $category->getName(),
-                    'link' => $this->rssUrlBuilder->getUrl(array('type' => 'category', 'cid' => $category->getId()))
-                );
+                    'link' => $this->rssUrlBuilder->getUrl(['type' => 'category', 'cid' => $category->getId()]),
+                ];
             }
-            $result = array('group' => 'Categories', 'feeds' => $feeds);
+            $result = ['group' => 'Categories', 'feeds' => $feeds];
         }
         return $result;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isAuthRequired()
+    {
+        return false;
     }
 }

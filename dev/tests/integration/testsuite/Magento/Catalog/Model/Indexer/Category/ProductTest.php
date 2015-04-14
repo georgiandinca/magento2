@@ -1,31 +1,16 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license   http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Model\Indexer\Category;
+
+use Magento\Catalog\Model\Category;
 
 /**
  * @magentoDataFixture Magento/Catalog/_files/indexer_catalog_category.php
  * @magentoDbIsolation enabled
+ * @magentoAppIsolation enabled
  */
 class ProductTest extends \PHPUnit_Framework_TestCase
 {
@@ -55,26 +40,30 @@ class ProductTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    /**
+     * @magentoDataFixture Magento/Catalog/_files/indexer_catalog_category.php
+     * @magentoDbIsolation enabled
+     */
     public function testReindexAll()
     {
         $categories = $this->getCategories(4);
         $products = $this->getProducts(2);
 
-        /** @var \Magento\Catalog\Model\Category $categoryFourth */
+        /** @var Category $categoryFourth */
         $categoryFourth = end($categories);
         foreach ($products as $product) {
             /** @var \Magento\Catalog\Model\Product $product */
-            $product->setCategoryIds(array($categoryFourth->getId()));
+            $product->setCategoryIds([$categoryFourth->getId()]);
             $product->save();
         }
 
-        /** @var \Magento\Catalog\Model\Category $categoryThird */
+        /** @var Category $categoryThird */
         $categoryThird = $categories[2];
         $categoryThird->setIsAnchor(true);
         $categoryThird->save();
 
         $this->clearIndex();
-        $categories = array(self::DEFAULT_ROOT_CATEGORY, $categoryThird->getId(), $categoryFourth->getId());
+        $categories = [self::DEFAULT_ROOT_CATEGORY, $categoryThird->getId(), $categoryFourth->getId()];
 
         $this->indexer->reindexAll();
 
@@ -94,22 +83,24 @@ class ProductTest extends \PHPUnit_Framework_TestCase
      * @magentoAppArea adminhtml
      * @magentoDataFixture Magento/CatalogUrlRewrite/_files/categories.php
      * @magentoAppIsolation enabled
-     * @depends testReindexAll
+     * @magentoDbIsolation enabled
+     *
      */
     public function testCategoryMove()
     {
+        $this->testReindexAll();
         $categories = $this->getCategories(4);
         $products = $this->getProducts(2);
 
-        /** @var \Magento\Catalog\Model\Category $categoryFourth */
+        /** @var Category $categoryFourth */
         $categoryFourth = end($categories);
 
-        /** @var \Magento\Catalog\Model\Category $categorySecond */
+        /** @var Category $categorySecond */
         $categorySecond = $categories[1];
         $categorySecond->setIsAnchor(true);
         $categorySecond->save();
 
-        /** @var \Magento\Catalog\Model\Category $categoryThird */
+        /** @var Category $categoryThird */
         $categoryThird = $categories[2];
 
         /**
@@ -117,7 +108,7 @@ class ProductTest extends \PHPUnit_Framework_TestCase
          */
         $categoryFourth->move($categorySecond->getId(), null);
 
-        $categories = array(self::DEFAULT_ROOT_CATEGORY, $categorySecond->getId(), $categoryFourth->getId());
+        $categories = [self::DEFAULT_ROOT_CATEGORY, $categorySecond->getId(), $categoryFourth->getId()];
 
         foreach ($products as $product) {
             /** @var \Magento\Catalog\Model\Product $product */
@@ -138,14 +129,14 @@ class ProductTest extends \PHPUnit_Framework_TestCase
         $categories = $this->getCategories(4);
         $products = $this->getProducts(2);
 
-        /** @var \Magento\Catalog\Model\Category $categoryFourth */
+        /** @var Category $categoryFourth */
         $categoryFourth = end($categories);
         $categoryFourth->delete();
 
-        /** @var \Magento\Catalog\Model\Category $categorySecond */
+        /** @var Category $categorySecond */
         $categorySecond = $categories[1];
 
-        $categories = array($categorySecond->getId(), $categoryFourth->getId());
+        $categories = [$categorySecond->getId(), $categoryFourth->getId()];
 
         foreach ($products as $product) {
             /** @var \Magento\Catalog\Model\Product $product */
@@ -159,22 +150,23 @@ class ProductTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @depends testReindexAll
+     *
      */
     public function testCategoryCreate()
     {
+        $this->testReindexAll();
         $categories = $this->getCategories(4);
         $products = $this->getProducts(3);
 
-        /** @var \Magento\Catalog\Model\Category $categorySecond */
+        /** @var Category $categorySecond */
         $categorySecond = $categories[1];
         $categorySecond->setIsAnchor(0);
         $categorySecond->save();
 
-        /** @var \Magento\Catalog\Model\Category $categoryFifth */
+        /** @var Category $categoryFifth */
         $categoryFifth = end($categories);
 
-        /** @var \Magento\Catalog\Model\Category $categorySixth */
+        /** @var Category $categorySixth */
         $categorySixth = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             'Magento\Catalog\Model\Category'
         );
@@ -192,15 +184,15 @@ class ProductTest extends \PHPUnit_Framework_TestCase
 
         /** @var \Magento\Catalog\Model\Product $productThird */
         $productThird = end($products);
-        $productThird->setCategoryIds(array($categorySixth->getId()));
+        $productThird->setCategoryIds([$categorySixth->getId()]);
         $productThird->save();
 
-        $categories = array(self::DEFAULT_ROOT_CATEGORY, $categorySixth->getId());
+        $categories = [self::DEFAULT_ROOT_CATEGORY, $categorySixth->getId()];
         foreach ($categories as $categoryId) {
             $this->assertTrue((bool)$this->productResource->canBeShowInCategory($productThird, $categoryId));
         }
 
-        $categories = array($categoryFifth->getId(), $categorySecond->getId());
+        $categories = [$categoryFifth->getId(), $categorySecond->getId()];
         foreach ($categories as $categoryId) {
             $this->assertFalse((bool)$this->productResource->canBeShowInCategory($productThird, $categoryId));
         }
@@ -208,11 +200,11 @@ class ProductTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param int $count
-     * @return \Magento\Catalog\Model\Category[]
+     * @return Category[]
      */
     protected function getCategories($count)
     {
-        /** @var \Magento\Catalog\Model\Category $category */
+        /** @var Category $category */
         $category = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
             'Magento\Catalog\Model\Category'
         );

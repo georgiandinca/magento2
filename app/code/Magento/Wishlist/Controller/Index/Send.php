@@ -1,34 +1,19 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Wishlist\Controller\Index;
 
-use Magento\Wishlist\Controller\IndexInterface;
 use Magento\Framework\App\Action;
-use Magento\Framework\App\Action\NotFoundException;
+use Magento\Framework\Exception\NotFoundException;
 use Magento\Framework\App\ResponseInterface;
+use Magento\Wishlist\Controller\IndexInterface;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class Send extends Action\Action implements IndexInterface
 {
     /**
@@ -62,13 +47,13 @@ class Send extends Action\Action implements IndexInterface
     protected $_customerSession;
 
     /**
-     * @var \Magento\Core\App\Action\FormKeyValidator
+     * @var \Magento\Framework\Data\Form\FormKey\Validator
      */
     protected $_formKeyValidator;
 
     /**
      * @param Action\Context $context
-     * @param \Magento\Core\App\Action\FormKeyValidator $formKeyValidator
+     * @param \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator
      * @param \Magento\Customer\Model\Session $customerSession
      * @param \Magento\Wishlist\Controller\WishlistProviderInterface $wishlistProvider
      * @param \Magento\Wishlist\Model\Config $wishlistConfig
@@ -78,7 +63,7 @@ class Send extends Action\Action implements IndexInterface
      */
     public function __construct(
         Action\Context $context,
-        \Magento\Core\App\Action\FormKeyValidator $formKeyValidator,
+        \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator,
         \Magento\Customer\Model\Session $customerSession,
         \Magento\Wishlist\Controller\WishlistProviderInterface $wishlistProvider,
         \Magento\Wishlist\Model\Config $wishlistConfig,
@@ -101,6 +86,9 @@ class Send extends Action\Action implements IndexInterface
      *
      * @return ResponseInterface|void
      * @throws NotFoundException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
     public function execute()
     {
@@ -110,7 +98,7 @@ class Send extends Action\Action implements IndexInterface
 
         $wishlist = $this->wishlistProvider->getWishlist();
         if (!$wishlist) {
-            throw new NotFoundException();
+            throw new NotFoundException(__('Page not found.'));
         }
 
         $sharingLimit = $this->_wishlistConfig->getSharingEmailLimit();
@@ -146,12 +134,13 @@ class Send extends Action\Action implements IndexInterface
             $this->_objectManager->get(
                 'Magento\Wishlist\Model\Session'
             )->setSharingForm(
-                $this->getRequest()->getPost()
+                $this->getRequest()->getPostValue()
             );
             $this->_redirect('*/*/share');
             return;
         }
 
+        $this->addLayoutHandles();
         $this->inlineTranslation->suspend();
 
         $sent = 0;
@@ -159,25 +148,14 @@ class Send extends Action\Action implements IndexInterface
         try {
             $customer = $this->_customerSession->getCustomerDataObject();
             $customerName = $this->_customerHelperView->getCustomerName($customer);
-            /*if share rss added rss feed to email template*/
-            if ($this->getRequest()->getParam('rss_url')) {
-                $rss_url = $this->_view->getLayout()->createBlock(
-                    'Magento\Wishlist\Block\Rss\EmailLink'
-                )->setWishlistId(
-                    $wishlist->getId()
-                )->toHtml();
-                $message .= $rss_url;
-            }
-            $wishlistBlock = $this->_view->getLayout()->createBlock(
-                'Magento\Wishlist\Block\Share\Email\Items'
-            )->toHtml();
 
+            $message .= $this->getRssLink($wishlist->getId());
             $emails = array_unique($emails);
             $sharingCode = $wishlist->getSharingCode();
 
             try {
                 $scopeConfig = $this->_objectManager->get('Magento\Framework\App\Config\ScopeConfigInterface');
-                $storeManager = $this->_objectManager->get('Magento\Framework\StoreManagerInterface');
+                $storeManager = $this->_objectManager->get('Magento\Store\Model\StoreManagerInterface');
                 foreach ($emails as $email) {
                     $transport = $this->_transportBuilder->setTemplateIdentifier(
                         $scopeConfig->getValue(
@@ -185,21 +163,21 @@ class Send extends Action\Action implements IndexInterface
                             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
                         )
                     )->setTemplateOptions(
-                        array(
+                        [
                             'area' => \Magento\Framework\App\Area::AREA_FRONTEND,
-                            'store' => $storeManager->getStore()->getStoreId()
-                        )
+                            'store' => $storeManager->getStore()->getStoreId(),
+                        ]
                     )->setTemplateVars(
-                        array(
+                        [
                             'customer' => $customer,
                             'customerName' => $customerName,
                             'salable' => $wishlist->isSalable() ? 'yes' : '',
-                            'items' => $wishlistBlock,
-                            'addAllLink' => $this->_url->getUrl('*/shared/allcart', array('code' => $sharingCode)),
-                            'viewOnSiteLink' => $this->_url->getUrl('*/shared/index', array('code' => $sharingCode)),
+                            'items' => $this->getWishlistItems(),
+                            'addAllLink' => $this->_url->getUrl('*/shared/allcart', ['code' => $sharingCode]),
+                            'viewOnSiteLink' => $this->_url->getUrl('*/shared/index', ['code' => $sharingCode]),
                             'message' => $message,
-                            'store' => $storeManager->getStore()
-                        )
+                            'store' => $storeManager->getStore(),
+                        ]
                     )->setFrom(
                         $scopeConfig->getValue(
                             'wishlist/email/email_identity',
@@ -223,18 +201,63 @@ class Send extends Action\Action implements IndexInterface
 
             $this->inlineTranslation->resume();
 
-            $this->_eventManager->dispatch('wishlist_share', array('wishlist' => $wishlist));
+            $this->_eventManager->dispatch('wishlist_share', ['wishlist' => $wishlist]);
             $this->messageManager->addSuccess(__('Your wish list has been shared.'));
-            $this->_redirect('*/*', array('wishlist_id' => $wishlist->getId()));
+            $this->_redirect('*/*', ['wishlist_id' => $wishlist->getId()]);
         } catch (\Exception $e) {
             $this->inlineTranslation->resume();
             $this->messageManager->addError($e->getMessage());
             $this->_objectManager->get(
                 'Magento\Wishlist\Model\Session'
             )->setSharingForm(
-                $this->getRequest()->getPost()
+                $this->getRequest()->getPostValue()
             );
             $this->_redirect('*/*/share');
         }
+    }
+
+    /**
+     * Prepare to load additional email blocks
+     *
+     * Add 'wishlist_email_rss' layout handle.
+     * Add 'wishlist_email_items' layout handle.
+     *
+     * @return void
+     */
+    protected function addLayoutHandles()
+    {
+        if ($this->getRequest()->getParam('rss_url')) {
+            $this->_view->getLayout()->getUpdate()->addHandle('wishlist_email_rss');
+        }
+        $this->_view->getLayout()->getUpdate()->addHandle('wishlist_email_items');
+        $this->_view->loadLayoutUpdates();
+    }
+
+    /**
+     * Retrieve RSS link content (html)
+     *
+     * @param int $wishlistId
+     * @return mixed
+     */
+    protected function getRssLink($wishlistId)
+    {
+        if ($this->getRequest()->getParam('rss_url')) {
+            return $this->_view->getLayout()
+                ->getBlock('wishlist.email.rss')
+                ->setWishlistId($wishlistId)
+                ->toHtml();
+        }
+    }
+
+    /**
+     * Retrieve wishlist items content (html)
+     *
+     * @return string
+     */
+    protected function getWishlistItems()
+    {
+        return $this->_view->getLayout()
+            ->getBlock('wishlist.email.items')
+            ->toHtml();
     }
 }

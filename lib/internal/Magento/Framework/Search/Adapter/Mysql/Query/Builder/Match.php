@@ -1,35 +1,49 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework\Search\Adapter\Mysql\Query\Builder;
 
+use Magento\Framework\DB\Helper\Mysql\Fulltext;
 use Magento\Framework\DB\Select;
+use Magento\Framework\Search\Adapter\Mysql\Field\ResolverInterface;
 use Magento\Framework\Search\Adapter\Mysql\ScoreBuilder;
 use Magento\Framework\Search\Request\Query\Bool;
 use Magento\Framework\Search\Request\QueryInterface as RequestQueryInterface;
 
 class Match implements QueryInterface
 {
+    const SPECIAL_CHARACTERS = '-+~/\\<>\'":*$#@()!,.?`=';
+
+    const MINIMAL_CHARACTER_LENGTH = 3;
+
+    /**
+     * @var string[]
+     */
+    private $replaceSymbols = [];
+
+    /**
+     * @var ResolverInterface
+     */
+    private $resolver;
+
+    /**
+     * @var Fulltext
+     */
+    private $fulltextHelper;
+
+    /**
+     * @param ResolverInterface $resolver
+     * @param Fulltext $fulltextHelper
+     */
+    public function __construct(ResolverInterface $resolver, Fulltext $fulltextHelper)
+    {
+        $this->resolver = $resolver;
+        $this->replaceSymbols = str_split(self::SPECIAL_CHARACTERS, 1);
+        $this->fulltextHelper = $fulltextHelper;
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -40,25 +54,59 @@ class Match implements QueryInterface
         $conditionType
     ) {
         /** @var $query \Magento\Framework\Search\Request\Query\Match */
-        $queryValue = $query->getValue();
-        if ($conditionType === Bool::QUERY_CONDITION_MUST) {
-            $queryValue = '+' . $queryValue;
-        } elseif ($conditionType === Bool::QUERY_CONDITION_NOT) {
-            $queryValue = '-' . $queryValue;
-        }
+        $queryValue = $this->prepareQuery($query->getValue(), $conditionType);
 
         $fieldList = [];
         foreach ($query->getMatches() as $match) {
             $fieldList[] = $match['field'];
         }
+        $resolvedFieldList = $this->resolver->resolve($fieldList);
 
         $queryBoost = $query->getBoost();
         $scoreBuilder->addCondition(
-            $select->getMatchQuery($fieldList, $queryValue, Select::FULLTEXT_MODE_BOOLEAN),
-            !is_null($queryBoost) ? $queryBoost : 1
+            $this->fulltextHelper->getMatchQuery($resolvedFieldList, $queryValue, Fulltext::FULLTEXT_MODE_BOOLEAN),
+            $queryBoost !== null ? $queryBoost : 1
         );
-        $select->match($fieldList, $queryValue, true, Select::FULLTEXT_MODE_BOOLEAN);
+        $select = $this->fulltextHelper->match(
+            $select,
+            $resolvedFieldList,
+            $queryValue,
+            true,
+            Fulltext::FULLTEXT_MODE_BOOLEAN
+        );
 
         return $select;
+    }
+
+    /**
+     * @param string $queryValue
+     * @param string $conditionType
+     * @return string
+     */
+    protected function prepareQuery($queryValue, $conditionType)
+    {
+        $queryValue = str_replace($this->replaceSymbols, ' ', $queryValue);
+
+        $stringPrefix = '';
+        if ($conditionType === Bool::QUERY_CONDITION_MUST) {
+            $stringPrefix = '+';
+        } elseif ($conditionType === Bool::QUERY_CONDITION_NOT) {
+            $stringPrefix = '-';
+        }
+
+        $queryValues = explode(' ', $queryValue);
+
+        foreach ($queryValues as $queryKey => $queryValue) {
+            if (empty($queryValue)) {
+                unset($queryValues[$queryKey]);
+            } else {
+                $stringSuffix = self::MINIMAL_CHARACTER_LENGTH > strlen($queryValue) ? '' : '*';
+                $queryValues[$queryKey] = $stringPrefix . $queryValue . $stringSuffix;
+            }
+        }
+
+        $queryValue = implode(' ', $queryValues);
+
+        return $queryValue;
     }
 }

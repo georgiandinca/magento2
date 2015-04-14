@@ -2,26 +2,8 @@
 /**
  * Filesystem configuration loader. Loads configuration from XML files, split by scopes
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license   http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  *
  */
 namespace Magento\Framework\Config\Reader;
@@ -71,7 +53,7 @@ class Filesystem implements \Magento\Framework\Config\ReaderInterface
      *
      * @var array
      */
-    protected $_idAttributes = array();
+    protected $_idAttributes = [];
 
     /**
      * Class of dom configuration document used for merge
@@ -105,7 +87,7 @@ class Filesystem implements \Magento\Framework\Config\ReaderInterface
         \Magento\Framework\Config\SchemaLocatorInterface $schemaLocator,
         \Magento\Framework\Config\ValidationStateInterface $validationState,
         $fileName,
-        $idAttributes = array(),
+        $idAttributes = [],
         $domDocumentClass = 'Magento\Framework\Config\Dom',
         $defaultScope = 'global'
     ) {
@@ -132,7 +114,7 @@ class Filesystem implements \Magento\Framework\Config\ReaderInterface
         $scope = $scope ?: $this->_defaultScope;
         $fileList = $this->_fileResolver->get($this->_fileName, $scope);
         if (!count($fileList)) {
-            return array();
+            return [];
         }
         $output = $this->_readFiles($fileList);
 
@@ -144,7 +126,7 @@ class Filesystem implements \Magento\Framework\Config\ReaderInterface
      *
      * @param array $fileList
      * @return array
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function _readFiles($fileList)
     {
@@ -158,18 +140,22 @@ class Filesystem implements \Magento\Framework\Config\ReaderInterface
                     $configMerger->merge($content);
                 }
             } catch (\Magento\Framework\Config\Dom\ValidationException $e) {
-                throw new \Magento\Framework\Exception("Invalid XML in file " . $key . ":\n" . $e->getMessage());
+                throw new \Magento\Framework\Exception\LocalizedException(
+                    new \Magento\Framework\Phrase("Invalid XML in file %1:\n%2", [$key, $e->getMessage()])
+                );
             }
         }
         if ($this->_isValidated) {
-            $errors = array();
+            $errors = [];
             if ($configMerger && !$configMerger->validate($this->_schemaFile, $errors)) {
                 $message = "Invalid Document \n";
-                throw new \Magento\Framework\Exception($message . implode("\n", $errors));
+                throw new \Magento\Framework\Exception\LocalizedException(
+                    new \Magento\Framework\Phrase($message . implode("\n", $errors))
+                );
             }
         }
 
-        $output = array();
+        $output = [];
         if ($configMerger) {
             $output = $this->_converter->convert($configMerger->getDom());
         }

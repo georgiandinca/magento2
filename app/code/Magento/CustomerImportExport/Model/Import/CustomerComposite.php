@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\CustomerImportExport\Model\Import;
 
@@ -82,36 +64,36 @@ class CustomerComposite extends \Magento\ImportExport\Model\Import\AbstractEntit
      *
      * @var string[]
      */
-    protected $_specialAttributes = array(
+    protected $_specialAttributes = [
         Customer::COLUMN_WEBSITE,
         Customer::COLUMN_STORE,
         self::COLUMN_DEFAULT_BILLING,
-        self::COLUMN_DEFAULT_SHIPPING
-    );
+        self::COLUMN_DEFAULT_SHIPPING,
+    ];
 
     /**
      * Permanent entity columns
      *
      * @var string[]
      */
-    protected $_permanentAttributes = array(
+    protected $_permanentAttributes = [
         Customer::COLUMN_EMAIL,
-        Customer::COLUMN_WEBSITE
-    );
+        Customer::COLUMN_WEBSITE,
+    ];
 
     /**
      * Customer attributes
      *
      * @var string[]
      */
-    protected $_customerAttributes = array();
+    protected $_customerAttributes = [];
 
     /**
      * Address attributes
      *
      * @var string[]
      */
-    protected $_addressAttributes = array();
+    protected $_addressAttributes = [];
 
     /**
      * Website code of current customer row
@@ -147,7 +129,6 @@ class CustomerComposite extends \Magento\ImportExport\Model\Import\AbstractEntit
     protected $masterAttributeCode = 'email';
 
     /**
-     * @param \Magento\Core\Helper\Data $coreData
      * @param \Magento\Framework\Stdlib\String $string
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\ImportExport\Model\ImportFactory $importFactory
@@ -161,7 +142,6 @@ class CustomerComposite extends \Magento\ImportExport\Model\Import\AbstractEntit
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        \Magento\Core\Helper\Data $coreData,
         \Magento\Framework\Stdlib\String $string,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         \Magento\ImportExport\Model\ImportFactory $importFactory,
@@ -170,34 +150,34 @@ class CustomerComposite extends \Magento\ImportExport\Model\Import\AbstractEntit
         \Magento\CustomerImportExport\Model\Resource\Import\CustomerComposite\DataFactory $dataFactory,
         \Magento\CustomerImportExport\Model\Import\CustomerFactory $customerFactory,
         \Magento\CustomerImportExport\Model\Import\AddressFactory $addressFactory,
-        array $data = array()
+        array $data = []
     ) {
-        parent::__construct($coreData, $string, $scopeConfig, $importFactory, $resourceHelper, $resource, $data);
+        parent::__construct($string, $scopeConfig, $importFactory, $resourceHelper, $resource, $data);
 
         $this->addMessageTemplate(
             self::ERROR_ROW_IS_ORPHAN,
             __('Orphan rows that will be skipped due default row errors')
         );
 
-        $this->_availableBehaviors = array(
+        $this->_availableBehaviors = [
             \Magento\ImportExport\Model\Import::BEHAVIOR_APPEND,
-            \Magento\ImportExport\Model\Import::BEHAVIOR_DELETE
-        );
+            \Magento\ImportExport\Model\Import::BEHAVIOR_DELETE,
+        ];
 
         // customer entity stuff
         if (isset($data['customer_data_source_model'])) {
             $this->_dataSourceModels['customer'] = $data['customer_data_source_model'];
         } else {
-            $arguments = array(
-                'entity_type' => CustomerComposite::COMPONENT_ENTITY_CUSTOMER
-            );
-            $this->_dataSourceModels['customer'] = $dataFactory->create(array('arguments' => $arguments));
+            $arguments = [
+                'entity_type' => CustomerComposite::COMPONENT_ENTITY_CUSTOMER,
+            ];
+            $this->_dataSourceModels['customer'] = $dataFactory->create(['arguments' => $arguments]);
         }
         if (isset($data['customer_entity'])) {
             $this->_customerEntity = $data['customer_entity'];
         } else {
             $data['data_source_model'] = $this->_dataSourceModels['customer'];
-            $this->_customerEntity = $customerFactory->create(array('data' => $data));
+            $this->_customerEntity = $customerFactory->create(['data' => $data]);
             unset($data['data_source_model']);
         }
         $this->_initCustomerAttributes();
@@ -206,17 +186,17 @@ class CustomerComposite extends \Magento\ImportExport\Model\Import\AbstractEntit
         if (isset($data['address_data_source_model'])) {
             $this->_dataSourceModels['address'] = $data['address_data_source_model'];
         } else {
-            $arguments = array(
+            $arguments = [
                 'entity_type' => CustomerComposite::COMPONENT_ENTITY_ADDRESS,
-                'customer_attributes' => $this->_customerAttributes
-            );
-            $this->_dataSourceModels['address'] = $dataFactory->create(array('arguments' => $arguments));
+                'customer_attributes' => $this->_customerAttributes,
+            ];
+            $this->_dataSourceModels['address'] = $dataFactory->create(['arguments' => $arguments]);
         }
         if (isset($data['address_entity'])) {
             $this->_addressEntity = $data['address_entity'];
         } else {
             $data['data_source_model'] = $this->_dataSourceModels['address'];
-            $this->_addressEntity = $addressFactory->create(array('data' => $data));
+            $this->_addressEntity = $addressFactory->create(['data' => $data]);
             unset($data['data_source_model']);
         }
         $this->_initAddressAttributes();
@@ -306,11 +286,11 @@ class CustomerComposite extends \Magento\ImportExport\Model\Import\AbstractEntit
                 $websiteId = $this->_customerEntity->getWebsiteId($this->_currentWebsiteCode);
                 if (!$this->_addressEntity->getCustomerStorage()->getCustomerId($this->_currentEmail, $websiteId)) {
                     $customerData = new \Magento\Framework\Object(
-                        array(
+                        [
                             'id' => $this->_nextCustomerId,
                             'email' => $this->_currentEmail,
-                            'website_id' => $websiteId
-                        )
+                            'website_id' => $websiteId,
+                        ]
                     );
                     $this->_addressEntity->getCustomerStorage()->addCustomer($customerData);
                     $this->_nextCustomerId++;
@@ -367,14 +347,14 @@ class CustomerComposite extends \Magento\ImportExport\Model\Import\AbstractEntit
      */
     protected function _prepareAddressRowData(array $rowData)
     {
-        $excludedAttributes = array(self::COLUMN_DEFAULT_BILLING, self::COLUMN_DEFAULT_SHIPPING);
+        $excludedAttributes = [self::COLUMN_DEFAULT_BILLING, self::COLUMN_DEFAULT_SHIPPING];
 
         unset(
             $rowData[Customer::COLUMN_WEBSITE],
             $rowData[Customer::COLUMN_STORE]
         );
 
-        $result = array();
+        $result = [];
         foreach ($rowData as $key => $value) {
             if (!in_array($key, $this->_customerAttributes) && !empty($value)) {
                 if (!in_array($key, $excludedAttributes)) {

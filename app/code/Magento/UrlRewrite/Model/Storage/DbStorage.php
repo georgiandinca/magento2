@@ -1,31 +1,14 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\UrlRewrite\Model\Storage;
 
 use Magento\Framework\App\Resource;
-use Magento\UrlRewrite\Service\V1\Data\UrlRewriteBuilder;
 use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
+use Magento\UrlRewrite\Service\V1\Data\UrlRewriteFactory;
+use Magento\Framework\Api\DataObjectHelper;
 
 class DbStorage extends AbstractStorage
 {
@@ -50,15 +33,19 @@ class DbStorage extends AbstractStorage
     protected $resource;
 
     /**
-     * @param \Magento\UrlRewrite\Service\V1\Data\UrlRewriteBuilder $urlRewriteBuilder
+     * @param \Magento\UrlRewrite\Service\V1\Data\UrlRewriteFactory $urlRewriteFactory
+     * @param DataObjectHelper $dataObjectHelper
      * @param \Magento\Framework\App\Resource $resource
      */
-    public function __construct(UrlRewriteBuilder $urlRewriteBuilder, Resource $resource)
-    {
+    public function __construct(
+        UrlRewriteFactory $urlRewriteFactory,
+        DataObjectHelper $dataObjectHelper,
+        Resource $resource
+    ) {
         $this->connection = $resource->getConnection(Resource::DEFAULT_WRITE_RESOURCE);
         $this->resource = $resource;
 
-        parent::__construct($urlRewriteBuilder);
+        parent::__construct($urlRewriteFactory, $dataObjectHelper);
     }
 
     /**
@@ -115,7 +102,7 @@ class DbStorage extends AbstractStorage
      *
      * @param array $data
      * @return void
-     * @throws DuplicateEntryException
+     * @throws \Magento\Framework\Exception\AlreadyExistsException
      * @throws \Exception
      */
     protected function insertMultiple($data)
@@ -126,7 +113,9 @@ class DbStorage extends AbstractStorage
             if ($e->getCode() === self::ERROR_CODE_DUPLICATE_ENTRY
                 && preg_match('#SQLSTATE\[23000\]: [^:]+: 1062[^\d]#', $e->getMessage())
             ) {
-                throw new DuplicateEntryException();
+                throw new \Magento\Framework\Exception\AlreadyExistsException(
+                    __('URL key for specified store already exists.')
+                );
             }
             throw $e;
         }

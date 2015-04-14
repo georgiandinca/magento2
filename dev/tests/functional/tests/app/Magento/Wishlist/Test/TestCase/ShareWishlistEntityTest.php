@@ -1,40 +1,22 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Wishlist\Test\TestCase;
 
-use Mtf\Client\Browser;
-use Mtf\TestCase\Injectable;
-use Magento\Cms\Test\Page\CmsIndex;
-use Magento\Customer\Test\Page\CustomerAccountLogin;
-use Magento\Customer\Test\Page\CustomerAccountIndex;
-use Magento\Customer\Test\Fixture\CustomerInjectable;
 use Magento\Catalog\Test\Fixture\CatalogProductSimple;
 use Magento\Catalog\Test\Page\Product\CatalogProductView;
+use Magento\Cms\Test\Page\CmsIndex;
+use Magento\Customer\Test\Fixture\Customer;
+use Magento\Customer\Test\Page\CustomerAccountIndex;
+use Magento\Customer\Test\Page\CustomerAccountLogin;
 use Magento\Customer\Test\Page\CustomerAccountLogout;
 use Magento\Wishlist\Test\Page\WishlistIndex;
 use Magento\Wishlist\Test\Page\WishlistShare;
+use Magento\Mtf\Client\BrowserInterface;
+use Magento\Mtf\TestCase\Injectable;
 
 /**
  * Test Creation for ShareWishlistEntity
@@ -55,9 +37,17 @@ use Magento\Wishlist\Test\Page\WishlistShare;
  *
  * @group Wishlist_(CS)
  * @ZephyrId MAGETWO-23394
+ *
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class ShareWishlistEntityTest extends Injectable
 {
+    /* tags */
+    const MVP = 'no';
+    const DOMAIN = 'CS';
+    const TO_MAINTAIN = 'yes';
+    /* end tags */
+
     /**
      * Cms index page
      *
@@ -110,12 +100,12 @@ class ShareWishlistEntityTest extends Injectable
     /**
      * Prepare data
      *
-     * @param CustomerInjectable $customer
+     * @param Customer $customer
      * @param CatalogProductSimple $product
      * @return array
      */
     public function __prepare(
-        CustomerInjectable $customer,
+        Customer $customer,
         CatalogProductSimple $product
     ) {
         $customer->persist();
@@ -160,23 +150,25 @@ class ShareWishlistEntityTest extends Injectable
     /**
      * Share wish list
      *
-     * @param Browser $browser
-     * @param CustomerInjectable $customer
+     * @param BrowserInterface $browser
+     * @param Customer $customer
      * @param CatalogProductSimple $product
      * @param array $sharingInfo
      * @return void
      */
     public function test(
-        Browser $browser,
-        CustomerInjectable $customer,
+        BrowserInterface $browser,
+        Customer $customer,
         CatalogProductSimple $product,
         array $sharingInfo
     ) {
         //Steps
         $this->loginCustomer($customer);
         $browser->open($_ENV['app_frontend_url'] . $product->getUrlKey() . '.html');
-        $this->catalogProductView->getViewBlock()->addToWishlist();
+        $this->catalogProductView->getViewBlock()->clickAddToWishlist();
+        $this->wishlistIndex->getMessagesBlock()->waitSuccessMessage();
         $this->wishlistIndex->getWishlistBlock()->clickShareWishList();
+        $this->cmsIndex->getCmsPageBlock()->waitPageInit();
         $this->wishlistShare->getSharingInfoForm()->fillForm($sharingInfo);
         $this->wishlistShare->getSharingInfoForm()->shareWishlist();
     }
@@ -184,10 +176,10 @@ class ShareWishlistEntityTest extends Injectable
     /**
      * Login customer
      *
-     * @param CustomerInjectable $customer
+     * @param Customer $customer
      * @return void
      */
-    protected function loginCustomer(CustomerInjectable $customer)
+    protected function loginCustomer(Customer $customer)
     {
         $this->cmsIndex->open();
         if (!$this->cmsIndex->getLinksBlock()->isLinkVisible('Log Out')) {

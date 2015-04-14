@@ -2,29 +2,14 @@
 /**
  * Session configuration object
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework\Session;
 
+use Magento\Framework\App\DeploymentConfig;
+use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\Filesystem;
 use Magento\Framework\Session\Config\ConfigInterface;
 
 /**
@@ -37,17 +22,17 @@ class Config implements ConfigInterface
     /**
      * Configuration path for session save method
      */
-    const PARAM_SESSION_SAVE_METHOD = 'session_save';
+    const PARAM_SESSION_SAVE_METHOD = 'session/save';
 
     /**
      * Configuration path for session save path
      */
-    const PARAM_SESSION_SAVE_PATH = 'session_save_path';
+    const PARAM_SESSION_SAVE_PATH = 'session/save_path';
 
     /**
      * Configuration path for session cache limiter
      */
-    const PARAM_SESSION_CACHE_LIMITER = 'session_cache_limiter';
+    const PARAM_SESSION_CACHE_LIMITER = 'session/cache_limiter';
 
     /**
      * Configuration path for cookie domain
@@ -79,7 +64,7 @@ class Config implements ConfigInterface
      *
      * @var array
      */
-    protected $options = array();
+    protected $options = [];
 
     /**
      * @var \Magento\Framework\App\Config\ScopeConfigInterface
@@ -101,17 +86,12 @@ class Config implements ConfigInterface
      *
      * @var string[]
      */
-    protected $booleanOptions = array(
+    protected $booleanOptions = [
         'session.use_cookies',
         'session.use_only_cookies',
         'session.use_trans_sid',
-        'session.cookie_httponly'
-    );
-
-    /**
-     * @var \Magento\Framework\App\Filesystem
-     */
-    protected $_filesystem;
+        'session.cookie_httponly',
+    ];
 
     /**
      * @var string
@@ -126,39 +106,45 @@ class Config implements ConfigInterface
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Framework\Stdlib\String $stringHelper
      * @param \Magento\Framework\App\RequestInterface $request
-     * @param \Magento\Framework\App\Filesystem $filesystem
+     * @param Filesystem $filesystem
+     * @param DeploymentConfig $deploymentConfig
      * @param string $scopeType
-     * @param string $saveMethod
-     * @param null|string $savePath
-     * @param null|string $cacheLimiter
      * @param string $lifetimePath
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function __construct(
         \Magento\Framework\ValidatorFactory $validatorFactory,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         \Magento\Framework\Stdlib\String $stringHelper,
         \Magento\Framework\App\RequestInterface $request,
-        \Magento\Framework\App\Filesystem $filesystem,
+        Filesystem $filesystem,
+        DeploymentConfig $deploymentConfig,
         $scopeType,
-        $saveMethod = \Magento\Framework\Session\SaveHandlerInterface::DEFAULT_HANDLER,
-        $savePath = null,
-        $cacheLimiter = null,
         $lifetimePath = self::XML_PATH_COOKIE_LIFETIME
     ) {
         $this->_validatorFactory = $validatorFactory;
         $this->_scopeConfig = $scopeConfig;
         $this->_stringHelper = $stringHelper;
         $this->_httpRequest = $request;
-        $this->_filesystem = $filesystem;
         $this->_scopeType = $scopeType;
+
+        $saveMethod = $deploymentConfig->get(
+            self::PARAM_SESSION_SAVE_METHOD,
+            \Magento\Framework\Session\SaveHandlerInterface::DEFAULT_HANDLER
+        );
+        $savePath = $deploymentConfig->get(self::PARAM_SESSION_SAVE_PATH);
+        $cacheLimiter = $deploymentConfig->get(self::PARAM_SESSION_CACHE_LIMITER);
 
         $this->setSaveHandler($saveMethod === 'db' ? 'user' : $saveMethod);
 
-        if (!$savePath) {
-            $savePath = $this->_filesystem->getPath('session');
+        if (!$savePath && !ini_get('session.save_path')) {
+            $sessionDir = $filesystem->getDirectoryWrite(DirectoryList::SESSION);
+            $savePath = $sessionDir->getAbsolutePath();
+            $sessionDir->create();
         }
-        $this->setSavePath($savePath);
-
+        if ($savePath) {
+            $this->setSavePath($savePath);
+        }
         if ($cacheLimiter) {
             $this->setOption('session.cache_limiter', $cacheLimiter);
         }
@@ -422,6 +408,7 @@ class Config implements ConfigInterface
      * Get session.cookie_secure
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getCookieSecure()
     {
@@ -444,6 +431,7 @@ class Config implements ConfigInterface
      * Get session.cookie_httponly
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getCookieHttpOnly()
     {
@@ -466,6 +454,7 @@ class Config implements ConfigInterface
      * Get session.use_cookies
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getUseCookies()
     {

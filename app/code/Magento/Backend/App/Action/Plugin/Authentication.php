@@ -1,28 +1,11 @@
 <?php
 /**
- *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Backend\App\Action\Plugin;
+
+use Magento\Framework\Exception\AuthenticationException;
 
 class Authentication
 {
@@ -34,13 +17,13 @@ class Authentication
     /**
      * @var string[]
      */
-    protected $_openActions = array(
+    protected $_openActions = [
         'forgotpassword',
         'resetpassword',
         'resetpasswordpost',
         'logout',
-        'refresh' // captcha refresh
-    );
+        'refresh', // captcha refresh
+    ];
 
     /**
      * @var \Magento\Backend\Model\UrlInterface
@@ -181,11 +164,11 @@ class Authentication
         $postLogin = $request->getPost('login');
         $username = isset($postLogin['username']) ? $postLogin['username'] : '';
         $password = isset($postLogin['password']) ? $postLogin['password'] : '';
-        $request->setPost('login', null);
+        $request->setPostValue('login', null);
 
         try {
             $this->_auth->login($username, $password);
-        } catch (\Magento\Backend\Model\Auth\Exception $e) {
+        } catch (AuthenticationException $e) {
             if (!$request->getParam('messageSent')) {
                 $this->messageManager->addError($e->getMessage());
                 $request->setParam('messageSent', true);
@@ -207,7 +190,7 @@ class Authentication
 
         // Checks, whether secret key is required for admin access or request uri is explicitly set
         if ($this->_url->useSecretKey()) {
-            $requestUri = $this->_url->getUrl('*/*/*', array('_current' => true));
+            $requestUri = $this->_url->getUrl('*/*/*', ['_current' => true]);
         } elseif ($request) {
             $requestUri = $request->getRequestUri();
         }

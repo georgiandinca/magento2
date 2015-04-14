@@ -1,30 +1,14 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
 
 namespace Magento\Directory\Model;
 
-use Magento\Framework\ObjectManager;
+use Magento\Framework\ObjectManagerInterface;
 use Magento\Store\Model\ScopeInterface;
 use Magento\TestFramework\Helper\Bootstrap;
 
@@ -33,7 +17,7 @@ use Magento\TestFramework\Helper\Bootstrap;
  */
 class ObserverTest extends \PHPUnit_Framework_TestCase
 {
-    /** @var  ObjectManager */
+    /** @var  ObjectManagerInterface */
     protected $objectManager;
 
     /** @var Observer */
@@ -51,7 +35,7 @@ class ObserverTest extends \PHPUnit_Framework_TestCase
     /** @var string */
     protected $allowedCurrenciesPath = 'currency/options/allow';
 
-    /** @var \Magento\Core\Model\Resource\Config */
+    /** @var \Magento\Config\Model\Resource\Config */
     protected $configResource;
 
     public function setUp()
@@ -63,7 +47,7 @@ class ObserverTest extends \PHPUnit_Framework_TestCase
         $this->scopeConfig->setValue(Observer::CRON_STRING_PATH, 'cron-string-path', ScopeInterface::SCOPE_STORE);
         $this->scopeConfig->setValue(Observer::IMPORT_SERVICE, 'webservicex', ScopeInterface::SCOPE_STORE);
 
-        $this->configResource = $this->objectManager->get('Magento\Core\Model\Resource\Config');
+        $this->configResource = $this->objectManager->get('Magento\Config\Model\Resource\Config');
         $this->configResource->saveConfig(
             $this->baseCurrencyPath,
             $this->baseCurrency,
@@ -76,6 +60,16 @@ class ObserverTest extends \PHPUnit_Framework_TestCase
 
     public function testScheduledUpdateCurrencyRates()
     {
+        //skipping test if service is unavailable
+        $url = str_replace('{{CURRENCY_FROM}}', 'USD',
+            \Magento\Directory\Model\Currency\Import\Webservicex::CURRENCY_CONVERTER_URL);
+        $url = str_replace('{{CURRENCY_TO}}', 'GBP', $url);
+        try {
+            file_get_contents($url);
+        } catch (\PHPUnit_Framework_Error_Warning $e) {
+            $this->markTestSkipped('http://www.webservicex.net is unavailable ');
+        }
+
         $allowedCurrencies = 'USD,GBP,EUR';
         $this->configResource->saveConfig(
             $this->allowedCurrenciesPath,
@@ -90,22 +84,6 @@ class ObserverTest extends \PHPUnit_Framework_TestCase
             ->create()
             ->getResource();
         $rates = $currencyResource->getCurrencyRates($this->baseCurrency, explode(',', $allowedCurrencies));
-        $this->assertEquals(3, count($rates));
-    }
-
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Required parameter 'area' was not passed
-     */
-    public function testScheduledUpdateCurrencyRates_invalidCurrency()
-    {
-        $allowedCurrencies = 'USD,GBP,XXX';
-        $this->configResource->saveConfig(
-            $this->allowedCurrenciesPath,
-            $allowedCurrencies,
-            ScopeInterface::SCOPE_STORE,
-            0
-        );
-        $this->observer->scheduledUpdateCurrencyRates(null);
+        $this->assertNotEmpty($rates);
     }
 }

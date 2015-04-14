@@ -1,31 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\DesignEditor\Controller\Adminhtml\System\Design;
 
-use Magento\Store\Model\Store;
-use Magento\Framework\Model\Exception as CoreException;
+use Magento\Framework\Exception\LocalizedException as CoreException;
 use Magento\Framework\View\Design\ThemeInterface;
+use Magento\Store\Model\Store;
 
 /**
  * Backend controller for the design editor
@@ -66,14 +48,14 @@ class Editor extends \Magento\Backend\App\Action
      */
     protected function _setTitle()
     {
-        $this->_title->add(__('Store Designer'));
+        $this->_view->getPage()->getConfig()->getTitle()->prepend(__('Store Designer'));
     }
 
     /**
      * Load theme by id
      *
      * @param int $themeId
-     * @return \Magento\Core\Model\Theme
+     * @return \Magento\Theme\Model\Theme
      * @throws CoreException
      */
     protected function _loadThemeById($themeId)
@@ -105,7 +87,7 @@ class Editor extends \Magento\Backend\App\Action
     protected function _isFirstEntrance()
     {
         $isCustomized = (bool)$this->_objectManager->get(
-            'Magento\Core\Model\Resource\Theme\CollectionFactory'
+            'Magento\Theme\Model\Resource\Theme\CollectionFactory'
         )->create()->addTypeFilter(
             ThemeInterface::TYPE_VIRTUAL
         )->getSize();
@@ -120,9 +102,9 @@ class Editor extends \Magento\Backend\App\Action
     protected function _renderStoreDesigner()
     {
         try {
-            $this->_setTitle();
             $this->_view->loadLayout();
             $this->_setActiveMenu('Magento_DesignEditor::system_design_editor');
+            $this->_setTitle();
             if (!$this->_isFirstEntrance()) {
                 /** @var $assignedThemeBlock
                  * \Magento\DesignEditor\Block\Adminhtml\Theme\Selector\SelectorList\Assigned */
@@ -142,7 +124,7 @@ class Editor extends \Magento\Backend\App\Action
         } catch (\Exception $e) {
             $this->messageManager->addError(__('We can\'t load the list of themes.'));
             $this->getResponse()->setRedirect($this->_redirect->getRefererUrl());
-            $this->_objectManager->get('Magento\Framework\Logger')->logException($e);
+            $this->_objectManager->get('Psr\Log\LoggerInterface')->critical($e);
         }
     }
 

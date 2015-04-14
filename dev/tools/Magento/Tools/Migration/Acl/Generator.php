@@ -1,28 +1,9 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Tools\Migration\Acl;
-
 
 require_once __DIR__ . '/Menu/Generator.php';
 require_once __DIR__ . '/FileManager.php';
@@ -38,7 +19,7 @@ class Generator
      *
      * @var array
      */
-    protected $_metaNodeNames = array();
+    protected $_metaNodeNames = [];
 
     /**
      * Adminhtml files
@@ -52,20 +33,20 @@ class Generator
      *
      * @var array
      */
-    protected $_parsedDomList = array();
+    protected $_parsedDomList = [];
 
     /**
      * Map ACL resource xpath to id
      * @var array
      */
-    protected $_aclResourceMaps = array();
+    protected $_aclResourceMaps = [];
 
     /**
      * Map Menu ids
      *
      * @var array
      */
-    protected $_menuIdMaps = array();
+    protected $_menuIdMaps = [];
 
     /**
      * Base application path
@@ -79,7 +60,7 @@ class Generator
      *
      * @var array
      */
-    protected $_adminhtmlDomList = array();
+    protected $_adminhtmlDomList = [];
 
     /**
      * @var string
@@ -98,7 +79,7 @@ class Generator
      *
      * @var array
      */
-    protected $_uniqueName = array();
+    protected $_uniqueName = [];
 
     /**
      * @var \Magento\Tools\Migration\Acl\Formatter
@@ -118,14 +99,14 @@ class Generator
     public function __construct(
         \Magento\Tools\Migration\Acl\Formatter $xmlFormatter,
         \Magento\Tools\Migration\Acl\FileManager $fileManager,
-        $options = array()
+        $options = []
     ) {
         $this->_xmlFormatter = $xmlFormatter;
         $this->_fileManager = $fileManager;
         $this->_printHelp = array_key_exists('h', $options);
         $this->_isPreviewMode = array_key_exists('p', $options);
 
-        $this->_metaNodeNames = array('sort_order' => 'sortOrder', 'title' => 'title');
+        $this->_metaNodeNames = ['sort_order' => 'sortOrder', 'title' => 'title'];
 
         $this->_basePath = realpath(__DIR__ . '/../../../../../..');
 
@@ -172,7 +153,7 @@ class Generator
      */
     public function getForwardNodeNames()
     {
-        return array('children');
+        return ['children'];
     }
 
     /**
@@ -210,7 +191,7 @@ class Generator
      */
     public function getValidNodeTypes()
     {
-        return array(1); //DOMElement
+        return [1]; //DOMElement
     }
 
     /**
@@ -522,14 +503,14 @@ class Generator
 
             $output = $this->_xmlFormatter->parseString(
                 $dom->saveXml(),
-                array(
+                [
                     'indent' => true,
                     'input-xml' => true,
                     'output-xml' => true,
                     'add-xml-space' => false,
                     'indent-spaces' => 4,
                     'wrap' => 1000
-                )
+                ]
             );
             $this->_fileManager->write($file, $output);
         }
@@ -568,7 +549,7 @@ class Generator
      */
     public function removeAdminhtmlFiles()
     {
-        $output = array('removed' => array(), 'not_removed' => array());
+        $output = ['removed' => [], 'not_removed' => []];
 
         /** @var $dom \DOMDocument **/
         foreach ($this->_adminhtmlDomList as $file => $dom) {
@@ -740,7 +721,7 @@ class Generator
      */
     public function getRestrictedNodeNames()
     {
-        return array('privilegeSets');
+        return ['privilegeSets'];
     }
 
     /**
@@ -748,6 +729,6 @@ class Generator
      */
     public function getNodeToRemove()
     {
-        return array('resources', 'privilegeSets');
+        return ['resources', 'privilegeSets'];
     }
 }

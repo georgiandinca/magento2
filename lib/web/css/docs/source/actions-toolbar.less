@@ -1,26 +1,7 @@
 // /**
-////  * Magento
-//  *
-//  * NOTICE OF LICENSE
-//  *
-//  * This source file is subject to the Academic Free License (AFL 3.0)
-//  * that is bundled with this package in the file LICENSE_AFL.txt.
-//  * It is also available through the world-wide-web at this URL:
-//  * http://opensource.org/licenses/afl-3.0.php
-//  * If you did not receive a copy of the license and are unable to
-//  * obtain it through the world-wide-web, please send an email
-//  * to license@magentocommerce.com so we can send you a copy immediately.
-//  *
-//  * DISCLAIMER
-//  *
-//  * Do not edit or add to this file if you wish to upgrade Magento to newer
-//  * versions in the future. If you wish to customize Magento for your
-//  * needs please refer to http://www.magentocommerce.com for more information.
-// *
-// * @category design
-// * @copyright Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
-// * @license http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
-// */
+//  * Copyright © 2015 Magento. All rights reserved.
+//  * See COPYING.txt for license details.
+//  */
 
 //  # Actions toolbar
 //  Actions toolbar is a set of actions on a page, form and so on that includes primary and/or secondary actions.
@@ -29,7 +10,7 @@
 //
 //  **Sample of using a button + link**
 //  ``` html
-//  <div class="actions toolbar">
+//  <div class="actions-toolbar">
 //      <div class="primary">
 //          <button type="submit" class="action submit" title="Submit"><span>Submit</span></button>
 //      </div>
@@ -53,7 +34,7 @@
 //  </div>
 //  ```
 
-.actions.toolbar {
+.actions-toolbar {
     .actions-toolbar();
 }
 
@@ -62,9 +43,6 @@
 }
 
 //  # Actions toolbar mixin variables
-//
-//  The following variables are used in <code>.actions-toolbar()</code> mixin.
-//
 //  <pre>
 //    <table>
 //      <tr>
@@ -77,61 +55,61 @@
 //        <th>@_actions-toolbar-actions-position</th>
 //        <td class="vars_value">justify</td>
 //        <td class="vars_value">justify | left | right | center</td>
-//        <td>position for actions in Actions toolbar</td>
+//        <td>Position for actions in Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th>@_actions-toolbar-actions-reverse</th>
 //        <td class="vars_value">false</td>
 //        <td class="vars_value">true | false</td>
-//        <td>reverse primary and secondary blocks position in Actions toolbar</td>
+//        <td>Reverse primary and secondary blocks position in Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th>@_actions-toolbar-margin</th>
-//        <td class="vars_value">''</td>
-//        <td class="vars_value">&nbsp;</td>
-//        <td>margins of the Actions toolbar</td>
+//        <td class="vars_value">false</td>
+//        <td class="vars_value">'' | false | value</td>
+//        <td>Margins of the Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th>@_actions-toolbar-padding</th>
-//        <td class="vars_value">''</td>
-//        <td class="vars_value">&nbsp;</td>
-//        <td>paddings of the Actions toolbar</td>
+//        <td class="vars_value">false</td>
+//        <td class="vars_value">'' | false | value</td>
+//        <td>Paddings of the Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th>@_actions-toolbar-actions-margin</th>
-//        <td class="vars_value">''</td>
-//        <td class="vars_value">&nbsp;</td>
-//        <td>margins of all .actions in the Actions toolbar</td>
+//        <td class="vars_value">false</td>
+//        <td class="vars_value">'' | false | value</td>
+//        <td>Margins of all .actions in the Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th>@_actions-toolbar-primary-actions-margin</th>
-//        <td class="vars_value">''</td>
-//        <td class="vars_value">&nbsp;</td>
-//        <td>margins of primary .actions in the Actions toolbar</td>
+//        <td class="vars_value">0 @indent__xs 0 0</td>
+//        <td class="vars_value">'' | false | value</td>
+//        <td>Margins of primary .actions in the Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th>@_actions-toolbar-secondary-actions-margin</th>
-//        <td class="vars_value">''</td>
-//        <td class="vars_value">&nbsp;</td>
-//        <td>margins of secondary .actions in the Actions toolbar</td>
+//        <td class="vars_value">false</td>
+//        <td class="vars_value">'' | false | value</td>
+//        <td>Margins of secondary .actions in the Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th nowrap="nowrap">@_actions-toolbar-actions-links-margin-top</th>
-//        <td class="vars_value">''</td>
-//        <td class="vars_value">&nbsp;</td>
-//        <td>margin-top for links with class .action in the Actions toolbar</td>
+//        <td class="vars_value">false</td>
+//        <td class="vars_value">'' | false | value</td>
+//        <td>Margin-top for links with class .action in the Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th nowrap="nowrap">@_actions-toolbar-primary-actions-links-margin-top</th>
-//        <td class="vars_value">''</td>
-//        <td class="vars_value">&nbsp;</td>
-//        <td>margin-top for primary links with class .action in the Actions toolbar</td>
+//        <td class="vars_value">false</td>
+//        <td class="vars_value">'' | false | value</td>
+//        <td>Margin-top for primary links with class .action in the Actions toolbar</td>
 //      </tr>
 //      <tr>
 //        <th nowrap="nowrap">@_actions-toolbar-secondary-actions-links-margin-top</th>
-//        <td class="vars_value">''</td>
-//        <td class="vars_value">&nbsp;</td>
-//        <td>margin-top for secondary links with class .action in the Actions toolbar</td>
+//        <td class="vars_value">6px</td>
+//        <td class="vars_value">'' | false | value</td>
+//        <td>Margin-top for secondary links with class .action in the Actions toolbar</td>
 //      </tr>
 //    </table>
 //  </pre>
@@ -391,7 +369,7 @@
     .actions-toolbar();
 }
 
-@media only screen and (max-width: @screen-m) {
+@media only screen and (max-width: @screen__m) {
     .example-actions-toolbar-12 {
        .actions-toolbar-clear-floats();
     }

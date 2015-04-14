@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Backend\App;
 
@@ -45,7 +27,7 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
      *
      * @var array
      */
-    protected $_publicActions = array();
+    protected $_publicActions = [];
 
     /**
      * Namespace for session.
@@ -90,14 +72,9 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
     protected $_canUseBaseUrl;
 
     /**
-     * @var \Magento\Core\App\Action\FormKeyValidator
+     * @var \Magento\Framework\Data\Form\FormKey\Validator
      */
     protected $_formKeyValidator;
-
-    /**
-     * @var \Magento\Framework\App\Action\Title
-     */
-    protected $_title;
 
     /**
      * @param \Magento\Backend\App\Action\Context $context
@@ -110,7 +87,6 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
         $this->_helper = $context->getHelper();
         $this->_backendUrl = $context->getBackendUrl();
         $this->_formKeyValidator = $context->getFormKeyValidator();
-        $this->_title = $context->getTitle();
         $this->_localeResolver = $context->getLocaleResolver();
         $this->_canUseBaseUrl = $context->getCanUseBaseUrl();
         $this->_session = $context->getSession();
@@ -154,10 +130,9 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
         $menuBlock = $this->_view->getLayout()->getBlock('menu');
         $menuBlock->setActive($itemId);
         $parents = $menuBlock->getMenuModel()->getParentItems($itemId);
-        $parents = array_reverse($parents);
         foreach ($parents as $item) {
             /** @var $item \Magento\Backend\Model\Menu\Item */
-            $this->_title->add($item->getTitle(), true);
+            $this->_view->getPage()->getConfig()->getTitle()->prepend($item->getTitle());
         }
         return $this;
     }
@@ -227,12 +202,11 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
         }
 
         if ($request->isDispatched() && $request->getActionName() !== 'denied' && !$this->_isAllowed()) {
-            $this->_response->setHeader('HTTP/1.1', '403 Forbidden');
-            $this->_response->setHttpResponseCode(403);
+            $this->_response->setStatusHeader(403, '1.1', 'Forbidden');
             if (!$this->_auth->isLoggedIn()) {
                 return $this->_redirect('*/auth/login');
             }
-            $this->_view->loadLayout(array('default', 'adminhtml_denied'), true, true, false);
+            $this->_view->loadLayout(['default', 'adminhtml_denied'], true, true, false);
             $this->_view->renderLayout();
             $this->_request->setDispatched(true);
             return $this->_response;
@@ -289,9 +263,9 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
             if ($this->getRequest()->getQuery('isAjax', false) || $this->getRequest()->getQuery('ajax', false)) {
                 $this->getResponse()->representJson(
                     $this->_objectManager->get(
-                        'Magento\Core\Helper\Data'
+                        'Magento\Framework\Json\Helper\Data'
                     )->jsonEncode(
-                        array('error' => true, 'message' => $_keyErrorMsg)
+                        ['error' => true, 'message' => $_keyErrorMsg]
                     )
                 );
             } else {
@@ -315,8 +289,8 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
             $this->_getSession()->setSessionLocale($forceLocale);
         }
 
-        if (is_null($this->_getSession()->getLocale())) {
-            $this->_getSession()->setLocale($this->_localeResolver->getLocaleCode());
+        if ($this->_getSession()->getLocale() === null) {
+            $this->_getSession()->setLocale($this->_localeResolver->getLocale());
         }
 
         return $this;
@@ -325,11 +299,13 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
     /**
      * Set redirect into response
      *
+     * @deprecated
+     * @TODO MAGETWO-28356: Refactor controller actions to new ResultInterface
      * @param   string $path
      * @param   array $arguments
      * @return \Magento\Framework\App\ResponseInterface
      */
-    protected function _redirect($path, $arguments = array())
+    protected function _redirect($path, $arguments = [])
     {
         $this->_getSession()->setIsUrlNotice($this->_actionFlag->get('', self::FLAG_IS_URLS_CHECKED));
         $this->getResponse()->setRedirect($this->getUrl($path, $arguments));
@@ -337,6 +313,10 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
     }
 
     /**
+     * Forward to action
+     *
+     * @deprecated
+     * @TODO MAGETWO-28356: Refactor controller actions to new ResultInterface
      * @param string $action
      * @param string|null $controller
      * @param string|null $module
@@ -356,7 +336,7 @@ abstract class AbstractAction extends \Magento\Framework\App\Action\Action
      * @param   array $params
      * @return  string
      */
-    public function getUrl($route = '', $params = array())
+    public function getUrl($route = '', $params = [])
     {
         return $this->_helper->getUrl($route, $params);
     }

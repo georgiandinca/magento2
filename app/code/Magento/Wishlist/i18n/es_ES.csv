@@ -1,5 +1,5 @@
 Back,Volver
-Product,Producto
+Product Name,Producto
 Quantity,Quantity
 Configure,Configure
 "You added %1 to your shopping cart.","You added %1 to your shopping cart."
@@ -95,9 +95,11 @@ Message,Mensaje
 "General Options","General Options"
 "Share Options","Share Options"
 "Max Emails Allowed to be Sent","Max Emails Allowed to be Sent"
+"10 by default. Max - 10000","10 by default. Max - 10000"
 "Email Text Length Limit","Email Text Length Limit"
+"255 by default","255 by default"
 "My Wish List Link","My Wish List Link"
 "Display Wish List Summary","Display Wish List Summary"
 "No Items Found","No Items Found"
-"User description","Descripción del usuario"
+"User Description","Descripción del usuario"
 "Product Details and Comment","Detalles del producto y comentarios"

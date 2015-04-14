@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\OfflineShipping\Model\Carrier;
 
@@ -44,7 +26,7 @@ class Tablerate extends \Magento\Shipping\Model\Carrier\AbstractCarrier implemen
     /**
      * @var array
      */
-    protected $_conditionNames = array();
+    protected $_conditionNames = [];
 
     /**
      * @var \Magento\Shipping\Model\Rate\ResultFactory
@@ -52,7 +34,7 @@ class Tablerate extends \Magento\Shipping\Model\Carrier\AbstractCarrier implemen
     protected $_rateResultFactory;
 
     /**
-     * @var \Magento\Sales\Model\Quote\Address\RateResult\MethodFactory
+     * @var \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory
      */
     protected $_resultMethodFactory;
 
@@ -63,36 +45,40 @@ class Tablerate extends \Magento\Shipping\Model\Carrier\AbstractCarrier implemen
 
     /**
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     * @param \Magento\Sales\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory
-     * @param \Magento\Framework\Logger\AdapterFactory $logAdapterFactory
+     * @param \Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Shipping\Model\Rate\ResultFactory $rateResultFactory
-     * @param \Magento\Sales\Model\Quote\Address\RateResult\MethodFactory $resultMethodFactory
+     * @param \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory $resultMethodFactory
      * @param \Magento\OfflineShipping\Model\Resource\Carrier\TablerateFactory $tablerateFactory
      * @param array $data
+     * @SuppressWarnings(PHPMD.UnusedLocalVariable)
      */
     public function __construct(
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Sales\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory,
-        \Magento\Framework\Logger\AdapterFactory $logAdapterFactory,
+        \Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Shipping\Model\Rate\ResultFactory $rateResultFactory,
-        \Magento\Sales\Model\Quote\Address\RateResult\MethodFactory $resultMethodFactory,
+        \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory $resultMethodFactory,
         \Magento\OfflineShipping\Model\Resource\Carrier\TablerateFactory $tablerateFactory,
-        array $data = array()
+        array $data = []
     ) {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_resultMethodFactory = $resultMethodFactory;
         $this->_tablerateFactory = $tablerateFactory;
-        parent::__construct($scopeConfig, $rateErrorFactory, $logAdapterFactory, $data);
+        parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
         foreach ($this->getCode('condition_name') as $k => $v) {
             $this->_conditionNames[] = $k;
         }
     }
 
     /**
-     * @param \Magento\Sales\Model\Quote\Address\RateRequest $request
+     * @param \Magento\Quote\Model\Quote\Address\RateRequest $request
      * @return \Magento\Shipping\Model\Rate\Result
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function collectRates(\Magento\Sales\Model\Quote\Address\RateRequest $request)
+    public function collectRates(\Magento\Quote\Model\Quote\Address\RateRequest $request)
     {
         if (!$this->getConfigFlag('active')) {
             return false;
@@ -162,7 +148,7 @@ class Tablerate extends \Magento\Shipping\Model\Carrier\AbstractCarrier implemen
         $request->setPackageQty($oldQty);
 
         if (!empty($rate) && $rate['price'] >= 0) {
-            /** @var \Magento\Sales\Model\Quote\Address\RateResult\Method $method */
+            /** @var \Magento\Quote\Model\Quote\Address\RateResult\Method $method */
             $method = $this->_resultMethodFactory->create();
 
             $method->setCarrier('tablerate');
@@ -182,15 +168,15 @@ class Tablerate extends \Magento\Shipping\Model\Carrier\AbstractCarrier implemen
 
             $result->append($method);
         } else {
-            /** @var \Magento\Sales\Model\Quote\Address\RateResult\Error $error */
+            /** @var \Magento\Quote\Model\Quote\Address\RateResult\Error $error */
             $error = $this->_rateErrorFactory->create(
-                array(
-                    'data' => array(
+                [
+                    'data' => [
                         'carrier' => $this->_code,
                         'carrier_title' => $this->getConfigData('title'),
-                        'error_message' => $this->getConfigData('specificerrmsg')
-                    )
-                )
+                        'error_message' => $this->getConfigData('specificerrmsg'),
+                    ],
+                ]
             );
             $result->append($error);
         }
@@ -199,10 +185,10 @@ class Tablerate extends \Magento\Shipping\Model\Carrier\AbstractCarrier implemen
     }
 
     /**
-     * @param \Magento\Sales\Model\Quote\Address\RateRequest $request
+     * @param \Magento\Quote\Model\Quote\Address\RateRequest $request
      * @return array|bool
      */
-    public function getRate(\Magento\Sales\Model\Quote\Address\RateRequest $request)
+    public function getRate(\Magento\Quote\Model\Quote\Address\RateRequest $request)
     {
         return $this->_tablerateFactory->create()->getRate($request);
     }
@@ -215,18 +201,18 @@ class Tablerate extends \Magento\Shipping\Model\Carrier\AbstractCarrier implemen
      */
     public function getCode($type, $code = '')
     {
-        $codes = array(
-            'condition_name' => array(
+        $codes = [
+            'condition_name' => [
                 'package_weight' => __('Weight vs. Destination'),
                 'package_value' => __('Price vs. Destination'),
-                'package_qty' => __('# of Items vs. Destination')
-            ),
-            'condition_name_short' => array(
+                'package_qty' => __('# of Items vs. Destination'),
+            ],
+            'condition_name_short' => [
                 'package_weight' => __('Weight (and above)'),
                 'package_value' => __('Order Subtotal (and above)'),
-                'package_qty' => __('# of Items (and above)')
-            )
-        );
+                'package_qty' => __('# of Items (and above)'),
+            ],
+        ];
 
         if (!isset($codes[$type])) {
             throw new \Magento\Shipping\Exception(__('Please correct Table Rate code type: %1.', $type));
@@ -250,6 +236,6 @@ class Tablerate extends \Magento\Shipping\Model\Carrier\AbstractCarrier implemen
      */
     public function getAllowedMethods()
     {
-        return array('bestway' => $this->getConfigData('name'));
+        return ['bestway' => $this->getConfigData('name')];
     }
 }

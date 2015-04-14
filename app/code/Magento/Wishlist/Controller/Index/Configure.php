@@ -1,32 +1,14 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Wishlist\Controller\Index;
 
-use Magento\Wishlist\Controller\IndexInterface;
 use Magento\Framework\App\Action;
-use Magento\Framework\App\Action\NotFoundException;
+use Magento\Framework\Exception\NotFoundException;
+use Magento\Wishlist\Controller\IndexInterface;
 
 class Configure extends Action\Action implements IndexInterface
 {
@@ -43,17 +25,25 @@ class Configure extends Action\Action implements IndexInterface
     protected $wishlistProvider;
 
     /**
+     * @var \Magento\Framework\View\Result\PageFactory
+     */
+    protected $resultPageFactory;
+
+    /**
      * @param Action\Context $context
      * @param \Magento\Wishlist\Controller\WishlistProviderInterface $wishlistProvider
      * @param \Magento\Framework\Registry $coreRegistry
+     * @param \Magento\Framework\View\Result\PageFactory $resultPageFactory
      */
     public function __construct(
         Action\Context $context,
         \Magento\Wishlist\Controller\WishlistProviderInterface $wishlistProvider,
-        \Magento\Framework\Registry $coreRegistry
+        \Magento\Framework\Registry $coreRegistry,
+        \Magento\Framework\View\Result\PageFactory $resultPageFactory
     ) {
         $this->wishlistProvider = $wishlistProvider;
         $this->_coreRegistry = $coreRegistry;
+        $this->resultPageFactory = $resultPageFactory;
         parent::__construct($context);
     }
 
@@ -71,11 +61,11 @@ class Configure extends Action\Action implements IndexInterface
             $item = $this->_objectManager->create('Magento\Wishlist\Model\Item');
             $item->loadWithOptions($id);
             if (!$item->getId()) {
-                throw new \Magento\Framework\Model\Exception(__('We can\'t load the wish list item.'));
+                throw new \Magento\Framework\Exception\LocalizedException(__('We can\'t load the wish list item.'));
             }
             $wishlist = $this->wishlistProvider->getWishlist($item->getWishlistId());
             if (!$wishlist) {
-                throw new NotFoundException();
+                throw new NotFoundException(__('Page not found.'));
             }
 
             $this->_coreRegistry->register('wishlist_item', $item);
@@ -92,20 +82,25 @@ class Configure extends Action\Action implements IndexInterface
                 $this->_objectManager->get('Magento\Wishlist\Helper\Data')->calculate();
             }
             $params->setBuyRequest($buyRequest);
+            /** @var \Magento\Framework\View\Result\Page $resultPage */
+            $resultPage = $this->resultPageFactory->create();
             $this->_objectManager->get(
                 'Magento\Catalog\Helper\Product\View'
             )->prepareAndRender(
+                $resultPage,
                 $item->getProductId(),
                 $this,
                 $params
             );
-        } catch (\Magento\Framework\Model\Exception $e) {
+
+            return $resultPage;
+        } catch (\Magento\Framework\Exception\LocalizedException $e) {
             $this->messageManager->addError($e->getMessage());
             $this->_redirect('*');
             return;
         } catch (\Exception $e) {
             $this->messageManager->addError(__('We can\'t configure the product.'));
-            $this->_objectManager->get('Magento\Framework\Logger')->logException($e);
+            $this->_objectManager->get('Psr\Log\LoggerInterface')->critical($e);
             $this->_redirect('*');
             return;
         }

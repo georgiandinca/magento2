@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GiftMessage\Model;
 
@@ -57,28 +39,24 @@ class Observer extends \Magento\Framework\Object
     /**
      * Set gift messages to order from quote address
      *
-     * @param \Magento\Framework\Object $observer
+     * @param \Magento\Framework\Event\Observer $observer
      * @return $this
      */
-    public function salesEventConvertQuoteAddressToOrder($observer)
+    public function salesEventQuoteSubmitBefore($observer)
     {
-        if ($observer->getEvent()->getAddress()->getGiftMessageId()) {
-            $observer->getEvent()->getOrder()->setGiftMessageId(
-                $observer->getEvent()->getAddress()->getGiftMessageId()
-            );
-        }
+        $observer->getEvent()->getOrder()->setGiftMessageId($observer->getEvent()->getQuote()->getGiftMessageId());
         return $this;
     }
 
     /**
-     * Set gift messages to order from quote address
+     * Set gift message to order from address in multiple addresses checkout.
      *
-     * @param \Magento\Framework\Object $observer
+     * @param \Magento\Framework\Event\Observer $observer
      * @return $this
      */
-    public function salesEventConvertQuoteToOrder($observer)
+    public function multishippingEventCreateOrders($observer)
     {
-        $observer->getEvent()->getOrder()->setGiftMessageId($observer->getEvent()->getQuote()->getGiftMessageId());
+        $observer->getEvent()->getOrder()->setGiftMessageId($observer->getEvent()->getAddress()->getGiftMessageId());
         return $this;
     }
 
@@ -96,7 +74,7 @@ class Observer extends \Magento\Framework\Object
             return $this;
         }
 
-        if (!$this->_giftMessageMessage->isMessagesAvailable('order', $order, $order->getStore())) {
+        if (!$this->_giftMessageMessage->isMessagesAllowed('order', $order, $order->getStore())) {
             return $this;
         }
         $giftMessageId = $order->getGiftMessageId();
@@ -124,7 +102,7 @@ class Observer extends \Magento\Framework\Object
             return $this;
         }
 
-        $isAvailable = $this->_giftMessageMessage->isMessagesAvailable(
+        $isAvailable = $this->_giftMessageMessage->isMessagesAllowed(
             'order_item',
             $orderItem,
             $orderItem->getStoreId()
@@ -133,7 +111,7 @@ class Observer extends \Magento\Framework\Object
             return $this;
         }
 
-        /** @var $quoteItem \Magento\Sales\Model\Quote\Item */
+        /** @var $quoteItem \Magento\Quote\Model\Quote\Item */
         $quoteItem = $observer->getEvent()->getQuoteItem();
         if ($giftMessageId = $orderItem->getGiftMessageId()) {
             $giftMessage = $this->_messageFactory->create()->load($giftMessageId)->setId(null)->save();

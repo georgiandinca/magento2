@@ -1,30 +1,12 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Test\Fixture\CatalogProductSimple;
 
-use Mtf\Fixture\FixtureInterface;
+use Magento\Mtf\Fixture\FixtureInterface;
 
 /**
  * Class CheckoutData
@@ -57,11 +39,12 @@ class CheckoutData implements FixtureInterface
     public function __construct(array $params, array $data = [])
     {
         $this->params = $params;
-        $this->data = isset($data['preset']) ? $this->getPreset($data['preset']) : [];
-
-        if (isset($data['data'])) {
-            $this->data = array_replace_recursive($this->data, $data['data']);
+        $preset = [];
+        if (isset($data['preset'])) {
+            $preset = $this->getPreset($data['preset']);
+            unset($data['preset']);
         }
+        $this->data = empty($preset) ? $data : array_replace_recursive($preset, $data);
     }
 
     /**
@@ -102,6 +85,8 @@ class CheckoutData implements FixtureInterface
      *
      * @param string $name
      * @return array|null
+     *
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
     protected function getPreset($name)
     {
@@ -111,25 +96,45 @@ class CheckoutData implements FixtureInterface
                     'custom_options' => [
                         [
                             'title' => 'attribute_key_0',
-                            'value' => 'option_key_0'
+                            'value' => 'option_key_0',
                         ],
                         [
                             'title' => 'attribute_key_1',
                             'value' => 'Content option %isolation%',
-                        ]
-                    ]
+                        ],
+                    ],
                 ],
+                'qty' => 1,
                 'cartItem' => [
                     'price' => 340,
-                    'subtotal' => 340
-                ]
+                    'subtotal' => 340,
+                ],
+            ],
+            'forUpdateMiniShoppingCart' => [
+                'options' => [
+                    'custom_options' => [
+                        [
+                            'title' => 'attribute_key_0',
+                            'value' => 'option_key_1',
+                        ],
+                        [
+                            'title' => 'attribute_key_1',
+                            'value' => 'Content option %isolation%',
+                        ],
+                    ],
+                ],
+                'qty' => 2,
+                'cartItem' => [
+                    'price' => 370,
+                    'subtotal' => 740,
+                ],
             ],
             'options-suite' => [
                 'options' => [
                     'custom_options' => [
                         [
                             'title' => 'attribute_key_0',
-                            'value' => 'Field value 1 %isolation%'
+                            'value' => 'Field value 1 %isolation%',
                         ],
                         [
                             'title' => 'attribute_key_1',
@@ -142,50 +147,68 @@ class CheckoutData implements FixtureInterface
                         [
                             'title' => 'attribute_key_3',
                             'value' => 'option_key_0'
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ],
             'drop_down_with_one_option_fixed_price' => [
                 'options' => [
                     'custom_options' => [
                         [
                             'title' => 'attribute_key_0',
-                            'value' => 'option_key_0'
-                        ]
-                    ]
-                ]
+                            'value' => 'option_key_0',
+                        ],
+                    ],
+                ],
             ],
             'drop_down_with_one_option_percent_price' => [
                 'options' => [
                     'custom_options' => [
                         [
                             'title' => 'attribute_key_0',
-                            'value' => 'option_key_0'
-                        ]
-                    ]
-                ]
+                            'value' => 'option_key_0',
+                        ],
+                    ],
+                ],
             ],
             'order_default' => [
-                'options' => [
-                    'qty' => 1
+                'qty' => 1,
+                'cartItem' => [
+                    'price' => 560,
+                    'subtotal' => 560,
                 ],
-                'cartItem' => []
             ],
             'two_products' => [
-                'options' => [
-                    'qty' => 2
-                ],
+                'qty' => 2,
                 'cartItem' => [
                     'price' => 100,
-                    'subtotal' => 200
-                ]
+                    'subtotal' => 200,
+                ],
             ],
             'order_big_qty' => [
-                'options' => [
-                    'qty' => 2
+                'qty' => 900,
+            ],
+            'order_custom_price' => [
+                'qty' => 3,
+                'checkout_data' => [
+                    'use_custom_price' => "Yes",
+                    'custom_price' => 100,
                 ],
-                'cartItem' => []
+                'cartItem' => [],
+            ],
+            'order_special_price' => [
+                'qty' => 1,
+                'cartItem' => [
+                    'price' => 9,
+                    'subtotal' => 9,
+                ],
+            ],
+            'order_10_dollar_product' => [
+                'qty' => 1,
+                'cartItem' => [
+                    'price' => 10,
+                    'subtotal' => 10,
+                ],
             ]
         ];
         return isset($presets[$name]) ? $presets[$name] : [];

@@ -1,45 +1,56 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Sendfriend\Controller\Product;
+
+use Magento\Framework\Exception\NoSuchEntityException;
 
 class Sendmail extends \Magento\Sendfriend\Controller\Product
 {
+    /** @var  \Magento\Catalog\Api\CategoryRepositoryInterface */
+    protected $categoryRepository;
+
+    /**
+     * @param \Magento\Framework\App\Action\Context $context
+     * @param \Magento\Framework\Registry $coreRegistry
+     * @param \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator
+     * @param \Magento\Sendfriend\Model\Sendfriend $sendFriend
+     * @param \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
+     * @param \Magento\Catalog\Api\CategoryRepositoryInterface $categoryRepository
+     */
+    public function __construct(
+        \Magento\Framework\App\Action\Context $context,
+        \Magento\Framework\Registry $coreRegistry,
+        \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator,
+        \Magento\Sendfriend\Model\Sendfriend $sendFriend,
+        \Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
+        \Magento\Catalog\Api\CategoryRepositoryInterface $categoryRepository
+    ) {
+        parent::__construct($context, $coreRegistry, $formKeyValidator, $sendFriend, $productRepository);
+        $this->categoryRepository = $categoryRepository;
+    }
+
     /**
      * Send Email Post Action
      *
      * @return void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function execute()
     {
         if (!$this->_formKeyValidator->validate($this->getRequest())) {
-            return $this->_redirect('*/*/send', array('_current' => true));
+            $this->_redirect('sendfriend/product/send', ['_current' => true]);
+            return;
         }
 
         $product = $this->_initProduct();
-        $model = $this->_initSendToFriendModel();
-        $data = $this->getRequest()->getPost();
+        $data = $this->getRequest()->getPostValue();
 
         if (!$product || !$data) {
             $this->_forward('noroute');
@@ -48,21 +59,27 @@ class Sendmail extends \Magento\Sendfriend\Controller\Product
 
         $categoryId = $this->getRequest()->getParam('cat_id', null);
         if ($categoryId) {
-            $category = $this->_objectManager->create('Magento\Catalog\Model\Category')->load($categoryId);
-            $product->setCategory($category);
-            $this->_coreRegistry->register('current_category', $category);
+            try {
+                $category = $this->categoryRepository->get($categoryId);
+            } catch (NoSuchEntityException $noEntityException) {
+                $category = null;
+            }
+            if ($category) {
+                $product->setCategory($category);
+                $this->_coreRegistry->register('current_category', $category);
+            }
         }
 
-        $model->setSender($this->getRequest()->getPost('sender'));
-        $model->setRecipients($this->getRequest()->getPost('recipients'));
-        $model->setProduct($product);
+        $this->sendFriend->setSender($this->getRequest()->getPost('sender'));
+        $this->sendFriend->setRecipients($this->getRequest()->getPost('recipients'));
+        $this->sendFriend->setProduct($product);
 
         /* @var $session \Magento\Catalog\Model\Session */
         $catalogSession = $this->_objectManager->get('Magento\Catalog\Model\Session');
         try {
-            $validate = $model->validate();
+            $validate = $this->sendFriend->validate();
             if ($validate === true) {
-                $model->send();
+                $this->sendFriend->send();
                 $this->messageManager->addSuccess(__('The link to a friend was sent.'));
                 $url = $product->getProductUrl();
                 $this->getResponse()->setRedirect($this->_redirect->success($url));
@@ -76,7 +93,7 @@ class Sendmail extends \Magento\Sendfriend\Controller\Product
                     $this->messageManager->addError(__('We found some problems with the data.'));
                 }
             }
-        } catch (\Magento\Framework\Model\Exception $e) {
+        } catch (\Magento\Framework\Exception\LocalizedException $e) {
             $this->messageManager->addError($e->getMessage());
         } catch (\Exception $e) {
             $this->messageManager->addException($e, __('Some emails were not sent.'));
@@ -85,7 +102,7 @@ class Sendmail extends \Magento\Sendfriend\Controller\Product
         // save form data
         $catalogSession->setSendfriendFormData($data);
 
-        $url = $this->_objectManager->create('Magento\Framework\UrlInterface')->getUrl('*/*/send', array('_current' => true));
+        $url = $this->_url->getUrl('sendfriend/product/send', ['_current' => true]);
         $this->getResponse()->setRedirect($this->_redirect->error($url));
     }
 }

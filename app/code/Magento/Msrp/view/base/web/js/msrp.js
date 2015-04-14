@@ -1,95 +1,172 @@
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License (AFL 3.0)
- * that is bundled with this package in the file LICENSE_AFL.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/afl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
-/*jshint browser:true jquery:true*/
-define(["jquery", "jquery/ui", "mage/dropdown"], function($) {
+define([
+    'jquery',
+    'underscore',
+    'jquery/ui',
+    'mage/dropdown'
+], function ($, _) {
+    'use strict';
+
+    var openDropDown = null;
     $.widget('mage.addToCart', {
         options: {
             showAddToCart: true,
-            cartForm: '.form.map.checkout'
+            submitUrl: '',
+            singleOpenDropDown: true,
+            dialog: {}, // Options for mage/dropdown
+            dialogDelay: 500, // Delay in ms after resize dropdown shown again
+
+            // Selectors
+            cartForm: '.form.map.checkout',
+            cartButtonId: '', // better to be cartButton
+            popupId: '', // better to be popup
+            realPrice: '',
+            msrpPrice: '',
+            helpLinkId: '', // better to be helpLink
+            addToCartButton: '',
+
+            // Text options
+            productName: '',
+            addToCartUrl: ''
         },
 
-        _create: function() {
-            $(this.options.cartButtonId).on('click', $.proxy(function() {
-                this._addToCartSubmit();
-            }, this));
+        openDropDown: null,
 
-            $(this.options.popupId).on('click', $.proxy(function(e) {
+        /**
+         * Creates widget instance
+         * @private
+         */
+        _create: function () {
+            $(this.options.cartButtonId).on('click', this._addToCartSubmit.bind(this));
+
+            $(this.options.popupId).on('click', function (event) {
+                var dialog;
+                event.preventDefault();
+
                 if (this.options.submitUrl) {
                     location.href = this.options.submitUrl;
                 } else {
-                    $(this.options.popupCartButtonId).off('click');
-                    $(this.options.popupCartButtonId).on('click', $.proxy(function() {
-                        this._addToCartSubmit();
-                    }, this));
+                    $(this.options.popupCartButtonId)
+                        .off('click')
+                        .on('click', this._addToCartSubmit.bind(this));
                     $('#map-popup-heading-price').text(this.options.productName);
-                    $('#map-popup-price').html($(this.options.realPrice));
+                    $('#map-popup-price').html($(this.options.realPrice).html().trim());
                     $('#map-popup-msrp > span.price').html(this.options.msrpPrice);
+
                     this.element.trigger('reloadPrice');
-                    var dialog = $("#map-popup-click-for-price");
+
+                    dialog = $('#map-popup-click-for-price');
                     this._popupDialog(dialog, this.options.popupId);
+
+                    if (this.options.addToCartUrl) {
+                        $(this.options.cartForm).attr('action', this.options.addToCartUrl);
+                    }
+
                     if (!this.options.showAddToCart) {
                         $('#product_addtocart_form_from_popup').hide();
                     }
+
                     return false;
                 }
-            }, this));
+            }.bind(this));
 
-            $(this.options.helpLinkId).on('click', $.proxy(function(e) {
+            $(this.options.helpLinkId).on('click', function () {
                 $('#map-popup-heading-what-this').text(this.options.productName);
-                var dialog = $("#map-popup-what-this");
-                this._popupDialog(dialog, this.options.helpLinkId);
+                this._popupDialog($('#map-popup-what-this'), this.options.helpLinkId);
+
                 return false;
-            }, this));
+            }.bind(this));
         },
 
-        _popupDialog: function(target, trigger) {
-            if (!target.hasClass('ui-dialog-content')) {
-                target.dropdownDialog({
-                    appendTo: ".column.main",
-                    dialogContentClass: 'active',
-                    timeout: "2000",
-                    autoPosition: true,
-                    "dialogClass": "popup"
-                });
+        /**
+         * Handler for dialog popup
+         * @param {jQuery} elementTarget
+         * @param {jQuery} elementTrigger
+         * @private
+         */
+        _popupDialog: function (elementTarget, elementTrigger) {
+            var target = $(elementTarget),
+                trigger = $(elementTrigger),
+                counter = 0,
+                triggerClass = 'dropdown-active',
+                options;
+
+            options = {
+                appendTo: 'body',
+                dialogContentClass: 'active',
+                closeOnMouseLeave: false,
+                autoPosition: true,
+                'dialogClass': 'popup map-popup-wrapper',
+                position: {
+                    my: 'left top',
+                    collision: 'fit none',
+                    at: 'left bottom',
+                    within: 'body',
+                    of: trigger
+                },
+                shadowHinter: 'popup popup-pointer'
+            };
+            options = _.extend(options, this.options.dialog);
+
+            if (openDropDown && openDropDown.is(':data(mage-dropdownDialog)')) {
+                openDropDown.dropdownDialog('close');
             }
-            $('.mage-dropdown-dialog > .ui-dialog-content').dropdownDialog("close");
-            target.dropdownDialog("option", "position", {my: "right+50% top", collision: "none", at: "center bottom", of: trigger});
-            target.dropdownDialog("option", "triggerTarget", trigger);
-            target.dropdownDialog("open");
 
+            if (this.options.singleOpenDropDown) {
+                this.openDropDown = openDropDown;
+            }
+            openDropDown = target
+                .dropdownDialog(options)
+                .off('dropdowndialogclose')
+                .on('dropdowndialogclose', function () {
+                    if (!counter) {
+                        openDropDown = null;
+                        $(window).off('resize');
+                    }
+                    trigger.removeClass(triggerClass);
+                })
+                .on('dropdowndialogopen', function () {
+                    trigger.addClass(triggerClass);
+                })
+                .dropdownDialog('open');
+
+            $(window)
+                .resize(_.debounce(function () {
+                    if (openDropDown) {
+                        counter--;
+                        openDropDown.dropdownDialog('open');
+                    }
+                }, this.options.dialogDelay))
+                .resize(_.debounce(function () {
+                    if (openDropDown) {
+                        counter++;
+                        openDropDown.dropdownDialog('close');
+                    }
+                }, this.options.dialogDelay, true));
         },
 
-        _addToCartSubmit: function() {
+        /**
+         * Handler for addToCart action
+         * @private
+         */
+        _addToCartSubmit: function () {
             this.element.trigger('addToCart', this.element);
+
             if (this.options.addToCartButton) {
                 $(this.options.addToCartButton).click();
+
                 return;
             }
+
             if (this.options.addToCartUrl) {
-                $('.mage-dropdown-dialog > .ui-dialog-content').dropdownDialog("close");
-                $(this.options.cartForm).attr('action', this.options.addToCartUrl);
+                $('.mage-dropdown-dialog > .ui-dialog-content').dropdownDialog('close');
             }
             $(this.options.cartForm).submit();
         }
     });
+
+    return $.mage.addToCart;
 });

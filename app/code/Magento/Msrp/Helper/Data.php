@@ -1,45 +1,22 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Msrp\Helper;
 
 use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
 use Magento\Msrp\Model\Product\Attribute\Source\Type;
-use Magento\Framework\StoreManagerInterface;
-use Magento\Catalog\Model\ProductFactory;
+use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Model\Product;
+use Magento\Catalog\Api\ProductRepositoryInterface;
 
 /**
  * Msrp data helper
  */
 class Data extends AbstractHelper
 {
-    /**
-     * @var ProductFactory
-     */
-    protected $productFactory;
-
     /**
      * @var StoreManagerInterface
      */
@@ -56,27 +33,40 @@ class Data extends AbstractHelper
     protected $config;
 
     /**
+     * @var \Magento\Framework\Pricing\PriceCurrencyInterface
+     */
+    protected $priceCurrency;
+
+    /**
+     * @var ProductRepositoryInterface
+     */
+    protected $productRepository;
+
+    /**
      * @param Context $context
-     * @param ProductFactory $productFactory
      * @param StoreManagerInterface $storeManager
      * @param \Magento\Msrp\Model\Product\Options $productOptions
      * @param \Magento\Msrp\Model\Msrp $msrp
      * @param \Magento\Msrp\Model\Config $config
+     * @param \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency
+     * @param ProductRepositoryInterface $productRepository
      */
     public function __construct(
         Context $context,
-        ProductFactory $productFactory,
         StoreManagerInterface $storeManager,
         \Magento\Msrp\Model\Product\Options $productOptions,
         \Magento\Msrp\Model\Msrp $msrp,
-        \Magento\Msrp\Model\Config $config
+        \Magento\Msrp\Model\Config $config,
+        \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency,
+        ProductRepositoryInterface $productRepository
     ) {
         parent::__construct($context);
-        $this->productFactory = $productFactory;
         $this->storeManager = $storeManager;
         $this->productOptions = $productOptions;
         $this->msrp = $msrp;
         $this->config = $config;
+        $this->priceCurrency = $priceCurrency;
+        $this->productRepository = $productRepository;
     }
 
     /**
@@ -95,9 +85,7 @@ class Data extends AbstractHelper
             return false;
         }
         if (is_numeric($product)) {
-            $product = $this->productFactory->create()
-                ->setStoreId($this->storeManager->getStore()->getId())
-                ->load($product);
+            $product = $this->productRepository->getById($product, false, $this->storeManager->getStore()->getId());
         }
         $result = $this->msrp->canApplyToProduct($product);
         if ($result && $visibility !== null) {
@@ -162,9 +150,7 @@ class Data extends AbstractHelper
     public function isMinimalPriceLessMsrp($product)
     {
         if (is_numeric($product)) {
-            $product = $this->productFactory->create()
-                ->setStoreId($this->storeManager->getStore()->getId())
-                ->load($product);
+            $product = $this->productRepository->getById($product, false, $this->storeManager->getStore()->getId());
         }
         $msrp = $product->getMsrp();
         $price = $product->getPriceInfo()->getPrice(\Magento\Catalog\Pricing\Price\FinalPrice::PRICE_CODE);
@@ -174,6 +160,9 @@ class Data extends AbstractHelper
             } else {
                 $msrp = $product->getTypeInstance()->getChildrenMsrp($product);
             }
+        }
+        if ($msrp) {
+            $msrp = $this->priceCurrency->convertAndRound($msrp);
         }
         return $msrp > $price->getValue();
     }

@@ -1,29 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Framework\View\Design\FileResolution;
 
+use Magento\Framework\App\Bootstrap as AppBootstrap;
+use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\TestFramework\Helper\Bootstrap;
 
 /**
@@ -41,16 +25,16 @@ class FallbackTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        Bootstrap::getInstance()->reinitialize(array(
-            \Magento\Framework\App\Filesystem::PARAM_APP_DIRS => array(
-                \Magento\Framework\App\Filesystem::THEMES_DIR => array(
-                    'path' => __DIR__ . '/../../_files/fallback/design'
-                ),
-                \Magento\Framework\App\Filesystem::LIB_WEB => array(
-                    'path' => __DIR__ . '/../../_files/fallback/lib/web'
-                ),
-            )
-        ));
+        Bootstrap::getInstance()->reinitialize([
+            AppBootstrap::INIT_PARAM_FILESYSTEM_DIR_PATHS => [
+                DirectoryList::THEMES => [
+                    'path' => __DIR__ . '/../../_files/fallback/design',
+                ],
+                DirectoryList::LIB_WEB => [
+                    'path' => __DIR__ . '/../../_files/fallback/lib/web',
+                ],
+            ],
+        ]);
         /** @var \Magento\Framework\View\Design\Theme\FlyweightFactory $themeFactory */
         $this->themeFactory = Bootstrap::getObjectManager()
             ->get('Magento\Framework\View\Design\Theme\FlyweightFactory');
@@ -86,36 +70,36 @@ class FallbackTest extends \PHPUnit_Framework_TestCase
      */
     public function getTemplateFileDataProvider()
     {
-        return array(
-            'non-modular: no default inheritance' => array(
-                'fixture_template.phtml', 'vendor_standalone_theme', null,
+        return [
+            'non-modular: no default inheritance' => [
+                'fixture_template.phtml', 'Vendor/standalone_theme', null,
                 null,
-            ),
-            'non-modular: inherit parent theme' => array(
-                'fixture_template.phtml', 'vendor_custom_theme', null,
-                '%s/frontend/vendor_default/templates/fixture_template.phtml',
-            ),
-            'non-modular: inherit grandparent theme' => array(
-                'fixture_template.phtml', 'vendor_custom_theme2', null,
-                '%s/frontend/vendor_default/templates/fixture_template.phtml',
-            ),
-            'modular: no default inheritance' => array(
-                'fixture_template.phtml', 'vendor_standalone_theme', 'Fixture_Module',
+            ],
+            'non-modular: inherit parent theme' => [
+                'fixture_template.phtml', 'Vendor/custom_theme', null,
+                '%s/frontend/Vendor/default/templates/fixture_template.phtml',
+            ],
+            'non-modular: inherit grandparent theme' => [
+                'fixture_template.phtml', 'Vendor/custom_theme2', null,
+                '%s/frontend/Vendor/default/templates/fixture_template.phtml',
+            ],
+            'modular: no default inheritance' => [
+                'fixture_template.phtml', 'Vendor/standalone_theme', 'Fixture_Module',
                 null,
-            ),
-            'modular: no fallback to non-modular file' => array(
-                'fixture_template.phtml', 'vendor_default', 'NonExisting_Module',
+            ],
+            'modular: no fallback to non-modular file' => [
+                'fixture_template.phtml', 'Vendor/default', 'NonExisting_Module',
                 null,
-            ),
-            'modular: inherit parent theme' => array(
-                'fixture_template.phtml', 'vendor_custom_theme', 'Fixture_Module',
-                '%s/frontend/vendor_default/Fixture_Module/templates/fixture_template.phtml',
-            ),
-            'modular: inherit grandparent theme' => array(
-                'fixture_template.phtml', 'vendor_custom_theme2', 'Fixture_Module',
-                '%s/frontend/vendor_default/Fixture_Module/templates/fixture_template.phtml',
-            ),
-        );
+            ],
+            'modular: inherit parent theme' => [
+                'fixture_template.phtml', 'Vendor/custom_theme', 'Fixture_Module',
+                '%s/frontend/Vendor/default/Fixture_Module/templates/fixture_template.phtml',
+            ],
+            'modular: inherit grandparent theme' => [
+                'fixture_template.phtml', 'Vendor/custom_theme2', 'Fixture_Module',
+                '%s/frontend/Vendor/default/Fixture_Module/templates/fixture_template.phtml',
+            ],
+        ];
     }
 
     /**
@@ -144,20 +128,20 @@ class FallbackTest extends \PHPUnit_Framework_TestCase
 
     public function getLocaleFileDataProvider()
     {
-        return array(
-            'no default inheritance' => array(
-                'vendor_standalone_theme', 'en_US',
+        return [
+            'no default inheritance' => [
+                'Vendor/standalone_theme', 'en_US',
                 null,
-            ),
-            'inherit parent theme' => array(
-                'vendor_custom_theme', 'en_US',
-                '%s/frontend/vendor_custom_theme/i18n/en_US.csv',
-            ),
-            'inherit grandparent theme' => array(
-                'vendor_custom_theme2', 'en_US',
-                '%s/frontend/vendor_custom_theme/i18n/en_US.csv',
-            ),
-        );
+            ],
+            'inherit parent theme' => [
+                'Vendor/custom_theme', 'en_US',
+                '%s/frontend/Vendor/custom_theme/i18n/en_US.csv',
+            ],
+            'inherit grandparent theme' => [
+                'Vendor/custom_theme2', 'en_US',
+                '%s/frontend/Vendor/custom_theme/i18n/en_US.csv',
+            ],
+        ];
     }
 
     /**
@@ -190,67 +174,67 @@ class FallbackTest extends \PHPUnit_Framework_TestCase
 
     public function getViewFileDataProvider()
     {
-        return array(
-            'non-modular: no default inheritance' => array(
-                'fixture_script.js', 'vendor_standalone_theme', null, null,
+        return [
+            'non-modular: no default inheritance' => [
+                'fixture_script.js', 'Vendor/standalone_theme', null, null,
                 null,
-            ),
-            'non-modular: inherit same package & parent theme' => array(
-                'fixture_script.js', 'vendor_custom_theme', null, null,
-                '%s/frontend/vendor_default/web/fixture_script.js',
-            ),
-            'non-modular: inherit same package & grandparent theme' => array(
-                'fixture_script.js', 'vendor_custom_theme2', null, null,
-                '%s/frontend/vendor_default/web/fixture_script.js',
-            ),
-            'non-modular: fallback to non-localized file' => array(
-                'fixture_script.js', 'vendor_default', 'en_US', null,
-                '%s/frontend/vendor_default/web/fixture_script.js',
-            ),
-            'non-modular: localized file' => array(
-                'fixture_script.js', 'vendor_default', 'ru_RU', null,
-                '%s/frontend/vendor_default/web/i18n/ru_RU/fixture_script.js',
-            ),
-            'non-modular: override js lib file' => array(
-                'mage/script.js', 'vendor_custom_theme', null, null,
-                '%s/frontend/vendor_custom_theme/web/mage/script.js',
-            ),
-            'non-modular: inherit js lib file' => array(
-                'mage/script.js', 'vendor_default', null, null,
+            ],
+            'non-modular: inherit same package & parent theme' => [
+                'fixture_script.js', 'Vendor/custom_theme', null, null,
+                '%s/frontend/Vendor/default/web/fixture_script.js',
+            ],
+            'non-modular: inherit same package & grandparent theme' => [
+                'fixture_script.js', 'Vendor/custom_theme2', null, null,
+                '%s/frontend/Vendor/default/web/fixture_script.js',
+            ],
+            'non-modular: fallback to non-localized file' => [
+                'fixture_script.js', 'Vendor/default', 'en_US', null,
+                '%s/frontend/Vendor/default/web/fixture_script.js',
+            ],
+            'non-modular: localized file' => [
+                'fixture_script.js', 'Vendor/default', 'ru_RU', null,
+                '%s/frontend/Vendor/default/web/i18n/ru_RU/fixture_script.js',
+            ],
+            'non-modular: override js lib file' => [
+                'mage/script.js', 'Vendor/custom_theme', null, null,
+                '%s/frontend/Vendor/custom_theme/web/mage/script.js',
+            ],
+            'non-modular: inherit js lib file' => [
+                'mage/script.js', 'Vendor/default', null, null,
                 '%s/lib/web/mage/script.js',
-            ),
-            'modular: no default inheritance' => array(
-                'fixture_script.js', 'vendor_standalone_theme', null, 'Fixture_Module',
+            ],
+            'modular: no default inheritance' => [
+                'fixture_script.js', 'Vendor/standalone_theme', null, 'Fixture_Module',
                 null,
-            ),
-            'modular: no fallback to non-modular file' => array(
-                'fixture_script.js', 'vendor_default', null, 'NonExisting_Module',
+            ],
+            'modular: no fallback to non-modular file' => [
+                'fixture_script.js', 'Vendor/default', null, 'NonExisting_Module',
                 null,
-            ),
-            'modular: no fallback to js lib file' => array(
-                'mage/script.js', 'vendor_default', null, 'Fixture_Module',
+            ],
+            'modular: no fallback to js lib file' => [
+                'mage/script.js', 'Vendor/default', null, 'Fixture_Module',
                 null,
-            ),
-            'modular: no fallback to non-modular localized file' => array(
-                'fixture_script.js', 'vendor_default', 'ru_RU', 'NonExisting_Module',
+            ],
+            'modular: no fallback to non-modular localized file' => [
+                'fixture_script.js', 'Vendor/default', 'ru_RU', 'NonExisting_Module',
                 null,
-            ),
-            'modular: inherit same package & parent theme' => array(
-                'fixture_script.js', 'vendor_custom_theme', null, 'Fixture_Module',
-                '%s/frontend/vendor_default/Fixture_Module/web/fixture_script.js',
-            ),
-            'modular: inherit same package & grandparent theme' => array(
-                'fixture_script.js', 'vendor_custom_theme2', null, 'Fixture_Module',
-                '%s/frontend/vendor_default/Fixture_Module/web/fixture_script.js',
-            ),
-            'modular: fallback to non-localized file' => array(
-                'fixture_script.js', 'vendor_default', 'en_US', 'Fixture_Module',
-                '%s/frontend/vendor_default/Fixture_Module/web/fixture_script.js',
-            ),
-            'modular: localized file' => array(
-                'fixture_script.js', 'vendor_custom_theme2', 'ru_RU', 'Fixture_Module',
-                '%s/frontend/vendor_default/Fixture_Module/web/i18n/ru_RU/fixture_script.js',
-            ),
-        );
+            ],
+            'modular: inherit same package & parent theme' => [
+                'fixture_script.js', 'Vendor/custom_theme', null, 'Fixture_Module',
+                '%s/frontend/Vendor/default/Fixture_Module/web/fixture_script.js',
+            ],
+            'modular: inherit same package & grandparent theme' => [
+                'fixture_script.js', 'Vendor/custom_theme2', null, 'Fixture_Module',
+                '%s/frontend/Vendor/default/Fixture_Module/web/fixture_script.js',
+            ],
+            'modular: fallback to non-localized file' => [
+                'fixture_script.js', 'Vendor/default', 'en_US', 'Fixture_Module',
+                '%s/frontend/Vendor/default/Fixture_Module/web/fixture_script.js',
+            ],
+            'modular: localized file' => [
+                'fixture_script.js', 'Vendor/custom_theme2', 'ru_RU', 'Fixture_Module',
+                '%s/frontend/Vendor/default/Fixture_Module/web/i18n/ru_RU/fixture_script.js',
+            ],
+        ];
     }
 }

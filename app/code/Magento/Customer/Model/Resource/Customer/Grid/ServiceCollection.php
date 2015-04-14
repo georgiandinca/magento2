@@ -1,35 +1,17 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Customer\Model\Resource\Customer\Grid;
 
-use Magento\Core\Model\EntityFactory;
-use Magento\Framework\Service\AbstractServiceCollection;
-use Magento\Customer\Service\V1\CustomerAccountServiceInterface;
-use Magento\Customer\Service\V1\Data\CustomerDetails;
-use Magento\Framework\Service\V1\Data\FilterBuilder;
-use Magento\Framework\Service\V1\Data\SearchCriteriaBuilder;
-use Magento\Framework\Service\V1\Data\SortOrderBuilder;
+use Magento\Framework\Data\Collection\EntityFactory;
+use Magento\Customer\Api\CustomerRepositoryInterface;
+use Magento\Customer\Api\Data\CustomerInterface;
+use Magento\Framework\Api\AbstractServiceCollection;
+use Magento\Framework\Api\FilterBuilder;
+use Magento\Framework\Api\SearchCriteriaBuilder;
+use Magento\Framework\Api\SortOrderBuilder;
 
 /**
  * Customer Grid Collection backed by Services
@@ -37,15 +19,15 @@ use Magento\Framework\Service\V1\Data\SortOrderBuilder;
 class ServiceCollection extends AbstractServiceCollection
 {
     /**
-     * @var CustomerAccountServiceInterface
+     * @var CustomerRepository
      */
-    protected $accountService;
+    protected $customerRepository;
 
     /**
-     * @param EntityFactory $entityFactory
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
      * @param FilterBuilder $filterBuilder
      * @param SearchCriteriaBuilder $searchCriteriaBuilder
-     * @param CustomerAccountServiceInterface $accountService
+     * @param CustomerRepositoryInterface $customerRepository
      * @param SortOrderBuilder $sortOrderBuilder
      */
     public function __construct(
@@ -53,10 +35,10 @@ class ServiceCollection extends AbstractServiceCollection
         FilterBuilder $filterBuilder,
         SearchCriteriaBuilder $searchCriteriaBuilder,
         SortOrderBuilder $sortOrderBuilder,
-        CustomerAccountServiceInterface $accountService
+        CustomerRepositoryInterface $customerRepository
     ) {
         parent::__construct($entityFactory, $filterBuilder, $searchCriteriaBuilder, $sortOrderBuilder);
-        $this->accountService = $accountService;
+        $this->customerRepository = $customerRepository;
     }
 
     /**
@@ -66,12 +48,12 @@ class ServiceCollection extends AbstractServiceCollection
     {
         if (!$this->isLoaded()) {
             $searchCriteria = $this->getSearchCriteria();
-            $searchResults = $this->accountService->searchCustomers($searchCriteria);
+            $searchResults = $this->customerRepository->getList($searchCriteria);
             $this->_totalRecords = $searchResults->getTotalCount();
-            /** @var CustomerDetails[] $customers */
+            /** @var CustomerInterface[] $customers */
             $customers = $searchResults->getItems();
             foreach ($customers as $customer) {
-                $this->_addItem($this->createCustomerDetailItem($customer));
+                $this->_addItem($this->createCustomerItem($customer));
             }
             $this->_setIsLoaded();
         }
@@ -81,19 +63,18 @@ class ServiceCollection extends AbstractServiceCollection
     /**
      * Creates a collection item that represents a customer for the customer Grid.
      *
-     * @param CustomerDetails $customerDetail Input data for creating the item.
+     * @param CustomerInterface $customer Input data for creating the item.
      * @return \Magento\Framework\Object Collection item that represents a customer
      */
-    protected function createCustomerDetailItem(CustomerDetails $customerDetail)
+    protected function createCustomerItem(CustomerInterface $customer)
     {
-        $customer = $customerDetail->getCustomer();
-        $customerNameParts = array(
+        $customerNameParts = [
             $customer->getPrefix(),
             $customer->getFirstname(),
             $customer->getMiddlename(),
             $customer->getLastname(),
             $customer->getSuffix(),
-        );
+        ];
         $customerItem = new \Magento\Framework\Object();
         $customerItem->setId($customer->getId());
         $customerItem->setEntityId($customer->getId());
@@ -105,7 +86,7 @@ class ServiceCollection extends AbstractServiceCollection
         $customerItem->setGroupId($customer->getGroupId());
 
         $billingAddress = null;
-        foreach ($customerDetail->getAddresses() as $address) {
+        foreach ($customer->getAddresses() as $address) {
             if ($address->isDefaultBilling()) {
                 $billingAddress = $address;
                 break;
@@ -115,7 +96,7 @@ class ServiceCollection extends AbstractServiceCollection
             $customerItem->setBillingTelephone($billingAddress->getTelephone());
             $customerItem->setBillingPostcode($billingAddress->getPostcode());
             $customerItem->setBillingCountryId($billingAddress->getCountryId());
-            $region = is_null($billingAddress->getRegion()) ? '' : $billingAddress->getRegion()->getRegion();
+            $region = $billingAddress->getRegion() === null ? '' : $billingAddress->getRegion()->getRegion();
             $customerItem->setBillingRegion($region);
         }
         return $customerItem;

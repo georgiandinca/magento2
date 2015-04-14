@@ -1,28 +1,15 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
-
 namespace Magento\CatalogInventory\Model\Resource\Stock;
+
+use Magento\CatalogInventory\Api\Data\StockItemInterface;
+use Magento\CatalogInventory\Model\Indexer\Stock\Processor;
+use Magento\Framework\App\Resource as AppResource;
+use Magento\Framework\Model\AbstractModel;
+use Magento\Framework\Model\Resource\Db\TransactionManagerInterface;
 
 /**
  * Stock item resource model
@@ -30,22 +17,29 @@ namespace Magento\CatalogInventory\Model\Resource\Stock;
 class Item extends \Magento\Framework\Model\Resource\Db\AbstractDb
 {
     /**
-     * Core store config
+     * Whether index events should be processed immediately
      *
-     * @var \Magento\Framework\App\Config\ScopeConfigInterface
+     * @var bool
      */
-    protected $_scopeConfig;
+    protected $processIndexEvents = true;
 
     /**
-     * @param \Magento\Framework\App\Resource $resource
-     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+     * @var Processor
+     */
+    protected $stockIndexerProcessor;
+
+    /**
+     * @param \Magento\Framework\Model\Resource\Db\Context $context
+     * @param Processor $processor
+     * @param string|null $resourcePrefix
      */
     public function __construct(
-        \Magento\Framework\App\Resource $resource,
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+        \Magento\Framework\Model\Resource\Db\Context $context,
+        Processor $processor,
+        $resourcePrefix = null
     ) {
-        $this->_scopeConfig = $scopeConfig;
-        parent::__construct($resource);
+        $this->stockIndexerProcessor = $processor;
+        parent::__construct($context, $resourcePrefix);
     }
 
     /**
@@ -61,16 +55,20 @@ class Item extends \Magento\Framework\Model\Resource\Db\AbstractDb
     /**
      * Loading stock item data by product
      *
-     * @param \Magento\CatalogInventory\Model\Stock\Item $item
+     * @param \Magento\CatalogInventory\Api\Data\StockItemInterface $item
      * @param int $productId
+     * @param int $websiteId
      * @return $this
      */
-    public function loadByProductId(\Magento\CatalogInventory\Model\Stock\Item $item, $productId)
+    public function loadByProductId(\Magento\CatalogInventory\Api\Data\StockItemInterface $item, $productId, $websiteId)
     {
-        $select = $this->_getLoadSelect('product_id', $productId, $item)->where('stock_id = :stock_id');
-        $data = $this->_getReadAdapter()->fetchRow($select, array(':stock_id' => $item->getStockId()));
+        $select = $this->_getLoadSelect('product_id', $productId, $item)->where('website_id = :website_id');
+        $data = $this->_getReadAdapter()->fetchRow($select, [':website_id' => $websiteId]);
         if ($data) {
             $item->setData($data);
+        } else {
+            // see \Magento\CatalogInventory\Model\Stock\Item::getStockQty
+            $item->setStockQty(0);
         }
         $this->_afterLoad($item);
         return $this;
@@ -87,43 +85,8 @@ class Item extends \Magento\Framework\Model\Resource\Db\AbstractDb
     protected function _getLoadSelect($field, $value, $object)
     {
         $select = parent::_getLoadSelect($field, $value, $object)
-            ->join(array('p' => $this->getTable('catalog_product_entity')), 'product_id=p.entity_id', array('type_id'));
+            ->join(['p' => $this->getTable('catalog_product_entity')], 'product_id=p.entity_id', ['type_id']);
         return $select;
-    }
-
-    /**
-     * Add join for catalog in stock field to product collection
-     *
-     * @param \Magento\Catalog\Model\Resource\Product\Collection $productCollection
-     * @param array $columns
-     * @return $this
-     */
-    public function addCatalogInventoryToProductCollection($productCollection, $columns = null)
-    {
-        if ($columns === null) {
-            $adapter = $this->_getReadAdapter();
-            $isManageStock = (int) $this->_scopeConfig->getValue(
-                \Magento\CatalogInventory\Model\Stock\Item::XML_PATH_MANAGE_STOCK,
-                \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-            );
-            $stockExpr = $adapter->getCheckSql(
-                'cisi.use_config_manage_stock = 1',
-                $isManageStock,
-                'cisi.manage_stock'
-            );
-            $stockExpr = $adapter->getCheckSql("({$stockExpr} = 1)", 'cisi.is_in_stock', '1');
-
-            $columns = array('is_saleable' => new \Zend_Db_Expr($stockExpr), 'inventory_in_stock' => 'is_in_stock');
-        }
-
-        $productCollection->joinTable(
-            array('cisi' => 'cataloginventory_stock_item'),
-            'product_id=entity_id',
-            $columns,
-            null,
-            'left'
-        );
-        return $this;
     }
 
     /**
@@ -147,5 +110,33 @@ class Item extends \Magento\Framework\Model\Resource\Db\AbstractDb
             }
         }
         return $data;
+    }
+
+    /**
+     * Reindex CatalogInventory save event
+     *
+     * @param AbstractModel $object
+     * @return $this
+     */
+    protected function _afterSave(AbstractModel $object)
+    {
+        parent::_afterSave($object);
+        /** @var StockItemInterface $object */
+        if ($this->processIndexEvents) {
+            $this->stockIndexerProcessor->reindexRow($object->getProductId());
+        }
+        return $this;
+    }
+
+    /**
+     * Set whether index events should be processed immediately
+     *
+     * @param bool $process
+     * @return $this
+     */
+    public function setProcessIndexEvents($process = true)
+    {
+        $this->processIndexEvents = $process;
+        return $this;
     }
 }

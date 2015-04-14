@@ -1,36 +1,17 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @spi
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Test\Block\Adminhtml\Category;
 
-use Magento\Catalog\Test\Fixture\CatalogCategory;
-use Mtf\Block\Block;
-use Mtf\Factory\Factory;
-use Mtf\Client\Element\Locator;
-use Mtf\Fixture\FixtureInterface;
-use Mtf\Fixture\InjectableFixture;
+use Magento\Catalog\Test\Fixture\Category;
+use Magento\Mtf\Block\Block;
+use Magento\Mtf\Client\Locator;
+use Magento\Mtf\Fixture\FixtureInterface;
+use Magento\Mtf\Fixture\InjectableFixture;
+use Magento\Mtf\Client\Element\TreeElement;
 
 /**
  * Class Tree
@@ -117,15 +98,11 @@ class Tree extends Block
      */
     public function selectCategory(FixtureInterface $category, $fullPath = true)
     {
-        if ($category instanceof InjectableFixture) {
-            $parentPath = $this->prepareFullCategoryPath($category);
-            if (!$fullPath) {
-                array_pop($parentPath);
-            }
-            $path = implode('/', $parentPath);
-        } else {
-            $path = $category->getCategoryPath();
+        $parentPath = $this->prepareFullCategoryPath($category);
+        if (!$fullPath) {
+            array_pop($parentPath);
         }
+        $path = implode('/', $parentPath);
 
         $this->expandAllCategories();
         $this->_rootElement->find($this->treeElement, Locator::SELECTOR_CSS, 'tree')->setValue($path);
@@ -135,15 +112,17 @@ class Tree extends Block
     /**
      * Prepare category path
      *
-     * @param CatalogCategory $category
+     * @param Category $category
      * @return array
      */
-    protected function prepareFullCategoryPath(CatalogCategory $category)
+    protected function prepareFullCategoryPath(Category $category)
     {
         $path = [];
-        $parentCategory = $category->getDataFieldConfig('parent_id')['source']->getParentCategory();
+        $parentCategory = $category->hasData('parent_id')
+            ? $category->getDataFieldConfig('parent_id')['source']->getParentCategory()
+            : null;
 
-        if ($parentCategory != null) {
+        if ($parentCategory !== null) {
             $path = $this->prepareFullCategoryPath($parentCategory);
         }
         return array_filter(array_merge($path, [$category->getPath(), $category->getName()]));
@@ -173,13 +152,15 @@ class Tree extends Block
     /**
      * Check category in category tree
      *
-     * @param CatalogCategory $category
+     * @param Category $category
      * @return bool
      */
-    public function isCategoryVisible(CatalogCategory $category)
+    public function isCategoryVisible(Category $category)
     {
         $categoryPath = $this->prepareFullCategoryPath($category);
-        $structure = $this->_rootElement->find($this->treeElement, Locator::SELECTOR_CSS, 'tree')->getStructure();
+        /** @var TreeElement $treeElement */
+        $treeElement = $this->_rootElement->find($this->treeElement, Locator::SELECTOR_CSS, 'tree');
+        $structure = $treeElement->getStructure();
         $result = false;
         $element = array_shift($categoryPath);
         foreach ($structure as $item) {

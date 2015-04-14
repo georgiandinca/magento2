@@ -1,33 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Log\Model;
 
 /**
  * @method Resource\Visitor _getResource()
  * @method Resource\Visitor getResource()
- * @method string getSessionId()
- * @method Visitor setSessionId(string $value)
  * @method Visitor setFirstVisitAt(string $value)
  * @method Visitor setLastVisitAt(string $value)
  * @method Visitor setVisitorId(int $value)
@@ -42,7 +22,7 @@ namespace Magento\Log\Model;
 class Visitor extends \Magento\Framework\Model\AbstractModel
 {
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $storeManager;
 
@@ -75,7 +55,7 @@ class Visitor extends \Magento\Framework\Model\AbstractModel
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\Session\SessionManagerInterface $session
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\HTTP\Header $httpHeader
      * @param \Magento\Framework\HTTP\PhpEnvironment\RemoteAddress $remoteAddress
      * @param \Magento\Framework\HTTP\PhpEnvironment\ServerAddress $serverAddress
@@ -83,19 +63,20 @@ class Visitor extends \Magento\Framework\Model\AbstractModel
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
         \Magento\Framework\Registry $registry,
         \Magento\Framework\Session\SessionManagerInterface $session,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\HTTP\Header $httpHeader,
         \Magento\Framework\HTTP\PhpEnvironment\RemoteAddress $remoteAddress,
         \Magento\Framework\HTTP\PhpEnvironment\ServerAddress $serverAddress,
         \Magento\Framework\Stdlib\DateTime $dateTime,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->session = $session;
         $this->storeManager = $storeManager;
@@ -136,7 +117,7 @@ class Visitor extends \Magento\Framework\Model\AbstractModel
     {
         $clean = true;
         $this->addData(
-            array(
+            [
                 'server_addr' => $this->serverAddress->getServerAddress(true),
                 'remote_addr' => $this->remoteAddress->getRemoteAddress(true),
                 'http_secure' => $this->storeManager->getStore()->isCurrentlySecure(),
@@ -145,8 +126,8 @@ class Visitor extends \Magento\Framework\Model\AbstractModel
                 'http_accept_language' => $this->httpHeader->getHttpAcceptLanguage($clean),
                 'http_accept_charset' => $this->httpHeader->getHttpAcceptCharset($clean),
                 'request_uri' => $this->httpHeader->getRequestUri($clean),
-                'http_referer' => $this->httpHeader->getHttpReferer($clean)
-            )
+                'http_referer' => $this->httpHeader->getHttpReferer($clean),
+            ]
         );
 
         return $this;
@@ -172,7 +153,7 @@ class Visitor extends \Magento\Framework\Model\AbstractModel
     public function getFirstVisitAt()
     {
         if (!$this->hasData('first_visit_at')) {
-            $this->setData('first_visit_at', $this->dateTime->now());
+            $this->setData('first_visit_at', (new \DateTime())->getTimestamp());
         }
         return $this->getData('first_visit_at');
     }
@@ -185,7 +166,7 @@ class Visitor extends \Magento\Framework\Model\AbstractModel
     public function getLastVisitAt()
     {
         if (!$this->hasData('last_visit_at')) {
-            $this->setData('last_visit_at', $this->dateTime->now());
+            $this->setData('last_visit_at', (new \DateTime())->getTimestamp());
         }
         return $this->getData('last_visit_at');
     }
@@ -203,7 +184,7 @@ class Visitor extends \Magento\Framework\Model\AbstractModel
         $visitor = $observer->getEvent()->getVisitor();
         $this->setData($visitor->getData());
         $this->initServerData();
-        $this->setFirstVisitAt($this->dateTime->now());
+        $this->setFirstVisitAt((new \DateTime())->format(\Magento\Framework\Stdlib\DateTime::DATETIME_PHP_FORMAT));
         $this->setIsNewVisitor(true);
         $this->save();
         $visitor->setData($this->getData());
@@ -225,12 +206,43 @@ class Visitor extends \Magento\Framework\Model\AbstractModel
             $this->setData($visitor->getData());
             if ($this->getId() && $this->getVisitorId()) {
                 $this->initServerData();
-                $this->setLastVisitAt($this->dateTime->now());
+                $this->setLastVisitAt(
+                    (new \DateTime())->format(\Magento\Framework\Stdlib\DateTime::DATETIME_PHP_FORMAT)
+                );
                 $this->save();
                 $visitor->setData($this->getData());
             }
         } catch (\Exception $e) {
-            $this->_logger->logException($e);
+            $this->_logger->critical($e);
+        }
+        return $this;
+    }
+
+    /**
+     * Save object data
+     *
+     * @return $this
+     * @throws \Exception
+     */
+    public function save()
+    {
+        if ($this->isDeleted()) {
+            return $this->delete();
+        }
+        if (!$this->_hasModelChanged()) {
+            return $this;
+        }
+        try {
+            $this->validateBeforeSave();
+            $this->beforeSave();
+            if ($this->_dataSaveAllowed) {
+                $this->_getResource()->save($this);
+                $this->afterSave();
+            }
+            $this->_hasDataChanges = false;
+        } catch (\Exception $e) {
+            $this->_hasDataChanges = true;
+            throw $e;
         }
         return $this;
     }

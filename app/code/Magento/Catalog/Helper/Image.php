@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Helper;
 
@@ -113,13 +95,6 @@ class Image extends AbstractHelper
     protected $_assetRepo;
 
     /**
-     * Core store config
-     *
-     * @var \Magento\Framework\App\Config\ScopeConfigInterface
-     */
-    protected $_scopeConfig;
-
-    /**
      * Product image factory
      *
      * @var \Magento\Catalog\Model\Product\ImageFactory
@@ -130,17 +105,14 @@ class Image extends AbstractHelper
      * @param \Magento\Framework\App\Helper\Context $context
      * @param \Magento\Catalog\Model\Product\ImageFactory $productImageFactory
      * @param \Magento\Framework\View\Asset\Repository $assetRepo
-     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      */
     public function __construct(
         \Magento\Framework\App\Helper\Context $context,
         \Magento\Catalog\Model\Product\ImageFactory $productImageFactory,
-        \Magento\Framework\View\Asset\Repository $assetRepo,
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+        \Magento\Framework\View\Asset\Repository $assetRepo
     ) {
         $this->_productImageFactory = $productImageFactory;
         parent::__construct($context);
-        $this->_scopeConfig = $scopeConfig;
         $this->_assetRepo = $assetRepo;
     }
 
@@ -180,25 +152,25 @@ class Image extends AbstractHelper
         $this->setProduct($product);
 
         $this->setWatermark(
-            $this->_scopeConfig->getValue(
+            $this->scopeConfig->getValue(
                 "design/watermark/{$this->_getModel()->getDestinationSubdir()}_image",
                 \Magento\Store\Model\ScopeInterface::SCOPE_STORE
             )
         );
         $this->setWatermarkImageOpacity(
-            $this->_scopeConfig->getValue(
+            $this->scopeConfig->getValue(
                 "design/watermark/{$this->_getModel()->getDestinationSubdir()}_imageOpacity",
                 \Magento\Store\Model\ScopeInterface::SCOPE_STORE
             )
         );
         $this->setWatermarkPosition(
-            $this->_scopeConfig->getValue(
+            $this->scopeConfig->getValue(
                 "design/watermark/{$this->_getModel()->getDestinationSubdir()}_position",
                 \Magento\Store\Model\ScopeInterface::SCOPE_STORE
             )
         );
         $this->setWatermarkSize(
-            $this->_scopeConfig->getValue(
+            $this->scopeConfig->getValue(
                 "design/watermark/{$this->_getModel()->getDestinationSubdir()}_size",
                 \Magento\Store\Model\ScopeInterface::SCOPE_STORE
             )
@@ -265,10 +237,10 @@ class Image extends AbstractHelper
      *
      * @see \Magento\Catalog\Model\Product\Image
      * @param bool $flag
-     * @param string[] $position
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function keepFrame($flag, $position = array('center', 'middle'))
+    public function keepFrame($flag)
     {
         $this->_getModel()->setKeepFrame($flag);
         return $this;
@@ -283,10 +255,10 @@ class Image extends AbstractHelper
      *
      * @see \Magento\Catalog\Model\Product\Image
      * @param bool $flag
-     * @param int $alphaOpacity
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function keepTransparency($flag, $alphaOpacity = null)
+    public function keepTransparency($flag)
     {
         $this->_getModel()->setKeepTransparency($flag);
         return $this;
@@ -429,6 +401,34 @@ class Image extends AbstractHelper
     }
 
     /**
+     * @return $this
+     */
+    public function save()
+    {
+        $model = $this->_getModel();
+
+        if ($this->getImageFile()) {
+            $model->setBaseFile($this->getImageFile());
+        } else {
+            $model->setBaseFile($this->getProduct()->getData($model->getDestinationSubdir()));
+        }
+
+        if ($model->isCached()) {
+            return $this;
+        }
+
+        if ($this->_scheduleResize) {
+            $model->resize();
+        }
+        if ($this->getWatermark()) {
+            $model->setWatermark($this->getWatermark());
+        }
+
+        $model->saveFile();
+        return $this;
+    }
+
+    /**
      * @return string
      */
     protected function getDefaultPlaceholderUrl()
@@ -436,8 +436,8 @@ class Image extends AbstractHelper
         try {
             $url = $this->_assetRepo->getUrl($this->getPlaceholder());
         } catch (\Exception $e) {
-            $this->_logger->logException($e);
-            $url = $this->_urlBuilder->getUrl('', array('_direct' => 'core/index/notFound'));
+            $this->_logger->critical($e);
+            $url = $this->_urlBuilder->getUrl('', ['_direct' => 'core/index/notFound']);
         }
         return $url;
     }
@@ -637,7 +637,7 @@ class Image extends AbstractHelper
     {
         $size = explode('x', strtolower($string));
         if (sizeof($size) == 2) {
-            return array('width' => $size[0] > 0 ? $size[0] : null, 'height' => $size[1] > 0 ? $size[1] : null);
+            return ['width' => $size[0] > 0 ? $size[0] : null, 'height' => $size[1] > 0 ? $size[1] : null];
         }
         return false;
     }
@@ -670,6 +670,6 @@ class Image extends AbstractHelper
      */
     public function getOriginalSizeArray()
     {
-        return array($this->getOriginalWidth(), $this->getOriginalHeight());
+        return [$this->getOriginalWidth(), $this->getOriginalHeight()];
     }
 }

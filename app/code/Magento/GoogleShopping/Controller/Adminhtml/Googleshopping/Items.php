@@ -1,30 +1,12 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GoogleShopping\Controller\Adminhtml\Googleshopping;
 
-use \Magento\Framework\Notification\NotifierInterface;
-use \Magento\Backend\App\Action;
+use Magento\Backend\App\Action;
+use Magento\Framework\Notification\NotifierInterface;
 
 /**
  * GoogleShopping Admin Items Controller
@@ -40,12 +22,22 @@ class Items extends \Magento\Backend\App\Action
     protected $notifier;
 
     /**
-     * @param \Magento\Backend\App\Action\Context $context
-     * @param NotifierInterface $notifier
+     * @var \Magento\Framework\Url\EncoderInterface
      */
-    public function __construct(Action\Context $context, NotifierInterface $notifier)
-    {
+    protected $urlEncoder;
+
+    /**
+     * @param Action\Context $context
+     * @param NotifierInterface $notifier
+     * @param \Magento\Framework\Url\EncoderInterface $urlEncoder
+     */
+    public function __construct(
+        Action\Context $context,
+        NotifierInterface $notifier,
+        \Magento\Framework\Url\EncoderInterface $urlEncoder
+    ) {
         parent::__construct($context);
+        $this->urlEncoder = $urlEncoder;
         $this->notifier = $notifier;
     }
 
@@ -69,19 +61,16 @@ class Items extends \Magento\Backend\App\Action
     {
         $redirectUrl = $this->getUrl(
             '*/*/index',
-            array(
+            [
                 'store' => $this->_getStore()->getId(),
-                'captcha_token' => $this->_objectManager->get(
-                    'Magento\Core\Helper\Data'
-                )->urlEncode(
-                    $e->getCaptchaToken()
-                ),
-                'captcha_url' => $this->_objectManager->get('Magento\Core\Helper\Data')->urlEncode($e->getCaptchaUrl())
-            )
+                'captcha_token' => $this->urlEncoder->encode($e->getCaptchaToken()),
+                'captcha_url' => $this->urlEncoder->encode($e->getCaptchaUrl())
+            ]
         );
         if ($this->getRequest()->isAjax()) {
             $this->getResponse()->representJson(
-                $this->_objectManager->get('Magento\Core\Helper\Data')->jsonEncode(array('redirect' => $redirectUrl))
+                $this->_objectManager->get('Magento\Framework\Json\Helper\Data')
+                    ->jsonEncode(['redirect' => $redirectUrl])
             );
         } else {
             $this->_redirect($redirectUrl);
@@ -92,17 +81,17 @@ class Items extends \Magento\Backend\App\Action
      * Get store object, basing on request
      *
      * @return \Magento\Store\Model\Store
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function _getStore()
     {
         $store = $this->_objectManager->get(
-            'Magento\Framework\StoreManagerInterface'
+            'Magento\Store\Model\StoreManagerInterface'
         )->getStore(
             (int)$this->getRequest()->getParam('store', 0)
         );
         if (!$store || 0 == $store->getId()) {
-            throw new \Magento\Framework\Model\Exception(__('Unable to select a Store View'));
+            throw new \Magento\Framework\Exception\LocalizedException(__('Unable to select a Store View'));
         }
         return $store;
     }

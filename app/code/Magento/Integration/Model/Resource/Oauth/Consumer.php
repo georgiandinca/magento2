@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Integration\Model\Resource\Oauth;
 
@@ -31,13 +13,17 @@ class Consumer extends \Magento\Framework\Model\Resource\Db\AbstractDb
     protected $_dateTime;
 
     /**
-     * @param \Magento\Framework\App\Resource $resource
+     * @param \Magento\Framework\Model\Resource\Db\Context $context
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
+     * @param string|null $resourcePrefix
      */
-    public function __construct(\Magento\Framework\App\Resource $resource, \Magento\Framework\Stdlib\DateTime $dateTime)
-    {
+    public function __construct(
+        \Magento\Framework\Model\Resource\Db\Context $context,
+        \Magento\Framework\Stdlib\DateTime $dateTime,
+        $resourcePrefix = null
+    ) {
         $this->_dateTime = $dateTime;
-        parent::__construct($resource);
+        parent::__construct($context, $resourcePrefix);
     }
 
     /**
@@ -71,8 +57,26 @@ class Consumer extends \Magento\Framework\Model\Resource\Db\AbstractDb
     public function _afterDelete(\Magento\Framework\Model\AbstractModel $object)
     {
         $adapter = $this->_getWriteAdapter();
-        $adapter->delete($this->getTable('oauth_nonce'), array('consumer_id' => $object->getId()));
-        $adapter->delete($this->getTable('oauth_token'), array('consumer_id' => $object->getId()));
+        $adapter->delete($this->getTable('oauth_nonce'), ['consumer_id' => $object->getId()]);
+        $adapter->delete($this->getTable('oauth_token'), ['consumer_id' => $object->getId()]);
         return parent::_afterDelete($object);
+    }
+
+    /**
+     * Compute time in seconds since consumer was created.
+     *
+     * @param int $consumerId - The consumer id
+     * @return int - time lapsed in seconds
+     */
+    public function getTimeInSecondsSinceCreation($consumerId)
+    {
+        $adapter = $this->_getReadAdapter();
+        $select = $adapter->select()
+            ->from($this->getMainTable())
+            ->reset(\Zend_Db_Select::COLUMNS)
+            ->columns('CURRENT_TIMESTAMP() - created_at')
+            ->where('entity_id = ?', $consumerId);
+
+        return $adapter->fetchOne($select);
     }
 }

@@ -1,52 +1,34 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
+use Magento\Framework\Api\Code\Generator\Mapper;
+use Magento\Framework\Api\Code\Generator\SearchResults;
+use Magento\Framework\Autoload\AutoloaderRegistry;
 use Magento\Framework\Code\Generator;
 use Magento\Framework\Code\Generator\Io;
+use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Filesystem\Driver\File;
+use Magento\Framework\Interception\Code\Generator\Interceptor;
+use Magento\Framework\ObjectManager\Code\Generator\Converter;
 use Magento\Framework\ObjectManager\Code\Generator\Factory;
 use Magento\Framework\ObjectManager\Code\Generator\Proxy;
-use Magento\Framework\Interception\Code\Generator\Interceptor;
-use Magento\Framework\Exception;
-use Magento\Framework\Service\Code\Generator\Builder;
-use Magento\Framework\Service\Code\Generator\Mapper;
 use Magento\Framework\ObjectManager\Code\Generator\Repository;
-use Magento\Framework\ObjectManager\Code\Generator\Converter;
-use Magento\Framework\Service\Code\Generator\SearchResults;
-use Magento\Framework\Service\Code\Generator\SearchResultsBuilder;
+use Magento\Framework\Api\Code\Generator\ExtensionAttributesInterfaceGenerator;
+use Magento\Framework\Api\Code\Generator\ExtensionAttributesGenerator;
 
 require __DIR__ . '/../../../../../app/bootstrap.php';
 
 // default generation dir
 $generationDir = BP . '/' . Io::DEFAULT_DIRECTORY;
-
 try {
     $opt = new \Zend_Console_Getopt(
         [
             'type|t=w' => 'entity type(required)',
             'class|c=s' => 'entity class name(required)',
-            'generation|g=s' => 'generation dir. Default value ' . $generationDir
+            'generation|g=s' => 'generation dir. Default value ' . $generationDir,
         ]
     );
     $opt->parse();
@@ -69,6 +51,7 @@ try {
     if ($opt->getOption('g')) {
         $generationDir = $opt->getOption('g');
     }
+    AutoloaderRegistry::getAutoloader()->addPsr4('Magento\\', $generationDir . '/Magento/');
 } catch (\Zend_Console_Getopt_Exception $e) {
     $generator = new Generator();
     $entities = $generator->getGeneratedEntities();
@@ -85,34 +68,27 @@ try {
     exit($example);
 }
 
-(new \Magento\Framework\Autoload\IncludePath())->addIncludePath($generationDir);
-
 //reinit generator with correct generation path
-$io = new Io(new File(), null, $generationDir);
+$io = new Io(new File(), $generationDir);
 $generator = new Generator(
-    null,
     $io,
     [
-        SearchResultsBuilder::ENTITY_TYPE =>
-            'Magento\Framework\Service\Code\Generator\SearchResultsBuilder',
-        Proxy::ENTITY_TYPE =>
-            'Magento\Framework\ObjectManager\Code\Generator\Proxy',
-        Factory::ENTITY_TYPE =>
-            'Magento\Framework\ObjectManager\Code\Generator\Factory',
-        Interceptor::ENTITY_TYPE =>
-            'Magento\Framework\Interception\Code\Generator\Interceptor',
-        Builder::ENTITY_TYPE =>
-            'Magento\Framework\Service\Code\Generator\Builder',
-        Mapper::ENTITY_TYPE =>
-            'Magento\Framework\Service\Code\Generator\Mapper',
-        Repository::ENTITY_TYPE =>
-            'Magento\Framework\ObjectManager\Code\Generator\Repository',
-        Converter::ENTITY_TYPE =>
-            'Magento\Framework\ObjectManager\Code\Generator\Converter',
-        SearchResults::ENTITY_TYPE =>
-            'Magento\Framework\Service\Code\Generator\SearchResults',
+        Proxy::ENTITY_TYPE => 'Magento\Framework\ObjectManager\Code\Generator\Proxy',
+        Factory::ENTITY_TYPE => 'Magento\Framework\ObjectManager\Code\Generator\Factory',
+        Interceptor::ENTITY_TYPE => 'Magento\Framework\Interception\Code\Generator\Interceptor',
+        Mapper::ENTITY_TYPE => 'Magento\Framework\Api\Code\Generator\Mapper',
+        Repository::ENTITY_TYPE => 'Magento\Framework\ObjectManager\Code\Generator\Repository',
+        Converter::ENTITY_TYPE => 'Magento\Framework\ObjectManager\Code\Generator\Converter',
+        SearchResults::ENTITY_TYPE => 'Magento\Framework\Api\Code\Generator\SearchResults',
+        ExtensionAttributesInterfaceGenerator::ENTITY_TYPE =>
+            'Magento\Framework\Api\Code\Generator\ExtensionAttributesInterfaceGenerator',
+        ExtensionAttributesGenerator::ENTITY_TYPE => 'Magento\Framework\Api\Code\Generator\ExtensionAttributesGenerator'
     ]
 );
+/** Initialize object manager for code generation based on configs */
+$magentoObjectManagerFactory = \Magento\Framework\App\Bootstrap::createObjectManagerFactory(BP, $_SERVER);
+$objectManager = $magentoObjectManagerFactory->create($_SERVER);
+$generator->setObjectManager($objectManager);
 
 try {
     if (Generator::GENERATION_SUCCESS == $generator->generateClass($className)) {
@@ -120,6 +96,6 @@ try {
     } else {
         print "Can't generate class {$className}. This class either not generated entity, or it already exists.\n";
     }
-} catch (Exception $e) {
+} catch (LocalizedException $e) {
     print "Error! {$e->getMessage()}\n";
 }

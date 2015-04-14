@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework;
 
@@ -27,6 +9,7 @@ namespace Magento\Framework;
  * Universal data container with array access implementation
  *
  * @author      Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.NumberOfChildren)
  */
 class Object implements \ArrayAccess
 {
@@ -35,7 +18,7 @@ class Object implements \ArrayAccess
      *
      * @var array
      */
-    protected $_data = array();
+    protected $_data = [];
 
     /**
      * Data changes flag (true after setData|unsetData call)
@@ -62,7 +45,7 @@ class Object implements \ArrayAccess
      *
      * @var array
      */
-    protected static $_underscoreCache = array();
+    protected static $_underscoreCache = [];
 
     /**
      * Object delete flag
@@ -79,7 +62,7 @@ class Object implements \ArrayAccess
      *
      * @param array $data
      */
-    public function __construct(array $data = array())
+    public function __construct(array $data = [])
     {
         $this->_data = $data;
     }
@@ -93,7 +76,7 @@ class Object implements \ArrayAccess
     public function isDeleted($isDeleted = null)
     {
         $result = $this->_isDeleted;
-        if (!is_null($isDeleted)) {
+        if ($isDeleted !== null) {
             $this->_isDeleted = $isDeleted;
         }
         return $result;
@@ -186,7 +169,7 @@ class Object implements \ArrayAccess
      */
     public function setData($key, $value = null)
     {
-        if (is_array($key)) {
+        if ($key === (array)$key) {
             if ($this->_data !== $key) {
                 $this->_hasDataChanges = true;
             }
@@ -208,14 +191,14 @@ class Object implements \ArrayAccess
      */
     public function unsetData($key = null)
     {
-        if (is_null($key)) {
-            $this->setData(array());
+        if ($key === null) {
+            $this->setData([]);
         } elseif (is_string($key)) {
-            if (array_key_exists($key, $this->_data)) {
+            if (isset($this->_data[$key]) || array_key_exists($key, $this->_data)) {
                 $this->_hasDataChanges = true;
                 unset($this->_data[$key]);
             }
-        } elseif (is_array($key)) {
+        } elseif ($key === (array)$key) {
             foreach ($key as $element) {
                 $this->unsetData($element);
             }
@@ -238,6 +221,7 @@ class Object implements \ArrayAccess
      * @param string|int $index
      * @return mixed
      */
+
     public function getData($key = '', $index = null)
     {
         if ('' === $key) {
@@ -248,14 +232,14 @@ class Object implements \ArrayAccess
         if (strpos($key, '/')) {
             $data = $this->getDataByPath($key);
         } else {
-            $data = $this->getDataByKey($key);
+            $data = $this->_getData($key);
         }
 
         if ($index !== null) {
-            if (is_array($data)) {
+            if ($data === (array)$data) {
                 $data = isset($data[$index]) ? $data[$index] : null;
             } elseif (is_string($data)) {
-                $data = explode("\n", $data);
+                $data = explode(PHP_EOL, $data);
                 $data = isset($data[$index]) ? $data[$index] : null;
             } elseif ($data instanceof \Magento\Framework\Object) {
                 $data = $data->getData($index);
@@ -280,7 +264,7 @@ class Object implements \ArrayAccess
 
         $data = $this->_data;
         foreach ($keys as $key) {
-            if (is_array($data) && isset($data[$key])) {
+            if ((array)$data === $data && isset($data[$key])) {
                 $data = $data[$key];
             } elseif ($data instanceof \Magento\Framework\Object) {
                 $data = $data->getDataByKey($key);
@@ -310,7 +294,10 @@ class Object implements \ArrayAccess
      */
     protected function _getData($key)
     {
-        return isset($this->_data[$key]) ? $this->_data[$key] : null;
+        if (isset($this->_data[$key])) {
+            return $this->_data[$key];
+        }
+        return null;
     }
 
     /**
@@ -320,7 +307,7 @@ class Object implements \ArrayAccess
      * @param mixed $args
      * @return $this
      */
-    public function setDataUsingMethod($key, $args = array())
+    public function setDataUsingMethod($key, $args = [])
     {
         $method = 'set' . str_replace(' ', '', ucwords(str_replace('_', ' ', $key)));
         $this->{$method}($args);
@@ -376,13 +363,13 @@ class Object implements \ArrayAccess
      * @param array $keys array of required keys
      * @return array
      */
-    public function toArray(array $keys = array())
+    public function toArray(array $keys = [])
     {
         if (empty($keys)) {
             return $this->_data;
         }
 
-        $result = array();
+        $result = [];
         foreach ($keys as $key) {
             if (isset($this->_data[$key])) {
                 $result[$key] = $this->_data[$key];
@@ -399,7 +386,7 @@ class Object implements \ArrayAccess
      * @param  array $keys
      * @return array
      */
-    public function convertToArray(array $keys = array())
+    public function convertToArray(array $keys = [])
     {
         return $this->toArray($keys);
     }
@@ -413,7 +400,7 @@ class Object implements \ArrayAccess
      * @param bool $addCdata flag that require wrap all values in CDATA
      * @return string
      */
-    public function toXml(array $keys = array(), $rootName = 'item', $addOpenTag = false, $addCdata = true)
+    public function toXml(array $keys = [], $rootName = 'item', $addOpenTag = false, $addCdata = true)
     {
         $xml = '';
         $data = $this->toArray($keys);
@@ -422,8 +409,8 @@ class Object implements \ArrayAccess
                 $fieldValue = "<![CDATA[{$fieldValue}]]>";
             } else {
                 $fieldValue = str_replace(
-                    array('&', '"', "'", '<', '>'),
-                    array('&amp;', '&quot;', '&apos;', '&lt;', '&gt;'),
+                    ['&', '"', "'", '<', '>'],
+                    ['&amp;', '&quot;', '&apos;', '&lt;', '&gt;'],
                     $fieldValue
                 );
             }
@@ -448,7 +435,7 @@ class Object implements \ArrayAccess
      * @return string
      */
     public function convertToXml(
-        array $arrAttributes = array(),
+        array $arrAttributes = [],
         $rootName = 'item',
         $addOpenTag = false,
         $addCdata = true
@@ -462,7 +449,7 @@ class Object implements \ArrayAccess
      * @param array $keys array of required keys
      * @return string
      */
-    public function toJson(array $keys = array())
+    public function toJson(array $keys = [])
     {
         $data = $this->toArray($keys);
         return \Zend_Json::encode($data);
@@ -474,7 +461,7 @@ class Object implements \ArrayAccess
      * @param  array $keys
      * @return string
      */
-    public function convertToJson(array $keys = array())
+    public function convertToJson(array $keys = [])
     {
         return $this->toJson($keys);
     }
@@ -507,7 +494,7 @@ class Object implements \ArrayAccess
      * @param   string $method
      * @param   array $args
      * @return  mixed
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function __call($method, $args)
     {
@@ -527,8 +514,8 @@ class Object implements \ArrayAccess
                 $key = $this->_underscore(substr($method, 3));
                 return isset($this->_data[$key]);
         }
-        throw new \Magento\Framework\Exception(
-            sprintf('Invalid method %s::%s(%s)', get_class($this), $method, print_r($args, 1))
+        throw new \Magento\Framework\Exception\LocalizedException(
+            new \Magento\Framework\Phrase('Invalid method %1::%2(%3)', [get_class($this), $method, print_r($args, 1)])
         );
     }
 
@@ -559,7 +546,7 @@ class Object implements \ArrayAccess
         if (isset(self::$_underscoreCache[$name])) {
             return self::$_underscoreCache[$name];
         }
-        $result = strtolower(preg_replace('/(.)([A-Z])/', "$1_$2", $name));
+        $result = strtolower(trim(preg_replace('/([A-Z]|[0-9]+)/', "_$1", $name), '_'));
         self::$_underscoreCache[$name] = $result;
         return $result;
     }
@@ -575,9 +562,9 @@ class Object implements \ArrayAccess
      * @param   string $quote quoting sign
      * @return  string
      */
-    public function serialize($keys = array(), $valueSeparator = '=', $fieldSeparator = ' ', $quote = '"')
+    public function serialize($keys = [], $valueSeparator = '=', $fieldSeparator = ' ', $quote = '"')
     {
-        $data = array();
+        $data = [];
         if (empty($keys)) {
             $keys = array_keys($this->_data);
         }
@@ -602,7 +589,7 @@ class Object implements \ArrayAccess
      */
     public function setOrigData($key = null, $data = null)
     {
-        if (is_null($key)) {
+        if ($key === null) {
             $this->_origData = $this->_data;
         } else {
             $this->_origData[$key] = $data;
@@ -618,10 +605,13 @@ class Object implements \ArrayAccess
      */
     public function getOrigData($key = null)
     {
-        if (is_null($key)) {
+        if ($key === null) {
             return $this->_origData;
         }
-        return isset($this->_origData[$key]) ? $this->_origData[$key] : null;
+        if (isset($this->_origData[$key])) {
+            return $this->_origData[$key];
+        }
+        return null;
     }
 
     /**
@@ -656,9 +646,9 @@ class Object implements \ArrayAccess
      * @param array &$objects
      * @return array
      */
-    public function debug($data = null, &$objects = array())
+    public function debug($data = null, &$objects = [])
     {
-        if (is_null($data)) {
+        if ($data === null) {
             $hash = spl_object_hash($this);
             if (!empty($objects[$hash])) {
                 return '*** RECURSION ***';
@@ -666,7 +656,7 @@ class Object implements \ArrayAccess
             $objects[$hash] = true;
             $data = $this->getData();
         }
-        $debug = array();
+        $debug = [];
         foreach ($data as $key => $value) {
             if (is_scalar($value)) {
                 $debug[$key] = $value;
@@ -701,7 +691,7 @@ class Object implements \ArrayAccess
      */
     public function offsetExists($offset)
     {
-        return array_key_exists($offset, $this->_data);
+        return isset($this->_data[$offset]) || array_key_exists($offset, $this->_data);
     }
 
     /**
@@ -725,6 +715,9 @@ class Object implements \ArrayAccess
      */
     public function offsetGet($offset)
     {
-        return isset($this->_data[$offset]) ? $this->_data[$offset] : null;
+        if (isset($this->_data[$offset])) {
+            return $this->_data[$offset];
+        }
+        return null;
     }
 }

@@ -1,24 +1,6 @@
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License (AFL 3.0)
- * that is bundled with this package in the file LICENSE_AFL.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/afl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 define([
     'underscore',
@@ -61,10 +43,7 @@ define([
          * @returns {Sorting} Chainable.
          */
         initObservable: function(){
-            this.observe({
-                field:      this.field,
-                direction:  this.direction
-            });
+            this.observe('field direction');
 
             return this;
         },
@@ -74,8 +53,8 @@ define([
          * @returns {Sorting} Chainable.
          */
         attachTemplateExtender: function () {
-            var provider    = this.provider.dump,
-                extenders   = provider.get('extenders');
+            var dump        = this.provider.dump,
+                extenders   = dump.get('extenders');
                 
             extenders.push({
                 path: this.templateExtender,
@@ -83,7 +62,7 @@ define([
                 as:   'sorting'
             });
 
-            provider.trigger('update:extenders', extenders);
+            dump.resolve('update:extenders', extenders);
 
             return this;
         },

@@ -1,28 +1,14 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Payment\Model\Method;
 
+/**
+ * @method \Magento\Quote\Api\Data\PaymentMethodExtensionInterface getExtensionAttributes()
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class Cc extends \Magento\Payment\Model\Method\AbstractMethod
 {
     /**
@@ -58,37 +44,46 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
     protected $_centinelService;
 
     /**
-     * Construct
-     *
-     * @var \Magento\Framework\Logger
-     */
-    protected $_logger;
-
-    /**
-     * @param \Magento\Framework\Event\ManagerInterface $eventManager
+     * @param \Magento\Framework\Model\Context $context
+     * @param \Magento\Framework\Registry $registry
+     * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
+     * @param \Magento\Framework\Api\AttributeValueFactory $customAttributeFactory
      * @param \Magento\Payment\Helper\Data $paymentData
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     * @param \Magento\Framework\Logger\AdapterFactory $logAdapterFactory
-     * @param \Magento\Framework\Logger $logger
      * @param \Magento\Framework\Module\ModuleListInterface $moduleList
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\Centinel\Model\Service $centinelService
+     * @param \Magento\Framework\Model\Resource\AbstractResource $resource
+     * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        \Magento\Framework\Event\ManagerInterface $eventManager,
+        \Magento\Framework\Model\Context $context,
+        \Magento\Framework\Registry $registry,
+        \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory,
+        \Magento\Framework\Api\AttributeValueFactory $customAttributeFactory,
         \Magento\Payment\Helper\Data $paymentData,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Framework\Logger\AdapterFactory $logAdapterFactory,
-        \Magento\Framework\Logger $logger,
         \Magento\Framework\Module\ModuleListInterface $moduleList,
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Centinel\Model\Service $centinelService,
-        array $data = array()
+        \Magento\Framework\Model\Resource\AbstractResource $resource = null,
+        \Magento\Framework\Data\Collection\Db $resourceCollection = null,
+        array $data = []
     ) {
-        parent::__construct($eventManager, $paymentData, $scopeConfig, $logAdapterFactory, $data);
+        parent::__construct(
+            $context,
+            $registry,
+            $extensionFactory,
+            $customAttributeFactory,
+            $paymentData,
+            $scopeConfig,
+            $resource,
+            $resourceCollection,
+            $data
+        );
         $this->_moduleList = $moduleList;
-        $this->_logger = $logger;
         $this->_localeDate = $localeDate;
         $this->_centinelService = $centinelService;
     }
@@ -149,7 +144,7 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
      * Validate payment method information object
      *
      * @return $this
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
@@ -182,8 +177,7 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
                 $ccNumber
             )
             ) {
-
-                $ccTypeRegExpList = array(
+                $ccTypeRegExpList = [
                     //Solo, Switch or Maestro. International safe
                     'SO' => '/(^(6334)[5-9](\d{11}$|\d{13,14}$))|(^(6767)(\d{12}$|\d{14,15}$))/',
                     'SM' => '/(^(5[0678])\d{11,18}$)|(^(6[^05])\d{11,18}$)|(^(601)[^1]\d{9,16}$)|(^(6011)\d{9,11}$)' .
@@ -208,8 +202,8 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
                     '|3[8-9][0-9]{14}|6011(0[0-9]{11}|[2-4][0-9]{11}|74[0-9]{10}|7[7-9][0-9]{10}' .
                     '|8[6-9][0-9]{10}|9[0-9]{11})|62(2(12[6-9][0-9]{10}|1[3-9][0-9]{11}|[2-8][0-9]{12}' .
                     '|9[0-1][0-9]{11}|92[0-5][0-9]{10})|[4-6][0-9]{13}|8[2-8][0-9]{12})|6(4[4-9][0-9]{13}' .
-                    '|5[0-9]{14}))$/'
-                );
+                    '|5[0-9]{14}))$/',
+                ];
 
                 $ccNumAndTypeMatches = isset(
                     $ccTypeRegExpList[$info->getCcType()]
@@ -243,7 +237,7 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
         }
 
         if ($errorMsg) {
-            throw new \Magento\Framework\Model\Exception($errorMsg);
+            throw new \Magento\Framework\Exception\LocalizedException($errorMsg);
         }
 
         //This must be after all validation conditions
@@ -260,7 +254,7 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
     public function hasVerification()
     {
         $configData = $this->getConfigData('useccv');
-        if (is_null($configData)) {
+        if ($configData === null) {
             return true;
         }
         return (bool)$configData;
@@ -271,7 +265,7 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
      */
     public function getVerificationRegEx()
     {
-        $verificationExpList = array(
+        $verificationExpList = [
             'VI' => '/^[0-9]{3}$/',
             'MC' => '/^[0-9]{3}$/',
             'AE' => '/^[0-9]{4}$/',
@@ -280,8 +274,8 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
             'SM' => '/^[0-9]{3,4}$/',
             'SO' => '/^[0-9]{3,4}$/',
             'OT' => '/^[0-9]{3,4}$/',
-            'JCB' => '/^[0-9]{3,4}$/'
-        );
+            'JCB' => '/^[0-9]{3,4}$/',
+        ];
         return $verificationExpList;
     }
 
@@ -292,14 +286,9 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
      */
     protected function _validateExpDate($expYear, $expMonth)
     {
-        $date = $this->_localeDate->date();
-        if (!$expYear || !$expMonth || $date->compareYear(
-            $expYear
-        ) == 1 || $date->compareYear(
-            $expYear
-        ) == 0 && $date->compareMonth(
-            $expMonth
-        ) == 1
+        $date = new \DateTime();
+        if (!$expYear || !$expMonth || (int)$date->format('Y') > $expYear
+            || (int)$date->format('Y') == $expYear && (int)$date->format('m') > $expMonth
         ) {
             return false;
         }
@@ -368,7 +357,7 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
     /**
      * Check whether there are CC types set in configuration
      *
-     * @param \Magento\Sales\Model\Quote|null $quote
+     * @param \Magento\Quote\Model\Quote|null $quote
      * @return bool
      */
     public function isAvailable($quote = null)
@@ -384,7 +373,7 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
      */
     public function getIsCentinelValidationEnabled()
     {
-        return null !== $this->_moduleList->getModule('Magento_Centinel') && 1 == $this->getConfigData('centinel');
+        return $this->_moduleList->has('Magento_Centinel') && 1 == $this->getConfigData('centinel');
     }
 
     /**
@@ -493,7 +482,7 @@ class Cc extends \Magento\Payment\Model\Method\AbstractMethod
     private function _isPlaceOrder()
     {
         $info = $this->getInfoInstance();
-        if ($info instanceof \Magento\Sales\Model\Quote\Payment) {
+        if ($info instanceof \Magento\Quote\Model\Quote\Payment) {
             return false;
         } elseif ($info instanceof \Magento\Sales\Model\Order\Payment) {
             return true;

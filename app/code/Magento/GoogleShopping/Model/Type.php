@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GoogleShopping\Model;
 
@@ -82,6 +64,7 @@ class Type extends \Magento\Framework\Model\AbstractModel
      * @param \Magento\GoogleShopping\Model\Resource\Type $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
@@ -93,7 +76,7 @@ class Type extends \Magento\Framework\Model\AbstractModel
         \Magento\GoogleShopping\Helper\Data $googleShoppingHelper,
         \Magento\GoogleShopping\Model\Resource\Type $resource,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->_collectionFactory = $collectionFactory;
         $this->_attributeFactory = $attributeFactory;
@@ -129,6 +112,7 @@ class Type extends \Magento\Framework\Model\AbstractModel
      * @param CatalogModelProduct $product
      * @param Entry $entry
      * @return Entry
+     * @SuppressWarnings(PHPMD.UnusedLocalVariable)
      */
     public function convertProductToEntry($product, $entry)
     {
@@ -153,12 +137,12 @@ class Type extends \Magento\Framework\Model\AbstractModel
      */
     protected function _getAttributesMapByProduct(CatalogModelProduct $product)
     {
-        $result = array();
+        $result = [];
         $group = $this->_config->getAttributeGroupsFlat();
         foreach ($this->_getAttributesCollection() as $attribute) {
             $productAttribute = $this->_gsProduct->getProductAttribute($product, $attribute->getAttributeId());
 
-            if (!is_null($productAttribute)) {
+            if ($productAttribute !== null) {
                 // define final attribute name
                 if ($attribute->getGcontentAttribute()) {
                     $name = $attribute->getGcontentAttribute();
@@ -166,7 +150,7 @@ class Type extends \Magento\Framework\Model\AbstractModel
                     $name = $this->_gsProduct->getAttributeLabel($productAttribute, $product->getStoreId());
                 }
 
-                if (!is_null($name)) {
+                if ($name !== null) {
                     $name = $this->_googleShoppingHelper->normalizeName($name);
                     if (isset($group[$name])) {
                         // if attribute is in the group
@@ -175,13 +159,13 @@ class Type extends \Magento\Framework\Model\AbstractModel
                         }
                         // add group attribute to parent attribute
                         $result[$group[$name]]->addData(
-                            array(
+                            [
                                 'group_attribute_' . $name => $this->_attributeFactory->createAttribute(
                                     $name
                                 )->addData(
                                     $attribute->getData()
-                                )
-                            )
+                                ),
+                            ]
                         );
                         unset($group[$name]);
                     } else {
@@ -205,7 +189,7 @@ class Type extends \Magento\Framework\Model\AbstractModel
     protected function _getBaseAttributes()
     {
         $names = $this->_config->getBaseAttributes();
-        $attributes = array();
+        $attributes = [];
         foreach ($names as $name) {
             $attributes[$name] = $this->_attributeFactory->createAttribute($name);
         }
@@ -225,7 +209,7 @@ class Type extends \Magento\Framework\Model\AbstractModel
         foreach ($group as $child => $parent) {
             if (isset($attributes[$parent]) && !isset($attributes[$parent]['group_attribute_' . $child])) {
                 $attributes[$parent]->addData(
-                    array('group_attribute_' . $child => $this->_attributeFactory->createAttribute($child))
+                    ['group_attribute_' . $child => $this->_attributeFactory->createAttribute($child)]
                 );
             }
         }
@@ -241,7 +225,7 @@ class Type extends \Magento\Framework\Model\AbstractModel
      */
     protected function _getAttributesCollection()
     {
-        if (is_null($this->_attributesCollection)) {
+        if ($this->_attributesCollection === null) {
             $this->_attributesCollection = $this->_collectionFactory->create()->addAttributeSetFilter(
                 $this->getAttributeSetId(),
                 $this->getTargetCountry()
@@ -260,14 +244,14 @@ class Type extends \Magento\Framework\Model\AbstractModel
     protected function _removeNonexistentAttributes($entry, $existAttributes)
     {
         // attributes which can't be removed
-        $ignoredAttributes = array(
+        $ignoredAttributes = [
             "id",
             "image_link",
             "content_language",
             "target_country",
             "expiration_date",
-            "adult"
-        );
+            "adult",
+        ];
 
         $contentAttributes = $entry->getContentAttributes();
         foreach ($contentAttributes as $contentAttribute) {

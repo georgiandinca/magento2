@@ -1,33 +1,19 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Catalog\Model\Product;
 
+use Magento\Catalog\Api\Data\ProductCustomOptionValuesInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\Resource\Product\Option\Value\Collection;
 use Magento\Catalog\Pricing\Price\BasePrice;
-use Magento\Framework\Model\Exception;
 use Magento\Framework\Model\AbstractModel;
+use Magento\Framework\Exception\LocalizedException;
 
 /**
  * Catalog product option model
@@ -35,28 +21,12 @@ use Magento\Framework\Model\AbstractModel;
  * @method \Magento\Catalog\Model\Resource\Product\Option getResource()
  * @method int getProductId()
  * @method \Magento\Catalog\Model\Product\Option setProductId(int $value)
- * @method string getType()
- * @method \Magento\Catalog\Model\Product\Option setType(string $value)
- * @method string getTitle()
- * @method \Magento\Catalog\Model\Product\Option seTitle(string $value)
- * @method int getIsRequire()
- * @method \Magento\Catalog\Model\Product\Option setIsRequire(int $value)
- * @method string getSku()
- * @method \Magento\Catalog\Model\Product\Option setSku(string $value)
- * @method int getMaxCharacters()
- * @method \Magento\Catalog\Model\Product\Option setMaxCharacters(int $value)
- * @method string getFileExtension()
- * @method \Magento\Catalog\Model\Product\Option setFileExtension(string $value)
- * @method int getImageSizeX()
- * @method \Magento\Catalog\Model\Product\Option setImageSizeX(int $value)
- * @method int getImageSizeY()
- * @method \Magento\Catalog\Model\Product\Option setImageSizeY(int $value)
- * @method int getSortOrder()
- * @method \Magento\Catalog\Model\Product\Option setSortOrder(int $value)
  *
  * @author      Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  */
-class Option extends AbstractModel
+class Option extends AbstractModel implements \Magento\Catalog\Api\Data\ProductCustomOptionInterface
 {
     const OPTION_GROUP_TEXT = 'text';
 
@@ -86,6 +56,24 @@ class Option extends AbstractModel
 
     const OPTION_TYPE_TIME = 'time';
 
+    /**#@+
+     * Constants
+     */
+    const KEY_PRODUCT_SKU = 'product_sku';
+    const KEY_OPTION_ID = 'option_id';
+    const KEY_TITLE = 'title';
+    const KEY_TYPE = 'type';
+    const KEY_SORT_ORDER = 'sort_order';
+    const KEY_IS_REQUIRE = 'is_require';
+    const KEY_PRICE = 'price';
+    const KEY_PRICE_TYPE = 'price_type';
+    const KEY_SKU = 'sku';
+    const KEY_FILE_EXTENSION = 'file_extension';
+    const KEY_MAX_CHARACTERS = 'max_characters';
+    const KEY_IMAGE_SIZE_Y = 'image_size_y';
+    const KEY_IMAGE_SIZE_X = 'image_size_x';
+    /**#@-*/
+
     /**
      * @var Product
      */
@@ -94,12 +82,12 @@ class Option extends AbstractModel
     /**
      * @var array
      */
-    protected $_options = array();
+    protected $_options = [];
 
     /**
      * @var array
      */
-    protected $_values = array();
+    protected $_values = [];
 
     /**
      * Catalog product option value
@@ -135,6 +123,7 @@ class Option extends AbstractModel
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
@@ -145,13 +134,19 @@ class Option extends AbstractModel
         Option\Validator\Pool $validatorPool,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->_productOptionValue = $productOptionValue;
         $this->_optionFactory = $optionFactory;
         $this->validatorPool = $validatorPool;
         $this->string = $string;
-        parent::__construct($context, $registry, $resource, $resourceCollection, $data);
+        parent::__construct(
+            $context,
+            $registry,
+            $resource,
+            $resourceCollection,
+            $data
+        );
     }
 
     /**
@@ -201,7 +196,7 @@ class Option extends AbstractModel
     }
 
     /**
-     * @return Option\Value[]
+     * @return ProductCustomOptionValuesInterface[]|null
      */
     public function getValues()
     {
@@ -259,7 +254,7 @@ class Option extends AbstractModel
      */
     public function unsetOptions()
     {
-        $this->_options = array();
+        $this->_options = [];
         return $this;
     }
 
@@ -296,7 +291,7 @@ class Option extends AbstractModel
         if (is_null($type)) {
             $type = $this->getType();
         }
-        $optionGroupsToTypes = array(
+        $optionGroupsToTypes = [
             self::OPTION_TYPE_FIELD => self::OPTION_GROUP_TEXT,
             self::OPTION_TYPE_AREA => self::OPTION_GROUP_TEXT,
             self::OPTION_TYPE_FILE => self::OPTION_GROUP_FILE,
@@ -306,8 +301,8 @@ class Option extends AbstractModel
             self::OPTION_TYPE_MULTIPLE => self::OPTION_GROUP_SELECT,
             self::OPTION_TYPE_DATE => self::OPTION_GROUP_DATE,
             self::OPTION_TYPE_DATE_TIME => self::OPTION_GROUP_DATE,
-            self::OPTION_TYPE_TIME => self::OPTION_GROUP_DATE
-        );
+            self::OPTION_TYPE_TIME => self::OPTION_GROUP_DATE,
+        ];
 
         return isset($optionGroupsToTypes[$type]) ? $optionGroupsToTypes[$type] : '';
     }
@@ -317,7 +312,7 @@ class Option extends AbstractModel
      *
      * @param string $type Option type
      * @return \Magento\Catalog\Model\Product\Option\Type\DefaultType
-     * @throws Exception
+     * @throws LocalizedException
      */
     public function groupFactory($type)
     {
@@ -327,13 +322,14 @@ class Option extends AbstractModel
                 'Magento\Catalog\Model\Product\Option\Type\\' . $this->string->upperCaseWords($group)
             );
         }
-        throw new Exception(__('The option type to get group instance is incorrect.'));
+        throw new LocalizedException(__('The option type to get group instance is incorrect.'));
     }
 
     /**
      * Save options.
      *
      * @return $this
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function saveOptions()
     {
@@ -374,7 +370,6 @@ class Option extends AbstractModel
                      * need to remove all data of previous group
                      */
                     if ($this->getGroupByType($previousType) != $this->getGroupByType($this->getData('type'))) {
-
                         switch ($this->getGroupByType($previousType)) {
                             case self::OPTION_GROUP_SELECT:
                                 $this->unsetData('values');
@@ -412,9 +407,9 @@ class Option extends AbstractModel
 
     /**
      * @return AbstractModel
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
-    protected function _afterSave()
+    public function afterSave()
     {
         $this->getValueInstance()->unsetValues();
         if (is_array($this->getData('values'))) {
@@ -424,10 +419,10 @@ class Option extends AbstractModel
 
             $this->getValueInstance()->setOption($this)->saveValues();
         } elseif ($this->getGroupByType($this->getType()) == self::OPTION_GROUP_SELECT) {
-            throw new Exception(__('Select type options required values rows.'));
+            throw new LocalizedException(__('Select type options required values rows.'));
         }
 
-        return parent::_afterSave();
+        return parent::afterSave();
     }
 
     /**
@@ -441,10 +436,10 @@ class Option extends AbstractModel
     {
         if ($flag && $this->getPriceType() == 'percent') {
             $basePrice = $this->getProduct()->getPriceInfo()->getPrice(BasePrice::PRICE_CODE)->getValue();
-            $price = $basePrice * ($this->_getData('price') / 100);
+            $price = $basePrice * ($this->_getData(self::KEY_PRICE) / 100);
             return $price;
         }
-        return $this->_getData('price');
+        return $this->_getData(self::KEY_PRICE);
     }
 
     /**
@@ -561,8 +556,8 @@ class Option extends AbstractModel
      */
     protected function _clearData()
     {
-        $this->_data = array();
-        $this->_values = array();
+        $this->_data = [];
+        $this->_values = [];
         return $this;
     }
 
@@ -588,4 +583,267 @@ class Option extends AbstractModel
     {
         return $this->validatorPool->get($this->getType());
     }
+
+    /**
+     * Get product SKU
+     *
+     * @return string
+     */
+    public function getProductSku()
+    {
+        $productSku = $this->_getData(self::KEY_PRODUCT_SKU);
+        if (!$productSku) {
+            $productSku = $this->getProduct()->getSku();
+        }
+        return $productSku;
+    }
+
+    /**
+     * Get option id
+     *
+     * @return int|null
+     * @codeCoverageIgnoreStart
+     */
+    public function getOptionId()
+    {
+        return $this->_getData(self::KEY_OPTION_ID);
+    }
+
+    /**
+     * Get option title
+     *
+     * @return string
+     */
+    public function getTitle()
+    {
+        return $this->_getData(self::KEY_TITLE);
+    }
+
+    /**
+     * Get option type
+     *
+     * @return string
+     */
+    public function getType()
+    {
+        return $this->_getData(self::KEY_TYPE);
+    }
+
+    /**
+     * Get sort order
+     *
+     * @return int
+     */
+    public function getSortOrder()
+    {
+        return $this->_getData(self::KEY_SORT_ORDER);
+    }
+
+    /**
+     * Get is require
+     *
+     * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
+     */
+    public function getIsRequire()
+    {
+        return $this->_getData(self::KEY_IS_REQUIRE);
+    }
+
+    /**
+     * Get price type
+     *
+     * @return string|null
+     */
+    public function getPriceType()
+    {
+        return $this->_getData(self::KEY_PRICE_TYPE);
+    }
+
+    /**
+     * Get Sku
+     *
+     * @return string|null
+     */
+    public function getSku()
+    {
+        return $this->_getData(self::KEY_SKU);
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getFileExtension()
+    {
+        return $this->getData(self::KEY_FILE_EXTENSION);
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getMaxCharacters()
+    {
+        return $this->getData(self::KEY_MAX_CHARACTERS);
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getImageSizeX()
+    {
+        return $this->getData(self::KEY_IMAGE_SIZE_X);
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getImageSizeY()
+    {
+        return $this->getData(self::KEY_IMAGE_SIZE_Y);
+    }
+    /**
+     * Set product SKU
+     *
+     * @param string $productSku
+     * @return $this
+     */
+    public function setProductSku($productSku)
+    {
+        return $this->setData(self::KEY_PRODUCT_SKU, $productSku);
+    }
+
+    /**
+     * Set option id
+     *
+     * @param int $optionId
+     * @return $this
+     */
+    public function setOptionId($optionId)
+    {
+        return $this->setData(self::KEY_OPTION_ID, $optionId);
+    }
+
+    /**
+     * Set option title
+     *
+     * @param string $title
+     * @return $this
+     */
+    public function setTitle($title)
+    {
+        return $this->setData(self::KEY_TITLE, $title);
+    }
+
+    /**
+     * Set option type
+     *
+     * @param string $type
+     * @return $this
+     */
+    public function setType($type)
+    {
+        return $this->setData(self::KEY_TYPE, $type);
+    }
+
+    /**
+     * Set sort order
+     *
+     * @param int $sortOrder
+     * @return $this
+     */
+    public function setSortOrder($sortOrder)
+    {
+        return $this->setData(self::KEY_SORT_ORDER, $sortOrder);
+    }
+
+    /**
+     * Set is require
+     *
+     * @param bool $isRequired
+     * @return $this
+     */
+    public function setIsRequire($isRequired)
+    {
+        return $this->setData(self::KEY_IS_REQUIRE, $isRequired);
+    }
+
+    /**
+     * Set price
+     *
+     * @param float $price
+     * @return $this
+     */
+    public function setPrice($price)
+    {
+        return $this->setData(self::KEY_PRICE, $price);
+    }
+
+    /**
+     * Set price type
+     *
+     * @param string $priceType
+     * @return $this
+     */
+    public function setPriceType($priceType)
+    {
+        return $this->setData(self::KEY_PRICE_TYPE, $priceType);
+    }
+
+    /**
+     * Set Sku
+     *
+     * @param string $sku
+     * @return $this
+     */
+    public function setSku($sku)
+    {
+        return $this->setData(self::KEY_SKU, $sku);
+    }
+
+    /**
+     * @param string $fileExtension
+     * @return $this
+     */
+    public function setFileExtension($fileExtension)
+    {
+        return $this->setData(self::KEY_FILE_EXTENSION, $fileExtension);
+    }
+
+    /**
+     * @param int $maxCharacters
+     * @return $this
+     */
+    public function setMaxCharacters($maxCharacters)
+    {
+        return $this->setData(self::KEY_MAX_CHARACTERS, $maxCharacters);
+    }
+
+    /**
+     * @param int $imageSizeX
+     * @return $this
+     */
+    public function setImageSizeX($imageSizeX)
+    {
+        return $this->setData(self::KEY_IMAGE_SIZE_X, $imageSizeX);
+    }
+
+    /**
+     * @param int $imageSizeY
+     * @return $this
+     */
+    public function setImageSizeY($imageSizeY)
+    {
+        return $this->setData(self::KEY_IMAGE_SIZE_Y, $imageSizeY);
+    }
+
+    /**
+     * @param \Magento\Catalog\Api\Data\ProductCustomOptionValuesInterface[] $values
+     * @return $this
+     */
+    public function setValues(array $values = null)
+    {
+        $this->_values = $values;
+        return $this;
+    }
+    //@codeCoverageIgnoreEnd
 }

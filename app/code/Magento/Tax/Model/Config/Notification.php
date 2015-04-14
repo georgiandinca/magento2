@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license   http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Tax\Model\Config;
 
@@ -29,7 +11,7 @@ namespace Magento\Tax\Model\Config;
 class Notification extends \Magento\Framework\App\Config\Value
 {
     /**
-     * @var \Magento\Core\Model\Resource\Config
+     * @var \Magento\Config\Model\Resource\Config
      */
     protected $resourceConfig;
 
@@ -37,7 +19,7 @@ class Notification extends \Magento\Framework\App\Config\Value
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $config
-     * @param \Magento\Core\Model\Resource\Config $resourceConfig
+     * @param \Magento\Config\Model\Resource\Config $resourceConfig
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
@@ -46,10 +28,10 @@ class Notification extends \Magento\Framework\App\Config\Value
         \Magento\Framework\Model\Context $context,
         \Magento\Framework\Registry $registry,
         \Magento\Framework\App\Config\ScopeConfigInterface $config,
-        \Magento\Core\Model\Resource\Config $resourceConfig,
+        \Magento\Config\Model\Resource\Config $resourceConfig,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->resourceConfig = $resourceConfig;
         parent::__construct($context, $registry, $config, $resource, $resourceCollection, $data);
@@ -60,13 +42,13 @@ class Notification extends \Magento\Framework\App\Config\Value
      *
      * @return \Magento\Tax\Model\Config\Notification
      */
-    protected function _afterSave()
+    public function afterSave()
     {
         if ($this->isValueChanged()) {
             $this->_resetNotificationFlag(\Magento\Tax\Model\Config::XML_PATH_TAX_NOTIFICATION_IGNORE_DISCOUNT);
             $this->_resetNotificationFlag(\Magento\Tax\Model\Config::XML_PATH_TAX_NOTIFICATION_IGNORE_PRICE_DISPLAY);
         }
-        return parent::_afterSave($this);
+        return parent::afterSave($this);
     }
 
     /**

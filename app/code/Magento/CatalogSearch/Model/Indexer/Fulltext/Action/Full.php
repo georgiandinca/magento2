@@ -1,30 +1,16 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\CatalogSearch\Model\Indexer\Fulltext\Action;
 
 use Magento\Framework\Pricing\PriceCurrencyInterface;
 
+/**
+ * @SuppressWarnings(PHPMD.TooManyFields)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class Full
 {
     /**
@@ -39,12 +25,12 @@ class Full
      *
      * @var string
      */
-    protected $separator = '|';
+    protected $separator = ' | ';
 
     /**
-     * Array of \Magento\Framework\Stdlib\DateTime\DateInterface objects per store
+     * Array of \DateTime objects per store
      *
-     * @var array
+     * @var \DateTime[]
      */
     protected $dates = [];
 
@@ -112,7 +98,7 @@ class Full
     /**
      * Store manager
      *
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $storeManager;
 
@@ -154,7 +140,7 @@ class Full
     /**
      * @var \Magento\Framework\Search\Request\Config
      */
-    private $searchRequestConfig;
+    protected $searchRequestConfig;
 
     /**
      * @param \Magento\Framework\App\Resource $resource
@@ -167,12 +153,13 @@ class Full
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\CatalogSearch\Helper\Data $catalogSearchData
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
      * @param \Magento\Framework\Locale\ResolverInterface $localeResolver
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\CatalogSearch\Model\Resource\Fulltext $fulltextResource
      * @param PriceCurrencyInterface $priceCurrency
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\App\Resource $resource,
@@ -185,7 +172,7 @@ class Full
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\CatalogSearch\Helper\Data $catalogSearchData,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Stdlib\DateTime $dateTime,
         \Magento\Framework\Locale\ResolverInterface $localeResolver,
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
@@ -277,6 +264,8 @@ class Full
      * @param int $storeId Store View Id
      * @param int|array $productIds Product Entity Id
      * @return void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function rebuildStoreIndex($storeId, $productIds = null)
     {
@@ -330,16 +319,14 @@ class Full
                 }
 
                 $productAttr = $productAttributes[$productData['entity_id']];
-                if (!isset(
-                    $productAttr[$visibility->getId()]
-                    ) || !in_array(
-                        $productAttr[$visibility->getId()],
-                        $allowedVisibility
-                    )
+                if (!isset($productAttr[$visibility->getId()])
+                    || !in_array($productAttr[$visibility->getId()], $allowedVisibility)
                 ) {
                     continue;
                 }
-                if (!isset($productAttr[$status->getId()]) || !in_array($productAttr[$status->getId()], $statusIds)) {
+                if (!isset($productAttr[$status->getId()])
+                    || !in_array($productAttr[$status->getId()], $statusIds)
+                ) {
                     continue;
                 }
 
@@ -362,7 +349,7 @@ class Full
                         }
                     }
                 }
-                if (!is_null($productChildren) && !$hasChildren) {
+                if ($productChildren !== null && !$hasChildren) {
                     continue;
                 }
 
@@ -374,8 +361,7 @@ class Full
             $this->saveProductIndexes($storeId, $productIndexes);
         }
 
-        // Reset only product-specific queries and results.
-        $this->fulltextResource->resetSearchResults($storeId, $productIds);
+        $this->fulltextResource->resetSearchResults();
     }
 
     /**
@@ -398,18 +384,19 @@ class Full
         $websiteId = $this->storeManager->getStore($storeId)->getWebsiteId();
         $writeAdapter = $this->getWriteAdapter();
 
-        $select = $writeAdapter->select()->useStraightJoin(
-            true
-        )->from(
-            ['e' => $this->getTable('catalog_product_entity')],
-            array_merge(['entity_id', 'type_id'], $staticFields)
-        )->join(
-            ['website' => $this->getTable('catalog_product_website')],
-            $writeAdapter->quoteInto('website.product_id = e.entity_id AND website.website_id = ?', $websiteId),
-            []
-        );
+        $select = $writeAdapter->select()
+            ->useStraightJoin(true)
+            ->from(
+                ['e' => $this->getTable('catalog_product_entity')],
+                array_merge(['entity_id', 'type_id'], $staticFields)
+            )
+            ->join(
+                ['website' => $this->getTable('catalog_product_website')],
+                $writeAdapter->quoteInto('website.product_id = e.entity_id AND website.website_id = ?', $websiteId),
+                []
+            );
 
-        if (!is_null($productIds)) {
+        if ($productIds !== null) {
             $select->where('e.entity_id IN (?)', $productIds);
         }
 
@@ -456,12 +443,8 @@ class Full
             $this->searchableAttributes = [];
 
             $productAttributes = $this->productAttributeCollectionFactory->create();
+            $productAttributes->addToIndexFilter(true);
 
-            if ($this->engineProvider->get() && $this->engineProvider->get()->allowAdvancedIndex()) {
-                $productAttributes->addToIndexFilter(true);
-            } else {
-                $productAttributes->addSearchableAttributeFilter();
-            }
             /** @var \Magento\Eav\Model\Entity\Attribute[] $attributes */
             $attributes = $productAttributes->getItems();
 
@@ -479,7 +462,7 @@ class Full
             $this->searchableAttributes = $attributes;
         }
 
-        if (!is_null($backendType)) {
+        if ($backendType !== null) {
             $attributes = [];
             foreach ($this->searchableAttributes as $attributeId => $attribute) {
                 if ($attribute->getBackendType() == $backendType) {
@@ -625,7 +608,7 @@ class Full
                 $relation->getParentFieldName() . ' = ?',
                 $productId
             );
-            if (!is_null($relation->getWhere())) {
+            if ($relation->getWhere() !== null) {
                 $select->where($relation->getWhere());
             }
             return $this->getReadAdapter()->fetchCol($select);
@@ -657,6 +640,8 @@ class Full
      * @param array $productData
      * @param int $storeId
      * @return string
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function prepareProductIndex($indexData, $productData, $storeId)
     {
@@ -683,7 +668,7 @@ class Full
         foreach ($indexData as $entityId => $attributeData) {
             foreach ($attributeData as $attributeId => $attributeValue) {
                 $value = $this->getAttributeValue($attributeId, $attributeValue, $storeId);
-                if (!is_null($value) && $value !== false) {
+                if (!empty($value)) {
                     $attributeCode = $this->getSearchableAttribute($attributeId)->getAttributeCode();
 
                     if (isset($index[$attributeCode])) {
@@ -695,19 +680,17 @@ class Full
             }
         }
 
-        if (!$this->engineProvider->get()->allowAdvancedIndex()) {
-            $product = $this->getProductEmulator(
-                $productData['type_id']
-            )->setId(
-                $productData['entity_id']
-            )->setStoreId(
-                $storeId
-            );
-            $typeInstance = $this->getProductTypeInstance($productData['type_id']);
-            $data = $typeInstance->getSearchableData($product);
-            if ($data) {
-                $index['options'] = $data;
-            }
+        $product = $this->getProductEmulator(
+            $productData['type_id']
+        )->setId(
+            $productData['entity_id']
+        )->setStoreId(
+            $storeId
+        );
+        $typeInstance = $this->getProductTypeInstance($productData['type_id']);
+        $data = $typeInstance->getSearchableData($product);
+        if ($data) {
+            $index['options'] = $data;
         }
 
         if ($this->engineProvider->get()) {
@@ -721,55 +704,30 @@ class Full
      * Retrieve attribute source value for search
      *
      * @param int $attributeId
-     * @param mixed $value
+     * @param mixed $valueId
      * @param int $storeId
      * @return mixed
      */
-    protected function getAttributeValue($attributeId, $value, $storeId)
+    protected function getAttributeValue($attributeId, $valueId, $storeId)
     {
         $attribute = $this->getSearchableAttribute($attributeId);
-        if (!$attribute->getIsSearchable()) {
-            if ($this->engineProvider->get()->allowAdvancedIndex()) {
-                if ($attribute->getAttributeCode() == 'visibility') {
-                    return $value;
-                } elseif (!($attribute->getIsVisibleInAdvancedSearch() ||
-                    $attribute->getIsFilterable() ||
-                    $attribute->getIsFilterableInSearch() ||
-                    $attribute->getUsedForSortBy())
-                ) {
-                    return null;
-                }
-            } else {
-                return null;
-            }
-        }
+        $value = $this->engineProvider->get()->processAttributeValue($attribute, $valueId);
 
-        if ($attribute->usesSource()) {
-            if ($this->engineProvider->get()->allowAdvancedIndex()) {
-                return $value;
-            }
-
+        if ($attribute->getIsSearchable()
+            && $attribute->usesSource()
+            && $this->engineProvider->get()->allowAdvancedIndex()
+        ) {
             $attribute->setStoreId($storeId);
-            $value = $attribute->getSource()->getIndexOptionText($value);
+            $valueText = $attribute->getSource()->getIndexOptionText($valueId);
 
-            if (is_array($value)) {
-                $value = implode($this->separator, $value);
-            } elseif (empty($value)) {
-                $inputType = $attribute->getFrontend()->getInputType();
-                if ($inputType == 'select' || $inputType == 'multiselect') {
-                    return null;
-                }
-            }
-        } elseif ($attribute->getBackendType() == 'datetime') {
-            $value = $this->getStoreDate($storeId, $value);
-        } else {
-            $inputType = $attribute->getFrontend()->getInputType();
-            if ($inputType == 'price') {
-                $value = $this->priceCurrency->round($value);
+            if (is_array($valueText)) {
+                $value .=  $this->separator . implode($this->separator, $valueText);
+            } else {
+                $value .= $this->separator . $valueText;
             }
         }
 
-        $value = preg_replace("#\s+#siu", ' ', trim(strip_tags($value)));
+        $value = preg_replace('/\\s+/siu', ' ', trim(strip_tags($value)));
 
         return $value;
     }
@@ -805,23 +763,20 @@ class Full
                 \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
                 $storeId
             );
-            $locale = $this->scopeConfig->getValue(
-                $this->localeResolver->getDefaultLocalePath(),
-                \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
-                $storeId
-            );
-            $locale = new \Zend_Locale($locale);
+            
+            $this->localeResolver->emulate($storeId);
 
-            $dateObj = new \Magento\Framework\Stdlib\DateTime\Date(null, null, $locale);
-            $dateObj->setTimezone($timezone);
-            $this->dates[$storeId] = [$dateObj, $locale->getTranslation(null, 'date', $locale)];
+            $dateObj = new \DateTime();
+            $dateObj->setTimezone(new \DateTimeZone($timezone));
+            $this->dates[$storeId] = $dateObj;
+
+            $this->localeResolver->revert();
         }
 
         if (!$this->dateTime->isEmptyDate($date)) {
-            list($dateObj, $format) = $this->dates[$storeId];
-            $dateObj->setDate($date, \Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT);
-
-            return $dateObj->toString($format);
+            /** @var \DateTime $dateObj */
+            $dateObj = $this->dates[$storeId];
+            return $this->localeDate->formatDateTime($dateObj, \IntlDateFormatter::MEDIUM, \IntlDateFormatter::NONE);
         }
 
         return null;

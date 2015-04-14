@@ -1,28 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Sales\Model\Order;
 
+use Magento\Framework\Api\AttributeValueFactory;
+use Magento\Sales\Api\Data\ShipmentInterface;
+use Magento\Sales\Model\AbstractModel;
 use Magento\Sales\Model\EntityInterface;
 
 /**
@@ -30,44 +15,17 @@ use Magento\Sales\Model\EntityInterface;
  *
  * @method \Magento\Sales\Model\Resource\Order\Shipment _getResource()
  * @method \Magento\Sales\Model\Resource\Order\Shipment getResource()
- * @method int getStoreId()
- * @method \Magento\Sales\Model\Order\Shipment setStoreId(int $value)
- * @method float getTotalWeight()
- * @method \Magento\Sales\Model\Order\Shipment setTotalWeight(float $value)
- * @method float getTotalQty()
- * @method \Magento\Sales\Model\Order\Shipment setTotalQty(float $value)
- * @method int getEmailSent()
- * @method \Magento\Sales\Model\Order\Shipment setEmailSent(int $value)
- * @method int getOrderId()
- * @method \Magento\Sales\Model\Order\Shipment setOrderId(int $value)
- * @method int getCustomerId()
- * @method \Magento\Sales\Model\Order\Shipment setCustomerId(int $value)
- * @method int getShippingAddressId()
- * @method \Magento\Sales\Model\Order\Shipment setShippingAddressId(int $value)
- * @method int getBillingAddressId()
- * @method \Magento\Sales\Model\Order\Shipment setBillingAddressId(int $value)
- * @method int getShipmentStatus()
- * @method \Magento\Sales\Model\Order\Shipment setShipmentStatus(int $value)
- * @method \Magento\Sales\Model\Order\Shipment setIncrementId(string $value)
- * @method string getCreatedAt()
  * @method \Magento\Sales\Model\Order\Shipment setCreatedAt(string $value)
- * @method string getUpdatedAt()
- * @method \Magento\Sales\Model\Order\Shipment setUpdatedAt(string $value)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  */
-class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInterface
+class Shipment extends AbstractModel implements EntityInterface, ShipmentInterface
 {
     const STATUS_NEW = 1;
 
     const REPORT_DATE_TYPE_ORDER_CREATED = 'order_created';
 
     const REPORT_DATE_TYPE_SHIPMENT_CREATED = 'shipment_created';
-
-    /**
-     * Order entity type
-     *
-     * @var string
-     */
-    protected $entityType = 'shipment';
 
     /**
      * Store address
@@ -85,24 +43,16 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
     const XML_PATH_STORE_COUNTRY_ID = 'shipping/origin/country_id';
 
     /**
-     * @var mixed
+     * Order entity type
+     *
+     * @var string
      */
-    protected $_items;
-
-    /**
-     * @var \Magento\Sales\Model\Resource\Order\Shipment\Track\Collection
-     */
-    protected $_tracks;
+    protected $entityType = 'shipment';
 
     /**
      * @var \Magento\Sales\Model\Order
      */
     protected $_order;
-
-    /**
-     * @var \Magento\Sales\Model\Resource\Order\Shipment\Comment\Collection
-     */
-    protected $_comments;
 
     /**
      * @var string
@@ -142,8 +92,8 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
     /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
-     * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
-     * @param \Magento\Framework\Stdlib\DateTime $dateTime
+     * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
+     * @param AttributeValueFactory $customAttributeFactory
      * @param \Magento\Sales\Model\OrderFactory $orderFactory
      * @param \Magento\Sales\Model\Resource\Order\Shipment\Item\CollectionFactory $shipmentItemCollectionFactory
      * @param \Magento\Sales\Model\Resource\Order\Shipment\Track\CollectionFactory $trackCollectionFactory
@@ -152,12 +102,13 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
         \Magento\Framework\Registry $registry,
-        \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
-        \Magento\Framework\Stdlib\DateTime $dateTime,
+        \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory,
+        AttributeValueFactory $customAttributeFactory,
         \Magento\Sales\Model\OrderFactory $orderFactory,
         \Magento\Sales\Model\Resource\Order\Shipment\Item\CollectionFactory $shipmentItemCollectionFactory,
         \Magento\Sales\Model\Resource\Order\Shipment\Track\CollectionFactory $trackCollectionFactory,
@@ -165,14 +116,22 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
         \Magento\Sales\Model\Resource\Order\Shipment\Comment\CollectionFactory $commentCollectionFactory,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->_orderFactory = $orderFactory;
         $this->_shipmentItemCollectionFactory = $shipmentItemCollectionFactory;
         $this->_trackCollectionFactory = $trackCollectionFactory;
         $this->_commentFactory = $commentFactory;
         $this->_commentCollectionFactory = $commentCollectionFactory;
-        parent::__construct($context, $registry, $localeDate, $dateTime, $resource, $resourceCollection, $data);
+        parent::__construct(
+            $context,
+            $registry,
+            $extensionFactory,
+            $customAttributeFactory,
+            $resource,
+            $resourceCollection,
+            $data
+        );
     }
 
     /**
@@ -274,12 +233,12 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
      * Apply to order, order items etc.
      *
      * @return $this
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function register()
     {
         if ($this->getId()) {
-            throw new \Magento\Framework\Model\Exception(__('We cannot register an existing shipment'));
+            throw new \Magento\Framework\Exception\LocalizedException(__('We cannot register an existing shipment'));
         }
 
         $totalQty = 0;
@@ -303,16 +262,17 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
      */
     public function getItemsCollection()
     {
-        if (empty($this->_items)) {
-            $this->_items = $this->_shipmentItemCollectionFactory->create()->setShipmentFilter($this->getId());
+        if (!$this->hasData(ShipmentInterface::ITEMS)) {
+            $this->setItems($this->_shipmentItemCollectionFactory->create()->setShipmentFilter($this->getId()));
 
             if ($this->getId()) {
-                foreach ($this->_items as $item) {
+                foreach ($this->getItems() as $item) {
                     $item->setShipment($this);
                 }
             }
         }
-        return $this->_items;
+
+        return $this->getItems();
     }
 
     /**
@@ -320,7 +280,7 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
      */
     public function getAllItems()
     {
-        $items = array();
+        $items = [];
         foreach ($this->getItemsCollection() as $item) {
             if (!$item->isDeleted()) {
                 $items[] = $item;
@@ -363,16 +323,16 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
      */
     public function getTracksCollection()
     {
-        if (empty($this->_tracks)) {
-            $this->_tracks = $this->_trackCollectionFactory->create()->setShipmentFilter($this->getId());
+        if (!$this->hasData(ShipmentInterface::TRACKS)) {
+            $this->setTracks($this->_trackCollectionFactory->create()->setShipmentFilter($this->getId()));
 
             if ($this->getId()) {
-                foreach ($this->_tracks as $track) {
+                foreach ($this->getTracks() as $track) {
                     $track->setShipment($this);
                 }
             }
         }
-        return $this->_tracks;
+        return $this->getTracks();
     }
 
     /**
@@ -380,7 +340,7 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
      */
     public function getAllTracks()
     {
-        $tracks = array();
+        $tracks = [];
         foreach ($this->getTracksCollection() as $track) {
             if (!$track->isDeleted()) {
                 $tracks[] = $track;
@@ -467,48 +427,40 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
      */
     public function getCommentsCollection($reload = false)
     {
-        if (is_null($this->_comments) || $reload) {
-            $this->_comments = $this->_commentCollectionFactory->create()->setShipmentFilter(
-                $this->getId()
-            )->setCreatedAtOrder();
+        if (!$this->hasData(ShipmentInterface::COMMENTS) || $reload) {
+            $comments = $this->_commentCollectionFactory->create()->setShipmentFilter($this->getId())
+                ->setCreatedAtOrder();
+            $this->setComments($comments);
 
             /**
              * When shipment created with adding comment,
              * comments collection must be loaded before we added this comment.
              */
-            $this->_comments->load();
+            $this->getComments()->load();
 
             if ($this->getId()) {
-                foreach ($this->_comments as $comment) {
+                foreach ($this->getComments() as $comment) {
                     $comment->setShipment($this);
                 }
             }
         }
-        return $this->_comments;
+        return $this->getComments();
     }
 
     /**
      * Before object save
      *
      * @return $this
-     * @throws \Magento\Framework\Model\Exception
      */
     protected function _beforeSave()
     {
-        if ((!$this->getId() || null !== $this->_items) && !count($this->getAllItems())) {
-            throw new \Magento\Framework\Model\Exception(__('We cannot create an empty shipment.'));
-        }
-
-        if (!$this->getOrderId() && $this->getOrder()) {
-            $this->setOrderId($this->getOrder()->getId());
-            $this->setShippingAddressId($this->getOrder()->getShippingAddress()->getId());
-        }
-
         return parent::_beforeSave();
     }
 
     /**
-     * @return \Magento\Framework\Model\AbstractModel
+     * Before object delete
+     *
+     * @return $this
      */
     protected function _beforeDelete()
     {
@@ -522,24 +474,6 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
      */
     protected function _afterSave()
     {
-        if (null !== $this->_items) {
-            foreach ($this->_items as $item) {
-                $item->save();
-            }
-        }
-
-        if (null !== $this->_tracks) {
-            foreach ($this->_tracks as $track) {
-                $track->save();
-            }
-        }
-
-        if (null !== $this->_comments) {
-            foreach ($this->_comments as $comment) {
-                $comment->save();
-            }
-        }
-
         return parent::_afterSave();
     }
 
@@ -588,4 +522,324 @@ class Shipment extends \Magento\Sales\Model\AbstractModel implements EntityInter
     {
         return $this->getData('increment_id');
     }
+
+    /**
+     * Returns packages
+     *
+     * @return string
+     */
+    public function getPackages()
+    {
+        return $this->getData(ShipmentInterface::PACKAGES);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setPackages(array $packages = null)
+    {
+        return $this->setData(ShipmentInterface::PACKAGES, $packages);
+    }
+
+    /**
+     * Returns items
+     *
+     * @return \Magento\Sales\Api\Data\ShipmentItemInterface[]
+     */
+    public function getItems()
+    {
+        if ($this->getData(ShipmentInterface::ITEMS) === null) {
+            $collection =  $this->_shipmentItemCollectionFactory->create()->setShipmentFilter($this->getId());
+            if ($this->getId()) {
+                foreach ($collection as $item) {
+                    $item->setShipment($this);
+                }
+                $this->setData(ShipmentInterface::ITEMS, $collection->getItems());
+            }
+        }
+        return $this->getData(ShipmentInterface::ITEMS);
+    }
+
+    /**
+     * Sets items
+     *
+     * @param mixed $items
+     * @return $this
+     */
+    public function setItems($items)
+    {
+        return $this->setData(ShipmentInterface::ITEMS, $items);
+    }
+
+    /**
+     * Returns tracks
+     *
+     * @return \Magento\Sales\Api\Data\ShipmentTrackInterface[]
+     */
+    public function getTracks()
+    {
+        if ($this->getData(ShipmentInterface::TRACKS) === null) {
+            $collection =  $this->_trackCollectionFactory->create()->setShipmentFilter($this->getId());
+            if ($this->getId()) {
+                foreach ($collection as $item) {
+                    $item->setShipment($this);
+                }
+                $this->setData(ShipmentInterface::TRACKS, $collection->getItems());
+            }
+        }
+        return $this->getData(ShipmentInterface::TRACKS);
+    }
+
+    /**
+     * Returns tracks
+     *
+     * @param \Magento\Sales\Api\Data\ShipmentTrackInterface[] $tracks
+     * @return $this
+     */
+    public function setTracks($tracks)
+    {
+        return $this->setData(ShipmentInterface::TRACKS, $tracks);
+    }
+
+    /**
+     * Returns billing_address_id
+     *
+     * @return int
+     */
+    public function getBillingAddressId()
+    {
+        return $this->getData(ShipmentInterface::BILLING_ADDRESS_ID);
+    }
+
+    /**
+     * Returns created_at
+     *
+     * @return string
+     */
+    public function getCreatedAt()
+    {
+        return $this->getData(ShipmentInterface::CREATED_AT);
+    }
+
+    /**
+     * Returns customer_id
+     *
+     * @return int
+     */
+    public function getCustomerId()
+    {
+        return $this->getData(ShipmentInterface::CUSTOMER_ID);
+    }
+
+    /**
+     * Returns email_sent
+     *
+     * @return int
+     */
+    public function getEmailSent()
+    {
+        return $this->getData(ShipmentInterface::EMAIL_SENT);
+    }
+
+    /**
+     * Returns order_id
+     *
+     * @return int
+     */
+    public function getOrderId()
+    {
+        return $this->getData(ShipmentInterface::ORDER_ID);
+    }
+
+    /**
+     * Returns shipment_status
+     *
+     * @return int
+     */
+    public function getShipmentStatus()
+    {
+        return $this->getData(ShipmentInterface::SHIPMENT_STATUS);
+    }
+
+    /**
+     * Returns shipping_address_id
+     *
+     * @return int
+     */
+    public function getShippingAddressId()
+    {
+        return $this->getData(ShipmentInterface::SHIPPING_ADDRESS_ID);
+    }
+
+    /**
+     * Returns store_id
+     *
+     * @return int
+     */
+    public function getStoreId()
+    {
+        return $this->getData(ShipmentInterface::STORE_ID);
+    }
+
+    /**
+     * Returns total_qty
+     *
+     * @return float
+     */
+    public function getTotalQty()
+    {
+        return $this->getData(ShipmentInterface::TOTAL_QTY);
+    }
+
+    /**
+     * Returns total_weight
+     *
+     * @return float
+     */
+    public function getTotalWeight()
+    {
+        return $this->getData(ShipmentInterface::TOTAL_WEIGHT);
+    }
+
+    /**
+     * Returns updated_at
+     *
+     * @return string
+     */
+    public function getUpdatedAt()
+    {
+        return $this->getData(ShipmentInterface::UPDATED_AT);
+    }
+
+    /**
+     * Returns comments
+     *
+     * @return \Magento\Sales\Api\Data\ShipmentCommentInterface[]
+     */
+    public function getComments()
+    {
+        return $this->getData(ShipmentInterface::COMMENTS);
+    }
+
+    /**
+     * Sets comments
+     *
+     * @param \Magento\Sales\Api\Data\ShipmentCommentInterface[] $comments
+     * @return $this
+     */
+    public function setComments($comments = null)
+    {
+        return $this->setData(ShipmentInterface::COMMENTS, $comments);
+    }
+
+    //@codeCoverageIgnoreStart
+    /**
+     * {@inheritdoc}
+     */
+    public function setStoreId($id)
+    {
+        return $this->setData(ShipmentInterface::STORE_ID, $id);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setTotalWeight($totalWeight)
+    {
+        return $this->setData(ShipmentInterface::TOTAL_WEIGHT, $totalWeight);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setTotalQty($qty)
+    {
+        return $this->setData(ShipmentInterface::TOTAL_QTY, $qty);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setEmailSent($emailSent)
+    {
+        return $this->setData(ShipmentInterface::EMAIL_SENT, $emailSent);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setOrderId($id)
+    {
+        return $this->setData(ShipmentInterface::ORDER_ID, $id);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setCustomerId($id)
+    {
+        return $this->setData(ShipmentInterface::CUSTOMER_ID, $id);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setShippingAddressId($id)
+    {
+        return $this->setData(ShipmentInterface::SHIPPING_ADDRESS_ID, $id);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setBillingAddressId($id)
+    {
+        return $this->setData(ShipmentInterface::BILLING_ADDRESS_ID, $id);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setShipmentStatus($shipmentStatus)
+    {
+        return $this->setData(ShipmentInterface::SHIPMENT_STATUS, $shipmentStatus);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setIncrementId($id)
+    {
+        return $this->setData(ShipmentInterface::INCREMENT_ID, $id);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setUpdatedAt($timestamp)
+    {
+        return $this->setData(ShipmentInterface::UPDATED_AT, $timestamp);
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * @return \Magento\Sales\Api\Data\ShipmentExtensionInterface|null
+     */
+    public function getExtensionAttributes()
+    {
+        return $this->_getExtensionAttributes();
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * @param \Magento\Sales\Api\Data\ShipmentExtensionInterface $extensionAttributes
+     * @return $this
+     */
+    public function setExtensionAttributes(\Magento\Sales\Api\Data\ShipmentExtensionInterface $extensionAttributes)
+    {
+        return $this->_setExtensionAttributes($extensionAttributes);
+    }
+    //@codeCoverageIgnoreEnd
 }

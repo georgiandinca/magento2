@@ -1,37 +1,21 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Customer\Model\Resource;
 
-use \Magento\Framework\Exception\InputException;
+use Magento\Framework\Validator\Exception as ValidatorException;
+use Magento\Framework\Exception\AlreadyExistsException;
 
 /**
  * Customer entity resource model
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
 {
     /**
-     * @var \Magento\Core\Model\Validator\Factory
+     * @var \Magento\Framework\Validator\Factory
      */
     protected $_validatorFactory;
 
@@ -48,38 +32,20 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
     protected $dateTime;
 
     /**
-     * @param \Magento\Framework\App\Resource $resource
-     * @param \Magento\Eav\Model\Config $eavConfig
-     * @param \Magento\Eav\Model\Entity\Attribute\Set $attrSetEntity
-     * @param \Magento\Framework\Locale\FormatInterface $localeFormat
-     * @param \Magento\Eav\Model\Resource\Helper $resourceHelper
-     * @param \Magento\Framework\Validator\UniversalFactory $universalFactory
+     * @param \Magento\Eav\Model\Entity\Context $context
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     * @param \Magento\Core\Model\Validator\Factory $validatorFactory
+     * @param \Magento\Framework\Validator\Factory $validatorFactory
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
      * @param array $data
      */
     public function __construct(
-        \Magento\Framework\App\Resource $resource,
-        \Magento\Eav\Model\Config $eavConfig,
-        \Magento\Eav\Model\Entity\Attribute\Set $attrSetEntity,
-        \Magento\Framework\Locale\FormatInterface $localeFormat,
-        \Magento\Eav\Model\Resource\Helper $resourceHelper,
-        \Magento\Framework\Validator\UniversalFactory $universalFactory,
+        \Magento\Eav\Model\Entity\Context $context,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Core\Model\Validator\Factory $validatorFactory,
+        \Magento\Framework\Validator\Factory $validatorFactory,
         \Magento\Framework\Stdlib\DateTime $dateTime,
-        $data = array()
+        $data = []
     ) {
-        parent::__construct(
-            $resource,
-            $eavConfig,
-            $attrSetEntity,
-            $localeFormat,
-            $resourceHelper,
-            $universalFactory,
-            $data
-        );
+        parent::__construct($context, $data);
         $this->_scopeConfig = $scopeConfig;
         $this->_validatorFactory = $validatorFactory;
         $this->dateTime = $dateTime;
@@ -94,15 +60,13 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
      */
     protected function _getDefaultAttributes()
     {
-        return array(
-            'entity_type_id',
-            'attribute_set_id',
+        return [
             'created_at',
             'updated_at',
             'increment_id',
             'store_id',
             'website_id'
-        );
+        ];
     }
 
     /**
@@ -110,8 +74,7 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
      *
      * @param \Magento\Framework\Object $customer
      * @return $this
-     * @throws \Magento\Customer\Exception
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function _beforeSave(\Magento\Framework\Object $customer)
     {
@@ -119,15 +82,15 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
         parent::_beforeSave($customer);
 
         if (!$customer->getEmail()) {
-            throw new \Magento\Customer\Exception(__('Customer email is required'));
+            throw new ValidatorException(__('Customer email is required'));
         }
 
         $adapter = $this->_getWriteAdapter();
-        $bind = array('email' => $customer->getEmail());
+        $bind = ['email' => $customer->getEmail()];
 
         $select = $adapter->select()->from(
             $this->getEntityTable(),
-            array($this->getEntityIdField())
+            [$this->getEntityIdField()]
         )->where(
             'email = :email'
         );
@@ -142,9 +105,8 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
 
         $result = $adapter->fetchOne($select, $bind);
         if ($result) {
-            throw new \Magento\Customer\Exception(
-                __('Customer with the same email already exists in associated website.'),
-                \Magento\Customer\Model\Customer::EXCEPTION_EMAIL_EXISTS
+            throw new AlreadyExistsException(
+                __('Customer with the same email already exists in associated website.')
             );
         }
 
@@ -169,16 +131,15 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
      *
      * @param \Magento\Customer\Model\Customer $customer
      * @return void
-     * @throws \Magento\Framework\Validator\ValidatorException When validation failed
+     * @throws \Magento\Framework\Validator\Exception
      */
     protected function _validate($customer)
     {
         $validator = $this->_validatorFactory->createValidator('customer', 'save');
 
         if (!$validator->isValid($customer)) {
-            throw new \Magento\Framework\Validator\ValidatorException(
-                InputException::DEFAULT_MESSAGE,
-                [],
+            throw new ValidatorException(
+                null,
                 null,
                 $validator->getMessages()
             );
@@ -202,6 +163,7 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
      *
      * @param \Magento\Customer\Model\Customer $customer
      * @return $this
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function _saveAddresses(\Magento\Customer\Model\Customer $customer)
     {
@@ -240,12 +202,8 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
                 }
             }
         }
-        if ($customer->dataHasChangedFor('default_billing')) {
-            $this->saveAttribute($customer, 'default_billing');
-        }
-        if ($customer->dataHasChangedFor('default_shipping')) {
-            $this->saveAttribute($customer, 'default_shipping');
-        }
+        $this->saveAttribute($customer, 'default_billing');
+        $this->saveAttribute($customer, 'default_shipping');
 
         return $this;
     }
@@ -273,22 +231,22 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
      * @param \Magento\Customer\Model\Customer $customer
      * @param string $email
      * @return $this
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function loadByEmail(\Magento\Customer\Model\Customer $customer, $email)
     {
         $adapter = $this->_getReadAdapter();
-        $bind = array('customer_email' => $email);
+        $bind = ['customer_email' => $email];
         $select = $adapter->select()->from(
             $this->getEntityTable(),
-            array($this->getEntityIdField())
+            [$this->getEntityIdField()]
         )->where(
             'email = :customer_email'
         );
 
         if ($customer->getSharingConfig()->isWebsiteScope()) {
             if (!$customer->hasData('website_id')) {
-                throw new \Magento\Framework\Model\Exception(
+                throw new \Magento\Framework\Exception\LocalizedException(
                     __('Customer website ID must be specified when using the website scope')
                 );
             }
@@ -300,7 +258,7 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
         if ($customerId) {
             $this->load($customer, $customerId);
         } else {
-            $customer->setData(array());
+            $customer->setData([]);
         }
 
         return $this;
@@ -330,7 +288,7 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
         $adapter = $this->_getReadAdapter();
         $select = $adapter->select()->from(
             $this->getTable('customer_entity'),
-            array('email', 'cnt' => 'COUNT(*)')
+            ['email', 'cnt' => 'COUNT(*)']
         )->group(
             'email'
         )->order(
@@ -354,7 +312,7 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
     public function checkCustomerId($customerId)
     {
         $adapter = $this->_getReadAdapter();
-        $bind = array('entity_id' => (int)$customerId);
+        $bind = ['entity_id' => (int)$customerId];
         $select = $adapter->select()->from(
             $this->getTable('customer_entity'),
             'entity_id'
@@ -380,7 +338,7 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
     public function getWebsiteId($customerId)
     {
         $adapter = $this->_getReadAdapter();
-        $bind = array('entity_id' => (int)$customerId);
+        $bind = ['entity_id' => (int)$customerId];
         $select = $adapter->select()->from(
             $this->getTable('customer_entity'),
             'website_id'
@@ -422,7 +380,9 @@ class Customer extends \Magento\Eav\Model\Entity\AbstractEntity
     {
         if (is_string($passwordLinkToken) && !empty($passwordLinkToken)) {
             $customer->setRpToken($passwordLinkToken);
-            $customer->setRpTokenCreatedAt($this->dateTime->now());
+            $customer->setRpTokenCreatedAt(
+                (new \DateTime())->format(\Magento\Framework\Stdlib\DateTime::DATETIME_PHP_FORMAT)
+            );
             $this->saveAttribute($customer, 'rp_token');
             $this->saveAttribute($customer, 'rp_token_created_at');
         }

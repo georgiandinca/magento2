@@ -1,31 +1,14 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Test\Constraint;
 
-use Mtf\Fixture\FixtureFactory;
-use Mtf\Constraint\AbstractConstraint;
+use Magento\Mtf\ObjectManager;
+use Magento\Mtf\Fixture\FixtureFactory;
+use Magento\Mtf\Constraint\AbstractConstraint;
 use Magento\Catalog\Test\Fixture\CatalogAttributeSet;
 use Magento\Catalog\Test\Fixture\CatalogProductSimple;
 use Magento\Catalog\Test\Fixture\CatalogProductAttribute;
@@ -41,13 +24,6 @@ use Magento\Catalog\Test\Page\Adminhtml\CatalogProductEdit;
 class AssertProductTemplateGroupOnProductForm extends AbstractConstraint
 {
     /**
-     * Constraint severeness
-     *
-     * @var string
-     */
-    protected $severeness = 'high';
-
-    /**
      * Assert that created product template:
      * 1. Displays in product template suggest container dropdown
      * 2. Can be used for new created product.
@@ -60,8 +36,7 @@ class AssertProductTemplateGroupOnProductForm extends AbstractConstraint
      * @param CatalogProductAttribute $productAttributeOriginal
      * @return void
      */
-    public function processAssert
-    (
+    public function processAssert(
         FixtureFactory $fixtureFactory,
         CatalogProductEdit $productEdit,
         CatalogProductIndex $productGrid,
@@ -69,7 +44,6 @@ class AssertProductTemplateGroupOnProductForm extends AbstractConstraint
         CatalogProductNew $newProductPage,
         CatalogProductAttribute $productAttributeOriginal
     ) {
-
         $productGrid->open();
         $productGrid->getGridPageActionBlock()->addProduct('simple');
         $productBlockForm = $newProductPage->getProductForm();

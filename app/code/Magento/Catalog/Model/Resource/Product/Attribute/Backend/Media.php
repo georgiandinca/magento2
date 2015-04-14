@@ -1,26 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Catalog\Model\Resource\Product\Attribute\Backend;
 
 /**
@@ -63,26 +48,33 @@ class Media extends \Magento\Framework\Model\Resource\Db\AbstractDb
 
         // Select gallery images for product
         $select = $adapter->select()->from(
-            array('main' => $this->getMainTable()),
-            array('value_id', 'value AS file')
+            ['main' => $this->getMainTable()],
+            [
+                'value_id',
+                'file' => 'value'
+            ]
         )->joinLeft(
-            array('value' => $this->getTable(self::GALLERY_VALUE_TABLE)),
+            ['value' => $this->getTable(self::GALLERY_VALUE_TABLE)],
             $adapter->quoteInto('main.value_id = value.value_id AND value.store_id = ?', (int)$product->getStoreId()),
-            array('label', 'position', 'disabled')
+            [
+                'label',
+                'position',
+                'disabled'
+            ]
         )->joinLeft(
             // Joining default values
-            array('default_value' => $this->getTable(self::GALLERY_VALUE_TABLE)),
+            ['default_value' => $this->getTable(self::GALLERY_VALUE_TABLE)],
             'main.value_id = default_value.value_id AND default_value.store_id = 0',
-            array('label_default' => 'label', 'position_default' => 'position', 'disabled_default' => 'disabled')
+            ['label_default' => 'label', 'position_default' => 'position', 'disabled_default' => 'disabled']
         )->where(
             'main.attribute_id = ?',
             $object->getAttribute()->getId()
         )->where(
             'main.entity_id = ?',
             $product->getId()
-        )->order(
-            $positionCheckSql . ' ' . \Magento\Framework\DB\Select::SQL_ASC
-        );
+        )
+        ->where($positionCheckSql . ' IS NOT NULL')
+        ->order($positionCheckSql . ' ' . \Magento\Framework\DB\Select::SQL_ASC);
 
         $result = $adapter->fetchAll($select);
         $this->_removeDuplicates($result);
@@ -97,7 +89,7 @@ class Media extends \Magento\Framework\Model\Resource\Db\AbstractDb
      */
     protected function _removeDuplicates(&$result)
     {
-        $fileToId = array();
+        $fileToId = [];
 
         foreach (array_keys($result) as $index) {
             if (!isset($fileToId[$result[$index]['file']])) {
@@ -174,10 +166,10 @@ class Media extends \Magento\Framework\Model\Resource\Db\AbstractDb
 
         $conditions = implode(
             ' AND ',
-            array(
+            [
                 $adapter->quoteInto('value_id = ?', (int)$valueId),
                 $adapter->quoteInto('store_id = ?', (int)$storeId)
-            )
+            ]
         );
 
         $adapter->delete($this->getTable(self::GALLERY_VALUE_TABLE), $conditions);
@@ -198,7 +190,7 @@ class Media extends \Magento\Framework\Model\Resource\Db\AbstractDb
     {
         $select = $this->_getReadAdapter()->select()->from(
             $this->getMainTable(),
-            array('value_id', 'value')
+            ['value_id', 'value']
         )->where(
             'attribute_id = ?',
             $object->getAttribute()->getId()
@@ -207,14 +199,14 @@ class Media extends \Magento\Framework\Model\Resource\Db\AbstractDb
             $originalProductId
         );
 
-        $valueIdMap = array();
+        $valueIdMap = [];
         // Duplicate main entries of gallery
         foreach ($this->_getReadAdapter()->fetchAll($select) as $row) {
-            $data = array(
+            $data = [
                 'attribute_id' => $object->getAttribute()->getId(),
                 'entity_id' => $newProductId,
-                'value' => isset($newFiles[$row['value_id']]) ? $newFiles[$row['value_id']] : $row['value']
-            );
+                'value' => isset($newFiles[$row['value_id']]) ? $newFiles[$row['value_id']] : $row['value'],
+            ];
 
             $valueIdMap[$row['value_id']] = $this->insertGallery($data);
         }

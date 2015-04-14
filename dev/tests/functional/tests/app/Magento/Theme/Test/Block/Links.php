@@ -1,56 +1,42 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @spi
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Theme\Test\Block;
 
-use Mtf\Block\Block;
-use Mtf\Client\Element;
-use Mtf\Client\Element\Locator;
+use Magento\Mtf\Block\Block;
+use Magento\Mtf\Client\Locator;
 
 /**
- * Class Links
- * Page Top Links block
+ * Page Top Links block.
  */
 class Links extends Block
 {
     /**
-     * Selector for qty products on compare
+     * Selector for qty products on compare.
      *
      * @var string
      */
     protected $qtyCompareProducts = '.compare .counter.qty';
 
     /**
-     * Link selector
+     * Link selector.
      *
      * @var string
      */
     protected $link = '//a[contains(text(), "%s")]';
 
     /**
-     * Open Link by title
+     * Welcome message on frontend.
+     *
+     * @var string
+     */
+    protected $welcomeMessage = '.greet.welcome';
+
+    /**
+     * Open Link by title.
      *
      * @param string $linkTitle
      * @return void
@@ -61,7 +47,7 @@ class Links extends Block
     }
 
     /**
-     * Is visible Link by title
+     * Is visible Link by title.
      *
      * @param string $linkTitle
      * @return bool
@@ -72,7 +58,25 @@ class Links extends Block
     }
 
     /**
-     * Get the number of products added to compare list
+     * Wait for link is visible.
+     *
+     * @param string $linkTitle
+     * @return void
+     */
+    public function waitLinkIsVisible($linkTitle)
+    {
+        $browser = $this->_rootElement;
+        $selector = sprintf($this->link, $linkTitle);
+        $browser->waitUntil(
+            function () use ($browser, $selector) {
+                $element = $browser->find($selector, Locator::SELECTOR_XPATH);
+                return $element->isVisible() ? true : null;
+            }
+        );
+    }
+
+    /**
+     * Get the number of products added to compare list.
      *
      * @return string
      */
@@ -85,13 +89,26 @@ class Links extends Block
     }
 
     /**
-     * Get url from link
+     * Get url from link.
      *
      * @param string $linkTitle
      * @return string
      */
     public function getLinkUrl($linkTitle)
     {
-        return trim($this->_rootElement->find(sprintf($this->link, $linkTitle), Locator::SELECTOR_XPATH)->getUrl());
+        $link = $this->_rootElement->find(sprintf($this->link, $linkTitle), Locator::SELECTOR_XPATH)
+            ->getAttribute('href');
+
+        return trim($link);
+    }
+
+    /**
+     * Waiter for welcome message.
+     *
+     * @return void
+     */
+    public function waitWelcomeMessage()
+    {
+        $this->waitForElementVisible($this->welcomeMessage);
     }
 }

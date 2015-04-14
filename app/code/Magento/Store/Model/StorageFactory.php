@@ -1,65 +1,38 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license   http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Store\Model;
 
 use Magento\Framework\Profiler;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class StorageFactory
 {
     /**
-     * @var \Magento\Framework\ObjectManager
+     * @var \Magento\Framework\ObjectManagerInterface
      */
     protected $_objectManager;
 
     /**
-     * Default storage class name
+     * Storage class name
      *
      * @var string
      */
-    protected $_defaultStorageClassName;
+    protected $_storageClassName;
 
     /**
-     * Installed storage class name
-     *
-     * @var string
+     * @var \Magento\Store\Model\StoreManagerInterface[]
      */
-    protected $_installedStorageClassName;
-
-    /**
-     * @var \Magento\Framework\StoreManagerInterface[]
-     */
-    protected $_cache = array();
+    protected $_cache = [];
 
     /**
      * @var \Magento\Framework\Event\ManagerInterface
      */
     protected $_eventManager;
-
-    /**
-     * @var \Magento\Framework\Logger
-     */
-    protected $_log;
 
     /**
      * @var \Magento\Framework\Session\SidResolverInterface
@@ -87,36 +60,30 @@ class StorageFactory
     protected $request;
 
     /**
-     * @param \Magento\Framework\ObjectManager $objectManager
+     * @param \Magento\Framework\ObjectManagerInterface $objectManager
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
-     * @param \Magento\Framework\Logger $logger
      * @param \Magento\Framework\Session\SidResolverInterface $sidResolver
      * @param \Magento\Framework\App\State $appState
      * @param \Magento\Framework\App\Http\Context $httpContext
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Framework\App\RequestInterface $request
-     * @param string $defaultStorageClassName
-     * @param string $installedStorageClassName
+     * @param string $storageClassName
      * @param string $writerModel
      */
     public function __construct(
-        \Magento\Framework\ObjectManager $objectManager,
+        \Magento\Framework\ObjectManagerInterface $objectManager,
         \Magento\Framework\Event\ManagerInterface $eventManager,
-        \Magento\Framework\Logger $logger,
         \Magento\Framework\Session\SidResolverInterface $sidResolver,
         \Magento\Framework\App\State $appState,
         \Magento\Framework\App\Http\Context $httpContext,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         \Magento\Framework\App\RequestInterface $request,
-        $defaultStorageClassName = 'Magento\Store\Model\Storage\DefaultStorage',
-        $installedStorageClassName = 'Magento\Store\Model\Storage\Db',
+        $storageClassName = 'Magento\Store\Model\Storage\Db',
         $writerModel = ''
     ) {
         $this->_objectManager = $objectManager;
-        $this->_defaultStorageClassName = $defaultStorageClassName;
-        $this->_installedStorageClassName = $installedStorageClassName;
+        $this->_storageClassName = $storageClassName;
         $this->_eventManager = $eventManager;
-        $this->_log = $logger;
         $this->_appState = $appState;
         $this->_sidResolver = $sidResolver;
         $this->_writerModel = $writerModel;
@@ -129,25 +96,24 @@ class StorageFactory
      * Get storage instance
      *
      * @param array $arguments
-     * @return \Magento\Framework\StoreManagerInterface
+     * @return \Magento\Store\Model\StoreManagerInterface
      * @throws \InvalidArgumentException
      */
-    public function get(array $arguments = array())
+    public function get(array $arguments = [])
     {
-        $className =
-            $this->_appState->isInstalled() ? $this->_installedStorageClassName : $this->_defaultStorageClassName;
+        $className = $this->_storageClassName;
 
         if (false == isset($this->_cache[$className])) {
-            /** @var $storage \Magento\Framework\StoreManagerInterface */
+            /** @var $storage \Magento\Store\Model\StoreManagerInterface */
             $storage = $this->_objectManager->create($className, $arguments);
 
-            if (false === ($storage instanceof \Magento\Framework\StoreManagerInterface)) {
+            if (false === ($storage instanceof \Magento\Store\Model\StoreManagerInterface)) {
                 throw new \InvalidArgumentException(
-                    $className . ' doesn\'t implement \Magento\Framework\StoreManagerInterface'
+                    $className . ' doesn\'t implement \Magento\Store\Model\StoreManagerInterface'
                 );
             }
             $this->_cache[$className] = $storage;
-            if ($className === $this->_installedStorageClassName) {
+            if ($className === $this->_storageClassName) {
                 $this->_reinitStores($storage, $arguments);
                 $useSid = $this->_scopeConfig->isSetFlag(
                     \Magento\Framework\Session\SidResolver::XML_PATH_USE_FRONTEND_SID,
@@ -157,36 +123,6 @@ class StorageFactory
                 $this->_sidResolver->setUseSessionInUrl($useSid);
 
                 $this->_eventManager->dispatch('core_app_init_current_store_after');
-
-                $store = $storage->getStore(true);
-                $logActive = $this->_scopeConfig->isSetFlag(
-                    'dev/log/active',
-                    \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
-                    $store
-                );
-                if ($logActive || $this->_appState->getMode() === \Magento\Framework\App\State::MODE_DEVELOPER) {
-                    $logFile = $this->_scopeConfig->getValue(
-                        'dev/log/file',
-                        \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
-                        $store
-                    );
-                    $logExceptionFile = $this->_scopeConfig->getValue(
-                        'dev/log/exception_file',
-                        \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
-                        $store
-                    );
-                    $this->_log->unsetLoggers();
-                    $this->_log->addStreamLog(
-                        \Magento\Framework\Logger::LOGGER_SYSTEM,
-                        $logFile,
-                        $this->_writerModel
-                    );
-                    $this->_log->addStreamLog(
-                        \Magento\Framework\Logger::LOGGER_EXCEPTION,
-                        $logExceptionFile,
-                        $this->_writerModel
-                    );
-                }
             }
         }
         return $this->_cache[$className];
@@ -195,20 +131,20 @@ class StorageFactory
     /**
      * Initialize currently ran store
      *
-     * @param \Magento\Framework\StoreManagerInterface $storage
+     * @param \Magento\Store\Model\StoreManagerInterface $storage
      * @param array $arguments
      * @return void
-     * @throws \Magento\Framework\App\InitException
+     * @throws \Magento\Framework\Exception\State\InitException
      */
-    protected function _reinitStores(\Magento\Framework\StoreManagerInterface $storage, $arguments)
+    protected function _reinitStores(\Magento\Store\Model\StoreManagerInterface $storage, $arguments)
     {
         Profiler::start('init_stores');
         $storage->reinitStores();
         Profiler::stop('init_stores');
 
         $scopeCode = $arguments['scopeCode'];
-        $scopeType = $arguments['scopeType'] ? : ScopeInterface::SCOPE_STORE;
-        if (empty($scopeCode) && false == is_null($storage->getWebsite(true))) {
+        $scopeType = $arguments['scopeType'] ?: ScopeInterface::SCOPE_STORE;
+        if (empty($scopeCode) && false == ($storage->getWebsite(true) === null)) {
             $scopeCode = $storage->getWebsite(true)->getCode();
             $scopeType = ScopeInterface::SCOPE_WEBSITE;
         }
@@ -223,8 +159,8 @@ class StorageFactory
                 $storage->setCurrentStore($this->_getStoreByWebsite($storage, $scopeCode));
                 break;
             default:
-                throw new \Magento\Framework\App\InitException(
-                    'Store Manager has not been initialized properly'
+                throw new \Magento\Framework\Exception\State\InitException(
+                    __('Store Manager has not been initialized properly')
                 );
         }
 
@@ -236,11 +172,11 @@ class StorageFactory
     }
 
     /**
-     * @param \Magento\Framework\StoreManagerInterface $storage
+     * @param \Magento\Store\Model\StoreManagerInterface $storage
      * @param string $scopeCode
      * @return null|string
      */
-    protected function _getStoreByGroup(\Magento\Framework\StoreManagerInterface $storage, $scopeCode)
+    protected function _getStoreByGroup(\Magento\Store\Model\StoreManagerInterface $storage, $scopeCode)
     {
         $groups = $storage->getGroups(true);
         $stores = $storage->getStores(true);
@@ -254,11 +190,11 @@ class StorageFactory
     }
 
     /**
-     * @param \Magento\Framework\StoreManagerInterface $storage
+     * @param \Magento\Store\Model\StoreManagerInterface $storage
      * @param string $scopeCode
      * @return null|string
      */
-    protected function _getStoreByWebsite(\Magento\Framework\StoreManagerInterface $storage, $scopeCode)
+    protected function _getStoreByWebsite(\Magento\Store\Model\StoreManagerInterface $storage, $scopeCode)
     {
         $websites = $storage->getWebsites(true, true);
         if (!isset($websites[$scopeCode])) {
@@ -271,11 +207,11 @@ class StorageFactory
     }
 
     /**
-     * @param \Magento\Framework\StoreManagerInterface $storage
+     * @param \Magento\Store\Model\StoreManagerInterface $storage
      * @param string $scopeType
      * @return void
      */
-    protected function _checkCookieStore(\Magento\Framework\StoreManagerInterface $storage, $scopeType)
+    protected function _checkCookieStore(\Magento\Store\Model\StoreManagerInterface $storage, $scopeType)
     {
         $storeCode = $storage->getStore()->getStoreCodeFromCookie();
         if (null != $storeCode) {
@@ -284,11 +220,11 @@ class StorageFactory
     }
 
     /**
-     * @param \Magento\Framework\StoreManagerInterface $storage
+     * @param \Magento\Store\Model\StoreManagerInterface $storage
      * @param string $scopeType
      * @return void
      */
-    protected function _checkRequestStore(\Magento\Framework\StoreManagerInterface $storage, $scopeType)
+    protected function _checkRequestStore(\Magento\Store\Model\StoreManagerInterface $storage, $scopeType)
     {
         $storeCode = $this->request->getParam('___store');
         if (empty($storeCode)) {
@@ -323,7 +259,7 @@ class StorageFactory
      * @param string $scopeCode
      * @return bool|Store
      */
-    protected function getActiveStoreByCode(\Magento\Framework\StoreManagerInterface $storage, $scopeCode)
+    protected function getActiveStoreByCode(\Magento\Store\Model\StoreManagerInterface $storage, $scopeCode)
     {
         $stores = $storage->getStores(true, true);
         if ($scopeCode && isset($stores[$scopeCode])
@@ -338,12 +274,12 @@ class StorageFactory
     /**
      * Set current store
      *
-     * @param \Magento\Framework\StoreManagerInterface $storage
+     * @param \Magento\Store\Model\StoreManagerInterface $storage
      * @param string $scopeCode
      * @param string $scopeType
      * @return bool
      */
-    protected function setCurrentStore(\Magento\Framework\StoreManagerInterface $storage, $scopeCode, $scopeType)
+    protected function setCurrentStore(\Magento\Store\Model\StoreManagerInterface $storage, $scopeCode, $scopeType)
     {
         $store = $this->getActiveStoreByCode($storage, $scopeCode);
         if (!$store) {

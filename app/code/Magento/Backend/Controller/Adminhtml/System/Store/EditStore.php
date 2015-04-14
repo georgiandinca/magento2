@@ -1,38 +1,20 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Backend\Controller\Adminhtml\System\Store;
 
 class EditStore extends \Magento\Backend\Controller\Adminhtml\System\Store
 {
     /**
-     * @return void
+     * @return \Magento\Framework\Controller\ResultInterface
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function execute()
     {
-        $this->_title->add(__('Stores'));
-
         if ($this->_getSession()->getPostData()) {
             $this->_coreRegistry->register('store_post_data', $this->_getSession()->getPostData());
             $this->_getSession()->unsPostData();
@@ -76,24 +58,23 @@ class EditStore extends \Magento\Backend\Controller\Adminhtml\System\Store
 
         if ($model->getId() || $this->_coreRegistry->registry('store_action') == 'add') {
             $this->_coreRegistry->register('store_data', $model);
-
-            if ($this->_coreRegistry->registry('store_action') == 'add') {
-                $this->_title->add(__('New ') . $title);
-            } else {
-                $this->_title->add($model->getName());
-            }
-
             if ($this->_coreRegistry->registry('store_action') == 'edit' && $codeBase && !$model->isReadOnly()) {
                 $this->messageManager->addNotice($codeBase);
             }
-
-            $this->_initAction()->_addContent(
-                $this->_view->getLayout()->createBlock('Magento\Backend\Block\System\Store\Edit')
-            );
-            $this->_view->renderLayout();
+            $resultPage = $this->createPage();
+            if ($this->_coreRegistry->registry('store_action') == 'add') {
+                $resultPage->getConfig()->getTitle()->prepend((__('New ') . $title));
+            } else {
+                $resultPage->getConfig()->getTitle()->prepend($model->getName());
+            }
+            $resultPage->getConfig()->getTitle()->prepend(__('Stores'));
+            $resultPage->addContent($resultPage->getLayout()->createBlock('Magento\Backend\Block\System\Store\Edit'));
+            return $resultPage;
         } else {
             $this->messageManager->addError($notExists);
-            $this->_redirect('adminhtml/*/');
+            /** @var \Magento\Backend\Model\View\Result\Redirect $resultRedirect */
+            $resultRedirect = $this->resultRedirectFactory->create();
+            return $resultRedirect->setPath('adminhtml/*/');
         }
     }
 }

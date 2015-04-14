@@ -1,39 +1,21 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Webapi\Controller;
 
-use Magento\Authorization\Model\UserContextInterface;
 use Magento\Framework\AuthorizationInterface;
 use Magento\Framework\Exception\AuthorizationException;
-use Magento\Framework\Service\SimpleDataObjectConverter;
-use Magento\Webapi\Controller\Rest\Request as RestRequest;
-use Magento\Webapi\Controller\Rest\Response as RestResponse;
-use Magento\Webapi\Controller\Rest\Response\PartialResponseProcessor;
+use Magento\Framework\Webapi\ErrorProcessor;
+use Magento\Framework\Webapi\ServiceInputProcessor;
+use Magento\Framework\Webapi\ServiceOutputProcessor;
+use Magento\Framework\Webapi\Rest\Request as RestRequest;
+use Magento\Framework\Webapi\Rest\Response as RestResponse;
+use Magento\Framework\Webapi\Rest\Response\FieldsFilter;
+use Magento\Webapi\Controller\Rest\ParamsOverrider;
 use Magento\Webapi\Controller\Rest\Router;
 use Magento\Webapi\Controller\Rest\Router\Route;
-use Magento\Webapi\Model\Config\Converter;
-use Magento\Webapi\Model\PathProcessor;
 
 /**
  * Front controller for WebAPI REST area.
@@ -41,38 +23,57 @@ use Magento\Webapi\Model\PathProcessor;
  * TODO: Consider warnings suppression removal
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
- * @SuppressWarnings(PHPMD.TooManyFields)
  */
 class Rest implements \Magento\Framework\App\FrontControllerInterface
 {
-    /** @var Router */
+    /**
+     * @var Router
+     */
     protected $_router;
 
-    /** @var Route */
+    /**
+     * @var Route
+     */
     protected $_route;
 
-    /** @var RestRequest */
+    /**
+     * @var RestRequest
+     */
     protected $_request;
 
-    /** @var RestResponse */
+    /**
+     * @var RestResponse
+     */
     protected $_response;
 
-    /** @var \Magento\Framework\ObjectManager */
+    /**
+     * @var \Magento\Framework\ObjectManagerInterface
+     */
     protected $_objectManager;
 
-    /** @var \Magento\Framework\App\State */
+    /**
+     * @var \Magento\Framework\App\State
+     */
     protected $_appState;
 
-    /** @var AuthorizationInterface */
+    /**
+     * @var AuthorizationInterface
+     */
     protected $_authorization;
 
-    /** @var ServiceArgsSerializer */
-    protected $_serializer;
+    /**
+     * @var ServiceInputProcessor
+     */
+    protected $serviceInputProcessor;
 
-    /** @var ErrorProcessor */
+    /**
+     * @var ErrorProcessor
+     */
     protected $_errorProcessor;
 
-    /** @var PathProcessor */
+    /**
+     * @var PathProcessor
+     */
     protected $_pathProcessor;
 
     /**
@@ -81,9 +82,9 @@ class Rest implements \Magento\Framework\App\FrontControllerInterface
     protected $areaList;
 
     /**
-     * @var PartialResponseProcessor
+     * @var FieldsFilter
      */
-    protected $partialResponseProcessor;
+    protected $fieldsFilter;
 
     /**
      * @var \Magento\Framework\Session\Generic
@@ -91,14 +92,14 @@ class Rest implements \Magento\Framework\App\FrontControllerInterface
     protected $session;
 
     /**
-     * @var \Magento\Authorization\Model\UserContextInterface
+     * @var ParamsOverrider
      */
-    protected $userContext;
+    protected $paramsOverrider;
 
     /**
-     * @var SimpleDataObjectConverter $dataObjectConverter
+     * @var ServiceOutputProcessor $serviceOutputProcessor
      */
-    protected $dataObjectConverter;
+    protected $serviceOutputProcessor;
 
     /**
      * Initialize dependencies
@@ -106,16 +107,16 @@ class Rest implements \Magento\Framework\App\FrontControllerInterface
      * @param RestRequest $request
      * @param RestResponse $response
      * @param Router $router
-     * @param \Magento\Framework\ObjectManager $objectManager
+     * @param \Magento\Framework\ObjectManagerInterface $objectManager
      * @param \Magento\Framework\App\State $appState
      * @param AuthorizationInterface $authorization
-     * @param ServiceArgsSerializer $serializer
+     * @param ServiceInputProcessor $serviceInputProcessor
      * @param ErrorProcessor $errorProcessor
      * @param PathProcessor $pathProcessor
      * @param \Magento\Framework\App\AreaList $areaList
-     * @param PartialResponseProcessor $partialResponseProcessor
-     * @param UserContextInterface $userContext
-     * @param SimpleDataObjectConverter $dataObjectConverter
+     * @param FieldsFilter $fieldsFilter
+     * @param ParamsOverrider $paramsOverrider
+     * @param ServiceOutputProcessor $serviceOutputProcessor
      *
      * TODO: Consider removal of warning suppression
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
@@ -124,16 +125,16 @@ class Rest implements \Magento\Framework\App\FrontControllerInterface
         RestRequest $request,
         RestResponse $response,
         Router $router,
-        \Magento\Framework\ObjectManager $objectManager,
+        \Magento\Framework\ObjectManagerInterface $objectManager,
         \Magento\Framework\App\State $appState,
         AuthorizationInterface $authorization,
-        ServiceArgsSerializer $serializer,
+        ServiceInputProcessor $serviceInputProcessor,
         ErrorProcessor $errorProcessor,
         PathProcessor $pathProcessor,
         \Magento\Framework\App\AreaList $areaList,
-        PartialResponseProcessor $partialResponseProcessor,
-        UserContextInterface $userContext,
-        SimpleDataObjectConverter $dataObjectConverter
+        FieldsFilter $fieldsFilter,
+        ParamsOverrider $paramsOverrider,
+        ServiceOutputProcessor $serviceOutputProcessor
     ) {
         $this->_router = $router;
         $this->_request = $request;
@@ -141,13 +142,13 @@ class Rest implements \Magento\Framework\App\FrontControllerInterface
         $this->_objectManager = $objectManager;
         $this->_appState = $appState;
         $this->_authorization = $authorization;
-        $this->_serializer = $serializer;
+        $this->serviceInputProcessor = $serviceInputProcessor;
         $this->_errorProcessor = $errorProcessor;
         $this->_pathProcessor = $pathProcessor;
         $this->areaList = $areaList;
-        $this->partialResponseProcessor = $partialResponseProcessor;
-        $this->userContext = $userContext;
-        $this->dataObjectConverter = $dataObjectConverter;
+        $this->fieldsFilter = $fieldsFilter;
+        $this->paramsOverrider = $paramsOverrider;
+        $this->serviceOutputProcessor = $serviceOutputProcessor;
     }
 
     /**
@@ -166,20 +167,24 @@ class Rest implements \Magento\Framework\App\FrontControllerInterface
             $this->checkPermissions();
             $route = $this->getCurrentRoute();
             if ($route->isSecure() && !$this->_request->isSecure()) {
-                throw new \Magento\Webapi\Exception(__('Operation allowed only in HTTPS'));
+                throw new \Magento\Framework\Webapi\Exception(__('Operation allowed only in HTTPS'));
             }
             /** @var array $inputData */
             $inputData = $this->_request->getRequestData();
             $serviceMethodName = $route->getServiceMethod();
             $serviceClassName = $route->getServiceClass();
-            $inputData = $this->overrideParams($inputData, $route->getParameters());
-            $inputParams = $this->_serializer->getInputData($serviceClassName, $serviceMethodName, $inputData);
+            $inputData = $this->paramsOverrider->override($inputData, $route->getParameters());
+            $inputParams = $this->serviceInputProcessor->process($serviceClassName, $serviceMethodName, $inputData);
             $service = $this->_objectManager->get($serviceClassName);
-            /** @var \Magento\Framework\Service\Data\AbstractExtensibleObject $outputData */
+            /** @var \Magento\Framework\Api\AbstractExtensibleObject $outputData */
             $outputData = call_user_func_array([$service, $serviceMethodName], $inputParams);
-            $outputData = $this->dataObjectConverter->processServiceOutput($outputData);
-            if ($this->_request->getParam(PartialResponseProcessor::FILTER_PARAMETER) && is_array($outputData)) {
-                $outputData = $this->partialResponseProcessor->filter($outputData);
+            $outputData = $this->serviceOutputProcessor->process(
+                $outputData,
+                $serviceClassName,
+                $serviceMethodName
+            );
+            if ($this->_request->getParam(FieldsFilter::FILTER_PARAMETER) && is_array($outputData)) {
+                $outputData = $this->fieldsFilter->filter($outputData);
             }
             $this->_response->prepareResponse($outputData);
         } catch (\Exception $e) {
@@ -187,30 +192,6 @@ class Rest implements \Magento\Framework\App\FrontControllerInterface
             $this->_response->setException($maskedException);
         }
         return $this->_response;
-    }
-
-    /**
-     * Override parameter values based on webapi.xml
-     *
-     * @param array $inputData Incoming data from request
-     * @param array $parameters Contains parameters to replace or default
-     * @return array Data in same format as $inputData with appropriate parameters added or changed
-     */
-    protected function overrideParams(array $inputData, array $parameters)
-    {
-        foreach ($parameters as $name => $paramData) {
-            if ($paramData[Converter::KEY_FORCE] || !isset($inputData[$name])) {
-                if ($paramData[Converter::KEY_VALUE] == '%customer_id%'
-                    && $this->userContext->getUserType() === UserContextInterface::USER_TYPE_CUSTOMER
-                ) {
-                    $value = $this->userContext->getUserId();
-                } else {
-                    $value = $paramData[Converter::KEY_VALUE];
-                }
-                $inputData[$name] = $value;
-            }
-        }
-        return $inputData;
     }
 
     /**
@@ -237,7 +218,9 @@ class Rest implements \Magento\Framework\App\FrontControllerInterface
         $route = $this->getCurrentRoute();
         if (!$this->isAllowed($route->getAclResources())) {
             $params = ['resources' => implode(', ', $route->getAclResources())];
-            throw new AuthorizationException(AuthorizationException::NOT_AUTHORIZED, $params);
+            throw new AuthorizationException(
+                __(AuthorizationException::NOT_AUTHORIZED, $params)
+            );
         }
     }
 

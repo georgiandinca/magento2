@@ -1,29 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Framework\View\Asset;
 
+use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\View\Asset\PreProcessor\ChainFactoryInterface;
 use Magento\Framework\View\Design\FileResolution\Fallback\Resolver\Simple;
 
 /**
@@ -34,12 +18,7 @@ use Magento\Framework\View\Design\FileResolution\Fallback\Resolver\Simple;
 class Source
 {
     /**
-     * A suffix for temporary materialization directory where pre-processed files will be written (if necessary)
-     */
-    const TMP_MATERIALIZATION_DIR = 'view_preprocessed';
-
-    /**
-     * @var \Magento\Framework\App\Filesystem
+     * @var \Magento\Framework\Filesystem
      */
     private $filesystem;
 
@@ -74,26 +53,34 @@ class Source
     private $themeList;
 
     /**
+     * @var ChainFactoryInterface
+     */
+    private $chainFactory;
+
+    /**
      * @param PreProcessor\Cache $cache
-     * @param \Magento\Framework\App\Filesystem $filesystem
+     * @param \Magento\Framework\Filesystem $filesystem
      * @param PreProcessor\Pool $preProcessorPool
      * @param \Magento\Framework\View\Design\FileResolution\Fallback\StaticFile $fallback
      * @param \Magento\Framework\View\Design\Theme\ListInterface $themeList
+     * @param ChainFactoryInterface $chainFactory
      */
     public function __construct(
         PreProcessor\Cache $cache,
-        \Magento\Framework\App\Filesystem $filesystem,
+        \Magento\Framework\Filesystem $filesystem,
         PreProcessor\Pool $preProcessorPool,
         \Magento\Framework\View\Design\FileResolution\Fallback\StaticFile $fallback,
-        \Magento\Framework\View\Design\Theme\ListInterface $themeList
+        \Magento\Framework\View\Design\Theme\ListInterface $themeList,
+        ChainFactoryInterface $chainFactory
     ) {
         $this->cache = $cache;
         $this->filesystem = $filesystem;
-        $this->rootDir = $filesystem->getDirectoryRead(\Magento\Framework\App\Filesystem::ROOT_DIR);
-        $this->varDir = $filesystem->getDirectoryWrite(\Magento\Framework\App\Filesystem::VAR_DIR);
+        $this->rootDir = $filesystem->getDirectoryRead(DirectoryList::ROOT);
+        $this->varDir = $filesystem->getDirectoryWrite(DirectoryList::VAR_DIR);
         $this->preProcessorPool = $preProcessorPool;
         $this->fallback = $fallback;
         $this->themeList = $themeList;
+        $this->chainFactory = $chainFactory;
     }
 
     /**
@@ -143,35 +130,42 @@ class Source
     private function preProcess(LocalInterface $asset)
     {
         $sourceFile = $this->findSourceFile($asset);
-        if (!$sourceFile) {
-            return false;
-        }
-        $dirCode = \Magento\Framework\App\Filesystem::ROOT_DIR;
+        $dirCode = DirectoryList::ROOT;
         $path = $this->rootDir->getRelativePath($sourceFile);
         $cacheId = $path . ':' . $asset->getPath();
         $cached = $this->cache->load($cacheId);
         if ($cached) {
             return unserialize($cached);
         }
-        $chain = new \Magento\Framework\View\Asset\PreProcessor\Chain(
-            $asset,
-            $this->rootDir->readFile($path),
-            $this->getContentType($path)
+
+        $chain = $this->chainFactory->create(
+            [
+                'asset' => $asset,
+                'origContent' => $this->rootDir->readFile($path),
+                'origContentType' => $this->getContentType($path),
+                'origAssetPath' => $path
+            ]
         );
-        $preProcessors = $this->preProcessorPool
-            ->getPreProcessors($chain->getOrigContentType(), $chain->getTargetContentType());
-        foreach ($preProcessors as $processor) {
-            $processor->process($chain);
-        }
+
+        $this->preProcessorPool->process($chain);
         $chain->assertValid();
         if ($chain->isChanged()) {
-            $dirCode = \Magento\Framework\App\Filesystem::VAR_DIR;
-            $path = self::TMP_MATERIALIZATION_DIR . '/source/' . $asset->getPath();
+            $dirCode = DirectoryList::VAR_DIR;
+            $path = DirectoryList::TMP_MATERIALIZATION_DIR . '/source/' . $chain->getTargetAssetPath();
             $this->varDir->writeFile($path, $chain->getContent());
         }
-        $result = array($dirCode, $path);
+        $result = [$dirCode, $path];
         $this->cache->save(serialize($result), $cacheId);
         return $result;
+    }
+
+    /**
+     * @param LocalInterface $asset
+     * @return bool|string
+     */
+    public function findSource(LocalInterface $asset)
+    {
+        return $this->findSourceFile($asset);
     }
 
     /**
@@ -182,7 +176,7 @@ class Source
      */
     public function getContentType($path)
     {
-        return pathinfo($path, PATHINFO_EXTENSION);
+        return strtolower(pathinfo($path, PATHINFO_EXTENSION));
     }
 
     /**
@@ -221,7 +215,7 @@ class Source
         $sourceFile = $this->fallback->getFile(
             $context->getAreaCode(),
             $themeModel,
-            $context->getLocaleCode(),
+            $context->getLocale(),
             $asset->getFilePath(),
             $asset->getModule()
         );
@@ -240,5 +234,19 @@ class Source
         $dir = $this->filesystem->getDirectoryRead($context->getBaseDirType());
         Simple::assertFilePathFormat($asset->getFilePath());
         return $dir->getAbsolutePath($asset->getPath());
+    }
+
+    /**
+     * @param \Magento\Framework\View\Asset\LocalInterface $asset
+     *
+     * @return bool|string
+     */
+    public function findRelativeSourceFilePath(LocalInterface $asset)
+    {
+        $sourceFile = $this->findSourceFile($asset);
+        if (!$sourceFile) {
+            return false;
+        }
+        return $this->rootDir->getRelativePath($sourceFile);
     }
 }

@@ -1,24 +1,6 @@
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License (AFL 3.0)
- * that is bundled with this package in the file LICENSE_AFL.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/afl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 'use strict';
@@ -50,6 +32,11 @@ angular.module('readiness-check', [])
             processed: false,
             expanded: false
         };
+        $scope.rawpost = {
+            visible: false,
+            processed: false,
+            expanded: false
+        };
         $scope.extensions = {
             visible: false,
             processed: false,
@@ -63,7 +50,7 @@ angular.module('readiness-check', [])
 
         $scope.items = {
             'php-version': {
-                url:'data/php-version',
+                url:'index.php/environment/php-version',
                 show: function() {
                     $scope.startProgress();
                     $scope.version.visible = true;
@@ -75,8 +62,21 @@ angular.module('readiness-check', [])
                     $scope.stopProgress();
                 }
             },
+            'php-rawpost': {
+                url:'index.php/environment/php-rawpost',
+                show: function() {
+                    $scope.startProgress();
+                    $scope.rawpost.visible = true;
+                },
+                process: function(data) {
+                    $scope.rawpost.processed = true;
+                    angular.extend($scope.rawpost, data);
+                    $scope.updateOnProcessed($scope.rawpost.responseType);
+                    $scope.stopProgress();
+                }
+            },
             'php-extensions': {
-                url:'data/php-extensions',
+                url:'index.php/environment/php-extensions',
                 show: function() {
                     $scope.startProgress();
                     $scope.extensions.visible = true;
@@ -89,7 +89,7 @@ angular.module('readiness-check', [])
                 }
             },
             'file-permissions': {
-                url:'data/file-permissions',
+                url:'index.php/environment/file-permissions',
                 show: function() {
                     $scope.startProgress();
                     $scope.permissions.visible = true;
@@ -110,7 +110,10 @@ angular.module('readiness-check', [])
         };
 
         $scope.updateOnProcessed = function(value) {
-            $rootScope.hasErrors = $scope.hasErrors || (value != 'success');
+            if (!$rootScope.hasErrors) {
+                $rootScope.hasErrors = (value != 'success');
+                $scope.hasErrors = $rootScope.hasErrors;
+            }
         };
 
         $scope.updateOnError = function(obj) {
@@ -135,18 +138,13 @@ angular.module('readiness-check', [])
         };
 
         $scope.progress = function() {
-            var timeout = 0;
+            $rootScope.hasErrors = false;
+            $scope.hasErrors = false;
             angular.forEach($scope.items, function(item) {
-                timeout += 1000;
-                $timeout(function() {
-                    item.show();
-                }, timeout);
+                item.show();
             });
             angular.forEach($scope.items, function(item) {
-                timeout += 500;
-                $timeout(function() {
-                    $scope.query(item);
-                }, timeout);
+                $scope.query(item);
             });
         };
 

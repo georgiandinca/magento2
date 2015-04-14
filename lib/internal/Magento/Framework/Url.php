@@ -1,26 +1,10 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
 
 namespace Magento\Framework;
 
@@ -71,6 +55,7 @@ namespace Magento\Framework;
  * - F: host_url
  * - G: route_path
  * - H: route_url
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInterface
 {
@@ -86,7 +71,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      *
      * @var array
      */
-    protected $_reservedRouteParams = array(
+    protected $_reservedRouteParams = [
         '_scope',
         '_type',
         '_secure',
@@ -99,8 +84,8 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
         '_fragment',
         '_escape',
         '_query',
-        '_scope_to_url'
-    );
+        '_scope_to_url',
+    ];
 
     /**
      * @var string
@@ -177,6 +162,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param string $scopeType
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\App\Route\ConfigInterface $routeConfig,
@@ -189,7 +175,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
         \Magento\Framework\Url\QueryParamsResolverInterface $queryParamsResolver,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         $scopeType,
-        array $data = array()
+        array $data = []
     ) {
         $this->_request = $request;
         $this->_routeConfig = $routeConfig;
@@ -213,7 +199,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
     protected function _parseUrl($url)
     {
         $data = parse_url($url);
-        $parts = array(
+        $parts = [
             'scheme' => 'setScheme',
             'host' => 'setHost',
             'port' => 'setPort',
@@ -221,8 +207,8 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
             'pass' => 'setPassword',
             'path' => 'setPath',
             'query' => 'setQuery',
-            'fragment' => 'setFragment'
-        );
+            'fragment' => 'setFragment',
+        ];
 
         foreach ($parts as $component => $method) {
             if (isset($data[$component])) {
@@ -248,6 +234,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      * Retrieve use session rule
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getUseSession()
     {
@@ -360,6 +347,9 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
             if ($this->_getType() == UrlInterface::URL_TYPE_LINK) {
                 $pathSecure = $this->_urlSecurityInfo->isSecure('/' . $this->_getActionPath());
                 $this->_routeParamsResolver->setData('secure', $pathSecure);
+            } elseif ($this->_getType() == UrlInterface::URL_TYPE_STATIC) {
+                $isRequestSecure = $this->_getRequest()->isSecure();
+                $this->_routeParamsResolver->setData('secure', $isRequestSecure);
             } else {
                 $this->_routeParamsResolver->setData('secure', true);
             }
@@ -400,7 +390,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      * @param array $params
      * @return string
      */
-    public function getBaseUrl($params = array())
+    public function getBaseUrl($params = [])
     {
         /**
          *  Original Scope
@@ -441,6 +431,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      *
      * @param string $data
      * @return \Magento\Framework\UrlInterface
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function _setRoutePath($data)
     {
@@ -453,7 +444,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
 
         $route = array_shift($routePieces);
         if ('*' === $route) {
-            $route = $this->_getRequest()->getRequestedRouteName();
+            $route = $this->_getRequest()->getRouteName();
         }
         $this->_setRouteName($route);
 
@@ -461,7 +452,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
         if (!empty($routePieces)) {
             $controller = array_shift($routePieces);
             if ('*' === $controller) {
-                $controller = $this->_getRequest()->getRequestedControllerName();
+                $controller = $this->_getRequest()->getControllerName();
             }
         }
         $this->_setControllerName($controller);
@@ -470,7 +461,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
         if (!empty($routePieces)) {
             $action = array_shift($routePieces);
             if ('*' === $action) {
-                $action = $this->_getRequest()->getRequestedActionName();
+                $action = $this->_getRequest()->getActionName();
             }
         }
         $this->_setActionName($action);
@@ -521,8 +512,9 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      *
      * @param array $routeParams
      * @return string
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
-    protected function _getRoutePath($routeParams = array())
+    protected function _getRoutePath($routeParams = [])
     {
         if (!$this->hasData('route_path')) {
             $routePath = $this->_getRequest()->getAlias(self::REWRITE_REQUEST_PATH_ALIAS);
@@ -778,6 +770,8 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      * @param   string|null $routePath
      * @param   array|null $routeParams
      * @return  string
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function getUrl($routePath = null, $routeParams = null)
     {
@@ -827,7 +821,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
                 $this->addQueryParams($query, !empty($routeParams['_current']));
             }
             if ($query === false) {
-                $this->addQueryParams(array());
+                $this->addQueryParams([]);
             }
         }
 
@@ -925,7 +919,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      * @param array $params
      * @return string
      */
-    public function getDirectUrl($url, $params = array())
+    public function getDirectUrl($url, $params = [])
     {
         $params['_direct'] = $url;
         return $this->getUrl('', $params);
@@ -994,7 +988,7 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
      */
     public function isOwnOriginUrl()
     {
-        $scopeDomains = array();
+        $scopeDomains = [];
         $referer = parse_url($this->_request->getServer('HTTP_REFERER'), PHP_URL_HOST);
         foreach ($this->_scopeResolver->getScopes() as $scope) {
             $scopeDomains[] = parse_url($scope->getBaseUrl(), PHP_URL_HOST);
@@ -1034,10 +1028,10 @@ class Url extends \Magento\Framework\Object implements \Magento\Framework\UrlInt
     {
         $port = $this->_request->getServer('SERVER_PORT');
         if ($port) {
-            $defaultPorts = array(
+            $defaultPorts = [
                 \Magento\Framework\App\Request\Http::DEFAULT_HTTP_PORT,
-                \Magento\Framework\App\Request\Http::DEFAULT_HTTPS_PORT
-            );
+                \Magento\Framework\App\Request\Http::DEFAULT_HTTPS_PORT,
+            ];
             $port = in_array($port, $defaultPorts) ? '' : ':' . $port;
         }
         $requestUri = $this->_request->getServer('REQUEST_URI');

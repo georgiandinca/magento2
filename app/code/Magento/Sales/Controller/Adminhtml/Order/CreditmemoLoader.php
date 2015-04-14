@@ -1,26 +1,8 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Sales\Controller\Adminhtml\Order;
 
@@ -82,9 +64,9 @@ class CreditmemoLoader extends Object
     protected $registry;
 
     /**
-     * @var \Magento\CatalogInventory\Helper\Data
+     * @var \Magento\CatalogInventory\Api\StockConfigurationInterface
      */
-    protected $inventoryHelper;
+    protected $stockConfiguration;
 
     /**
      * @param \Magento\Sales\Model\Order\CreditmemoFactory $creditmemoFactory
@@ -95,8 +77,9 @@ class CreditmemoLoader extends Object
      * @param \Magento\Backend\Model\Session $backendSession
      * @param \Magento\Framework\Message\ManagerInterface $messageManager
      * @param \Magento\Framework\Registry $registry
-     * @param \Magento\CatalogInventory\Helper\Data $inventoryHelper
+     * @param \Magento\CatalogInventory\Api\StockConfigurationInterface $stockConfiguration
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Sales\Model\Order\CreditmemoFactory $creditmemoFactory,
@@ -107,7 +90,7 @@ class CreditmemoLoader extends Object
         \Magento\Backend\Model\Session $backendSession,
         \Magento\Framework\Message\ManagerInterface $messageManager,
         \Magento\Framework\Registry $registry,
-        \Magento\CatalogInventory\Helper\Data $inventoryHelper,
+        \Magento\CatalogInventory\Api\StockConfigurationInterface $stockConfiguration,
         array $data = []
     ) {
         $this->creditmemoFactory = $creditmemoFactory;
@@ -118,7 +101,7 @@ class CreditmemoLoader extends Object
         $this->backendSession = $backendSession;
         $this->messageManager = $messageManager;
         $this->registry = $registry;
-        $this->inventoryHelper = $inventoryHelper;
+        $this->stockConfiguration = $stockConfiguration;
         parent::__construct($data);
     }
 
@@ -137,7 +120,7 @@ class CreditmemoLoader extends Object
         if (isset($data['items'])) {
             $qtys = $data['items'];
         } else {
-            $qtys = array();
+            $qtys = [];
         }
         return $qtys;
     }
@@ -191,6 +174,7 @@ class CreditmemoLoader extends Object
      * Initialize creditmemo model instance
      *
      * @return \Magento\Sales\Model\Order\Creditmemo|false
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function load()
     {
@@ -210,8 +194,8 @@ class CreditmemoLoader extends Object
 
             $savedData = $this->_getItemData();
 
-            $qtys = array();
-            $backToStock = array();
+            $qtys = [];
+            $backToStock = [];
             foreach ($savedData as $orderItemId => $itemData) {
                 if (isset($itemData['qty'])) {
                     $qtys[$orderItemId] = $itemData['qty'];
@@ -222,7 +206,7 @@ class CreditmemoLoader extends Object
             }
             $data['qtys'] = $qtys;
 
-            $service = $this->orderServiceFactory->create(array('order' => $order));
+            $service = $this->orderServiceFactory->create(['order' => $order]);
             if ($invoice) {
                 $creditmemo = $service->prepareInvoiceCreditmemo($invoice, $data);
             } else {
@@ -241,7 +225,7 @@ class CreditmemoLoader extends Object
                     $creditmemoItem->setBackToStock(true);
                 } elseif (empty($savedData)) {
                     $creditmemoItem->setBackToStock(
-                        $this->inventoryHelper->isAutoReturnEnabled()
+                        $this->stockConfiguration->isAutoReturnEnabled()
                     );
                 } else {
                     $creditmemoItem->setBackToStock(false);
@@ -251,7 +235,7 @@ class CreditmemoLoader extends Object
 
         $this->eventManager->dispatch(
             'adminhtml_sales_order_creditmemo_register_before',
-            array('creditmemo' => $creditmemo, 'input' => $this->getCreditmemo())
+            ['creditmemo' => $creditmemo, 'input' => $this->getCreditmemo()]
         );
 
         $this->registry->register('current_creditmemo', $creditmemo);

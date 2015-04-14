@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Backend\Block\Widget\Grid\Column\Renderer;
 
@@ -44,7 +26,7 @@ class Date extends \Magento\Backend\Block\Widget\Grid\Column\Renderer\AbstractRe
      * @param \Magento\Backend\Block\Context $context
      * @param array $data
      */
-    public function __construct(\Magento\Backend\Block\Context $context, array $data = array())
+    public function __construct(\Magento\Backend\Block\Context $context, array $data = [])
     {
         parent::__construct($context, $data);
     }
@@ -58,13 +40,13 @@ class Date extends \Magento\Backend\Block\Widget\Grid\Column\Renderer\AbstractRe
     {
         $format = $this->getColumn()->getFormat();
         if (!$format) {
-            if (is_null(self::$_format)) {
+            if (self::$_format === null) {
                 try {
                     self::$_format = $this->_localeDate->getDateFormat(
-                        \Magento\Framework\Stdlib\DateTime\TimezoneInterface::FORMAT_TYPE_MEDIUM
+                        \IntlDateFormatter::MEDIUM
                     );
                 } catch (\Exception $e) {
-                    $this->_logger->logException($e);
+                    $this->_logger->critical($e);
                 }
             }
             $format = self::$_format;
@@ -82,30 +64,7 @@ class Date extends \Magento\Backend\Block\Widget\Grid\Column\Renderer\AbstractRe
     {
         if ($data = $row->getData($this->getColumn()->getIndex())) {
             $format = $this->_getFormat();
-            try {
-                if ($this->getColumn()->getGmtoffset()) {
-                    $data = $this->_localeDate->date(
-                        $data,
-                        \Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT
-                    )->toString(
-                        $format
-                    );
-                } else {
-                    $data = $this->_localeDate->date($data, \Zend_Date::ISO_8601, null, false)->toString($format);
-                }
-            } catch (\Exception $e) {
-                if ($this->getColumn()->getTimezone()) {
-                    $data = $this->_localeDate->date(
-                        $data,
-                        \Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT
-                    )->toString(
-                        $format
-                    );
-                } else {
-                    $data = $this->_localeDate->date($data, null, null, false)->toString($format);
-                }
-            }
-            return $data;
+            return \IntlDateFormatter::formatObject($this->_localeDate->date(new \DateTime($data)), $format);
         }
         return $this->getColumn()->getDefault();
     }

@@ -1,32 +1,21 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
 
 /**
  * Magento configuration XML DOM utility
  */
 namespace Magento\Framework\Config;
 
+/**
+ * Class Dom
+ *
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class Dom
 {
     /**
@@ -93,7 +82,7 @@ class Dom
      */
     public function __construct(
         $xml,
-        array $idAttributes = array(),
+        array $idAttributes = [],
         $typeAttributeName = null,
         $schemaFile = null,
         $errorFormat = self::ERROR_FORMAT_DEFAULT
@@ -129,6 +118,7 @@ class Dom
      * @param \DOMElement $node
      * @param string $parentPath path to parent node
      * @return void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function _mergeNode(\DOMElement $node, $parentPath)
     {
@@ -138,7 +128,6 @@ class Dom
 
         /* Update matched node attributes and value */
         if ($matchedNode) {
-
             //different node type
             if ($this->_typeAttributeName && $node->hasAttribute(
                 $this->_typeAttributeName
@@ -236,7 +225,7 @@ class Dom
      * Getter for node by path
      *
      * @param string $nodePath
-     * @throws \Magento\Framework\Exception An exception is possible if original document contains multiple nodes for identifier
+     * @throws \Magento\Framework\Exception\LocalizedException An exception is possible if original document contains multiple nodes for identifier
      * @return \DOMElement|null
      */
     protected function _getMatchedNode($nodePath)
@@ -248,7 +237,9 @@ class Dom
         $matchedNodes = $xPath->query($nodePath);
         $node = null;
         if ($matchedNodes->length > 1) {
-            throw new \Magento\Framework\Exception("More than one node matching the query: {$nodePath}");
+            throw new \Magento\Framework\Exception\LocalizedException(
+                new \Magento\Framework\Phrase("More than one node matching the query: %1", [$nodePath])
+            );
         } elseif ($matchedNodes->length == 1) {
             $node = $matchedNodes->item(0);
         }
@@ -272,7 +263,7 @@ class Dom
         libxml_use_internal_errors(true);
         try {
             $result = $dom->schemaValidate($schemaFileName);
-            $errors = array();
+            $errors = [];
             if (!$result) {
                 $validationErrors = libxml_get_errors();
                 if (count($validationErrors)) {
@@ -350,7 +341,7 @@ class Dom
      * @param array &$errors
      * @return bool
      */
-    public function validate($schemaFileName, &$errors = array())
+    public function validate($schemaFileName, &$errors = [])
     {
         $errors = self::validateDomDocument($this->_dom, $schemaFileName, $this->_errorFormat);
         return !count($errors);

@@ -1,39 +1,21 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Pricing\Price;
 
-use Magento\Framework\Pricing\Adjustment\CalculatorInterface;
-use \Magento\Catalog\Model\Product;
+use Magento\Catalog\Model\Product;
 use Magento\Customer\Model\Session;
+use Magento\Framework\Pricing\Adjustment\CalculatorInterface;
 use Magento\Framework\Pricing\Price\AbstractPrice;
 use Magento\Framework\Pricing\Price\BasePriceProviderInterface;
 
 /**
  * Group price model
  */
-class GroupPrice extends AbstractPrice implements GroupPriceInterface, BasePriceProviderInterface
+class GroupPrice extends AbstractPrice implements BasePriceProviderInterface
 {
     /**
      * Price type group
@@ -54,15 +36,17 @@ class GroupPrice extends AbstractPrice implements GroupPriceInterface, BasePrice
      * @param Product $saleableItem
      * @param float $quantity
      * @param CalculatorInterface $calculator
+     * @param \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency
      * @param Session $customerSession
      */
     public function __construct(
         Product $saleableItem,
         $quantity,
         CalculatorInterface $calculator,
+        \Magento\Framework\Pricing\PriceCurrencyInterface $priceCurrency,
         Session $customerSession
     ) {
-        parent::__construct($saleableItem, $quantity, $calculator);
+        parent::__construct($saleableItem, $quantity, $calculator, $priceCurrency);
         $this->customerSession = $customerSession;
     }
 
@@ -77,6 +61,9 @@ class GroupPrice extends AbstractPrice implements GroupPriceInterface, BasePrice
             foreach ($this->getStoredGroupPrice() as $groupPrice) {
                 if ($groupPrice['cust_group'] == $customerGroup) {
                     $this->value = (float) $groupPrice['website_price'];
+                    if (!$this->isPercentageDiscount()) {
+                        $this->value = $this->priceCurrency->convertAndRound($this->value);
+                    }
                     break;
                 }
             }
@@ -89,7 +76,7 @@ class GroupPrice extends AbstractPrice implements GroupPriceInterface, BasePrice
      */
     protected function getCustomerGroupId()
     {
-        if ($this->product->getCustomerGroupId()) {
+        if ($this->product->getCustomerGroupId() !== null) {
             return (int) $this->product->getCustomerGroupId();
         }
         return (int) $this->customerSession->getCustomerGroupId();
@@ -98,7 +85,7 @@ class GroupPrice extends AbstractPrice implements GroupPriceInterface, BasePrice
     /**
      * @return array
      */
-    public function getStoredGroupPrice()
+    protected function getStoredGroupPrice()
     {
         if (null === $this->storedGroupPrice) {
             $resource = $this->product->getResource();
@@ -112,5 +99,13 @@ class GroupPrice extends AbstractPrice implements GroupPriceInterface, BasePrice
             }
         }
         return $this->storedGroupPrice;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPercentageDiscount()
+    {
+        return false;
     }
 }

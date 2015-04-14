@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework\View\Asset;
 
@@ -38,7 +20,7 @@ class MinifyService
     /**
      * ObjectManager
      *
-     * @var \Magento\Framework\ObjectManager
+     * @var \Magento\Framework\ObjectManagerInterface
      */
     protected $objectManager;
 
@@ -47,12 +29,12 @@ class MinifyService
      *
      * @var array
      */
-    protected $enabled = array();
+    protected $enabled = [];
 
     /**
      * @var \Magento\Framework\Code\Minifier\AdapterInterface[]
      */
-    protected $adapters = array();
+    protected $adapters = [];
 
     /**
      * @var string
@@ -63,12 +45,12 @@ class MinifyService
      * Constructor
      *
      * @param ConfigInterface $config
-     * @param \Magento\Framework\ObjectManager $objectManager
+     * @param \Magento\Framework\ObjectManagerInterface $objectManager
      * @param string $appMode
      */
     public function __construct(
         ConfigInterface $config,
-        \Magento\Framework\ObjectManager $objectManager,
+        \Magento\Framework\ObjectManagerInterface $objectManager,
         $appMode = \Magento\Framework\App\State::MODE_DEFAULT
     ) {
         $this->config = $config;
@@ -81,27 +63,18 @@ class MinifyService
      * Assets applicable for minification are wrapped with the minified asset
      *
      * @param array|\Iterator $assets
-     * @return \Magento\Framework\View\Asset\Minified[]
+     * @param bool $isDirectRequest
+     * @return Minified\AbstractAsset[]
      */
-    public function getAssets($assets)
+    public function getAssets($assets, $isDirectRequest = false)
     {
-        $resultAssets = array();
+        $resultAssets = [];
         $strategy = $this->appMode == \Magento\Framework\App\State::MODE_PRODUCTION
-            ? Minified::FILE_EXISTS : Minified::MTIME;
+            ? Minified\AbstractAsset::FILE_EXISTS : Minified\AbstractAsset::MTIME;
         /** @var $asset AssetInterface */
         foreach ($assets as $asset) {
-            $contentType = $asset->getContentType();
-            if ($this->isEnabled($contentType)) {
-                /** @var \Magento\Framework\View\Asset\Minified $asset */
-                $asset = $this->objectManager
-                    ->create(
-                        'Magento\Framework\View\Asset\Minified',
-                        array(
-                            'asset' => $asset,
-                            'strategy' => $strategy,
-                            'adapter' => $this->getAdapter($contentType),
-                        )
-                    );
+            if ($this->isEnabled($asset->getContentType())) {
+                $asset = $this->getAssetDecorated($asset, $strategy, $isDirectRequest);
             }
             $resultAssets[] = $asset;
         }
@@ -127,26 +100,71 @@ class MinifyService
      *
      * @param string $contentType
      * @return \Magento\Framework\Code\Minifier\AdapterInterface
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function getAdapter($contentType)
     {
         if (!isset($this->adapters[$contentType])) {
             $adapterClass = $this->config->getAssetMinificationAdapter($contentType);
             if (!$adapterClass) {
-                throw new \Magento\Framework\Exception(
-                    "Minification adapter is not specified for '$contentType' content type"
+                throw new \Magento\Framework\Exception\LocalizedException(
+                    new \Magento\Framework\Phrase(
+                        "Minification adapter is not specified for '%1' content type",
+                        [$contentType]
+                    )
                 );
             }
             $adapter = $this->objectManager->get($adapterClass);
             if (!($adapter instanceof \Magento\Framework\Code\Minifier\AdapterInterface)) {
                 $type = get_class($adapter);
-                throw new \Magento\Framework\Exception(
-                    "Invalid adapter: '{$type}'. Expected: \\Magento\\Framework\\Code\\Minifier\\AdapterInterface"
+                throw new \Magento\Framework\Exception\LocalizedException(
+                    new \Magento\Framework\Phrase(
+                        "Invalid adapter: '%1'. Expected: \\Magento\\Framework\\Code\\Minifier\\AdapterInterface",
+                        [$type]
+                    )
                 );
             }
             $this->adapters[$contentType] = $adapter;
         }
         return $this->adapters[$contentType];
+    }
+
+    /**
+     * Returns asset decorated by corresponding minifier
+     *
+     * @param AssetInterface $asset
+     * @param string $strategy
+     * @param bool $isDirectRequest
+     * @return AssetInterface
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    protected function getAssetDecorated(AssetInterface $asset, $strategy, $isDirectRequest)
+    {
+        return
+            $this->objectManager->create(
+                $this->getDecoratorClass($asset, $isDirectRequest),
+                [
+                    'asset' => $asset,
+                    'strategy' => $strategy,
+                    'adapter' => $this->getAdapter($asset->getContentType())
+                ]
+            );
+    }
+
+    /**
+     * Returns minifier decorator class name for given asset
+     *
+     * @param AssetInterface $asset
+     * @param bool $isDirectRequest
+     * @return string
+     */
+    protected function getDecoratorClass(AssetInterface $asset, $isDirectRequest)
+    {
+        if ($isDirectRequest || $asset->getContentType() == 'css') {
+            $result = 'Magento\Framework\View\Asset\Minified\ImmutablePathAsset';
+        } else {
+            $result = 'Magento\Framework\View\Asset\Minified\MutablePathAsset';
+        }
+        return $result;
     }
 }

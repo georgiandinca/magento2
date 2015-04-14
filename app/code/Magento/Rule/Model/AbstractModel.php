@@ -1,33 +1,15 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
 
 /**
  * Abstract Rule entity data model
  */
 namespace Magento\Rule\Model;
-
-use Magento\Framework\Model\Exception;
 
 abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
 {
@@ -106,7 +88,7 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->_formFactory = $formFactory;
         $this->_localeDate = $localeDate;
@@ -117,14 +99,15 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
      * Prepare data before saving
      *
      * @return $this
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
-    protected function _beforeSave()
+    public function beforeSave()
     {
         // Check if discount amount not negative
         if ($this->hasDiscountAmount()) {
             if ((int)$this->getDiscountAmount() < 0) {
-                throw new \Magento\Framework\Model\Exception(__('Invalid discount amount.'));
+                throw new \Magento\Framework\Exception\LocalizedException(__('Invalid discount amount.'));
             }
         }
 
@@ -162,7 +145,7 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
             }
         }
 
-        parent::_beforeSave();
+        parent::beforeSave();
         return $this;
     }
 
@@ -299,10 +282,10 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
     {
         $arr = $this->_convertFlatToRecursive($data);
         if (isset($arr['conditions'])) {
-            $this->getConditions()->setConditions(array())->loadArray($arr['conditions'][1]);
+            $this->getConditions()->setConditions([])->loadArray($arr['conditions'][1]);
         }
         if (isset($arr['actions'])) {
-            $this->getActions()->setActions(array())->loadArray($arr['actions'][1], 'actions');
+            $this->getActions()->setActions([])->loadArray($arr['actions'][1], 'actions');
         }
 
         return $this;
@@ -311,24 +294,25 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
     /**
      * Set specified data to current rule.
      * Set conditions and actions recursively.
-     * Convert dates into \Zend_Date.
+     * Convert dates into \DateTime.
      *
      * @param array $data
      * @return array
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function _convertFlatToRecursive(array $data)
     {
-        $arr = array();
+        $arr = [];
         foreach ($data as $key => $value) {
             if (($key === 'conditions' || $key === 'actions') && is_array($value)) {
                 foreach ($value as $id => $data) {
                     $path = explode('--', $id);
-                    $node =& $arr;
-                    for ($i = 0,$l = sizeof($path); $i < $l; $i++) {
+                    $node = & $arr;
+                    for ($i = 0, $l = sizeof($path); $i < $l; $i++) {
                         if (!isset($node[$key][$path[$i]])) {
-                            $node[$key][$path[$i]] = array();
+                            $node[$key][$path[$i]] = [];
                         }
-                        $node =& $node[$key][$path[$i]];
+                        $node = & $node[$key][$path[$i]];
                     }
                     foreach ($data as $k => $v) {
                         $node[$k] = $v;
@@ -336,15 +320,10 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
                 }
             } else {
                 /**
-                 * Convert dates into \Zend_Date
+                 * Convert dates into \DateTime
                  */
-                if (in_array($key, array('from_date', 'to_date')) && $value) {
-                    $value = $this->_localeDate->date(
-                        $value,
-                        \Magento\Framework\Stdlib\DateTime::DATE_INTERNAL_FORMAT,
-                        null,
-                        false
-                    );
+                if (in_array($key, ['from_date', 'to_date']) && $value) {
+                    $value = new \DateTime($value);
                 }
                 $this->setData($key, $value);
             }
@@ -369,10 +348,12 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
      *
      * @param \Magento\Framework\Object $object
      * @return bool|string[] - return true if validation passed successfully. Array with errors description otherwise
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function validateData(\Magento\Framework\Object $object)
     {
-        $result = array();
+        $result = [];
         $fromDate = $toDate = null;
 
         if ($object->hasFromDate() && $object->hasToDate()) {
@@ -381,10 +362,10 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
         }
 
         if ($fromDate && $toDate) {
-            $fromDate = new \Magento\Framework\Stdlib\DateTime\Date($fromDate, \Magento\Framework\Stdlib\DateTime::DATE_INTERNAL_FORMAT);
-            $toDate = new \Magento\Framework\Stdlib\DateTime\Date($toDate, \Magento\Framework\Stdlib\DateTime::DATE_INTERNAL_FORMAT);
+            $fromDate = new \DateTime($fromDate);
+            $toDate = new \DateTime($toDate);
 
-            if ($fromDate->compare($toDate) === 1) {
+            if ($fromDate > $toDate) {
                 $result[] = __('End Date must follow Start Date.');
             }
         }
@@ -461,51 +442,5 @@ abstract class AbstractModel extends \Magento\Framework\Model\AbstractModel
             $this->setData('website_ids', (array)$websiteIds);
         }
         return $this->_getData('website_ids');
-    }
-
-    /**
-     * @param string $format
-     * @return string
-     *
-     * @deprecated since 1.7.0.0
-     */
-    public function asString($format = '')
-    {
-        return '';
-    }
-
-    /**
-     * @return string
-     *
-     * @deprecated since 1.7.0.0
-     */
-    public function asHtml()
-    {
-        return '';
-    }
-
-    /**
-     * Returns rule as an array for admin interface
-     *
-     * @param array $arrAttributes
-     * @return array
-     *
-     * @deprecated since 1.7.0.0
-     */
-    public function asArray(array $arrAttributes = array())
-    {
-        return array();
-    }
-
-    /**
-     * Combine website ids to string
-     *
-     * @return $this
-     *
-     * @deprecated since 1.7.0.0
-     */
-    protected function _prepareWebsiteIds()
-    {
-        return $this;
     }
 }

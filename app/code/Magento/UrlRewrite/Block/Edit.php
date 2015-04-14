@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\UrlRewrite\Block;
 
@@ -69,7 +51,7 @@ class Edit extends \Magento\Backend\Block\Widget\Container
         \Magento\Backend\Block\Widget\Context $context,
         \Magento\UrlRewrite\Model\UrlRewriteFactory $rewriteFactory,
         \Magento\Backend\Helper\Data $adminhtmlData,
-        array $data = array()
+        array $data = []
     ) {
         $this->_rewriteFactory = $rewriteFactory;
         $this->_adminhtmlData = $adminhtmlData;
@@ -134,12 +116,12 @@ class Edit extends \Magento\Backend\Block\Widget\Container
     {
         $this->addButton(
             'reset',
-            array(
+            [
                 'label' => __('Reset'),
                 'onclick' => '$(\'edit_form\').reset()',
                 'class' => 'scalable',
                 'level' => -1
-            )
+            ]
         );
     }
 
@@ -152,12 +134,12 @@ class Edit extends \Magento\Backend\Block\Widget\Container
     {
         $this->addButton(
             'back',
-            array(
+            [
                 'label' => __('Back'),
                 'onclick' => 'setLocation(\'' . $this->_adminhtmlData->getUrl('adminhtml/*/') . '\')',
                 'class' => 'back',
                 'level' => -1
-            )
+            ]
         );
     }
 
@@ -181,20 +163,20 @@ class Edit extends \Magento\Backend\Block\Widget\Container
     {
         $this->addButton(
             'delete',
-            array(
+            [
                 'label' => __('Delete'),
                 'onclick' => 'deleteConfirm(' . json_encode(__('Are you sure you want to do this?'))
                     . ','
                     . json_encode(
                         $this->_adminhtmlData->getUrl(
                             'adminhtml/*/delete',
-                            array('id' => $this->getUrlRewrite()->getId())
+                            ['id' => $this->getUrlRewrite()->getId()]
                         )
                     )
                     . ')',
                 'class' => 'scalable delete',
                 'level' => -1
-            )
+            ]
         );
     }
 
@@ -207,14 +189,14 @@ class Edit extends \Magento\Backend\Block\Widget\Container
     {
         $this->addButton(
             'save',
-            array(
+            [
                 'label' => __('Save'),
                 'class' => 'save primary save-url-rewrite',
                 'level' => -1,
-                'data_attribute' => array(
-                    'mage-init' => array('button' => array('event' => 'save', 'target' => '#edit_form'))
-                )
-            )
+                'data_attribute' => [
+                    'mage-init' => ['button' => ['event' => 'save', 'target' => '#edit_form']],
+                ]
+            ]
         );
     }
 
@@ -228,7 +210,7 @@ class Edit extends \Magento\Backend\Block\Widget\Container
         return $this->getLayout()->createBlock(
             'Magento\UrlRewrite\Block\Edit\Form',
             '',
-            array('data' => array('url_rewrite' => $this->_getUrlRewrite()))
+            ['data' => ['url_rewrite' => $this->_getUrlRewrite()]]
         );
     }
 

@@ -1,28 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Weee\Model;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class Observer extends \Magento\Framework\Model\AbstractModel
 {
     /**
@@ -63,6 +48,7 @@ class Observer extends \Magento\Framework\Model\AbstractModel
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
@@ -74,7 +60,7 @@ class Observer extends \Magento\Framework\Model\AbstractModel
         \Magento\Catalog\Model\ProductTypes\ConfigInterface $productTypeConfig,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         $this->_layout = $layout;
         $this->_weeeTax = $weeeTax;
@@ -148,18 +134,18 @@ class Observer extends \Magento\Framework\Model\AbstractModel
 
         $response = $observer->getEvent()->getResponse();
         $types = $response->getTypes();
-        $types[] = array(
+        $types[] = [
             'value' => 'weee',
             'label' => __('Fixed Product Tax'),
-            'hide_fields' => array(
+            'hide_fields' => [
                 'is_unique',
                 'is_required',
                 'frontend_class',
                 '_scope',
                 '_default_value',
-                '_front_fieldset'
-            )
-        );
+                '_front_fieldset',
+            ],
+        ];
 
         $response->setTypes($types);
 
@@ -180,7 +166,7 @@ class Observer extends \Magento\Framework\Model\AbstractModel
         if ($object->getFrontendInput() == 'weee') {
             $object->setBackendModel($backendModel);
             if (!$object->getApplyTo()) {
-                $applyTo = array();
+                $applyTo = [];
                 foreach ($this->_productType->getOptions() as $option) {
                     if ($this->productTypeConfig->isProductSet($option['value'])) {
                         continue;
@@ -206,101 +192,6 @@ class Observer extends \Magento\Framework\Model\AbstractModel
         $types = $response->getTypes();
         $types['weee'] = 'Magento\Weee\Block\Element\Weee\Tax';
         $response->setTypes($types);
-        return $this;
-    }
-
-    /**
-     * Update WEEE amounts discount percents
-     *
-     * @param   \Magento\Framework\Event\Observer $observer
-     * @return  $this
-     */
-    public function updateDiscountPercents(\Magento\Framework\Event\Observer $observer)
-    {
-        if (!$this->_weeeData->isEnabled()) {
-            return $this;
-        }
-
-        $productCondition = $observer->getEvent()->getProductCondition();
-        if ($productCondition) {
-            $eventProduct = $productCondition;
-        } else {
-            $eventProduct = $observer->getEvent()->getProduct();
-        }
-        $this->_weeeTax->updateProductsDiscountPercent($eventProduct);
-
-        return $this;
-    }
-
-    /**
-     * Update options of the product view page
-     *
-     * @param   \Magento\Framework\Event\Observer $observer
-     * @return  $this
-     */
-    public function updateProductOptions(\Magento\Framework\Event\Observer $observer)
-    {
-        if (!$this->_weeeData->isEnabled()) {
-            return $this;
-        }
-
-        $response = $observer->getEvent()->getResponseObject();
-        $options = $response->getAdditionalOptions();
-
-        $_product = $this->_registry->registry('current_product');
-        if (!$_product) {
-            return $this;
-        }
-
-        $options['oldPlusDisposition'] = $this->_weeeData->getOriginalAmount($_product);
-        $options['plusDisposition'] = $this->_weeeData->getAmount($_product);
-
-        // Exclude Weee amount from excluding tax amount
-        if (!$this->_weeeData->typeOfDisplay(array(Tax::DISPLAY_INCL, Tax::DISPLAY_INCL_DESCR))) {
-            $options['exclDisposition'] = true;
-        }
-
-        $response->setAdditionalOptions($options);
-
-        return $this;
-    }
-
-    /**
-     * Process bundle options selection for prepare view json
-     *
-     * @param   \Magento\Framework\Event\Observer $observer
-     * @return  $this
-     */
-    public function updateBundleProductOptions(\Magento\Framework\Event\Observer $observer)
-    {
-        if (!$this->_weeeData->isEnabled()) {
-            return $this;
-        }
-
-        $response = $observer->getEvent()->getResponseObject();
-        $selection = $observer->getEvent()->getSelection();
-        $options = $response->getAdditionalOptions();
-
-        $_product = $this->_registry->registry('current_product');
-
-        $typeDynamic = \Magento\Bundle\Block\Adminhtml\Catalog\Product\Edit\Tab\Attributes\Extend::DYNAMIC;
-        if (!$_product || $_product->getPriceType() != $typeDynamic) {
-            return $this;
-        }
-
-        $amount = $this->_weeeData->getAmount($selection);
-        $attributes = $this->_weeeData->getProductWeeeAttributes($_product, null, null, null, $this->_weeeData->isTaxable());
-        $amountInclTaxes = $this->_weeeData->getAmountInclTaxes($attributes);
-        $taxes = $amountInclTaxes - $amount;
-        $options['plusDisposition'] = $amount;
-        $options['plusDispositionTax'] = $taxes < 0 ? 0 : $taxes;
-        // Exclude Weee amount from excluding tax amount
-        if (!$this->_weeeData->typeOfDisplay(array(0, 1, 4))) {
-            $options['exclDisposition'] = true;
-        }
-
-        $response->setAdditionalOptions($options);
-
         return $this;
     }
 }

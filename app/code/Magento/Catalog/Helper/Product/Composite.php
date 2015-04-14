@@ -1,41 +1,25 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Helper\Product;
 
+use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Framework\App\Helper\Context;
-use Magento\Framework\App\ViewInterface;
+use Magento\Framework\View\Result\LayoutFactory;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Catalog\Helper\Product;
-use Magento\Catalog\Model\ProductFactory;
-use Magento\Framework\StoreManagerInterface;
+use Magento\Store\Model\StoreManagerInterface;
 use Magento\Customer\Controller\RegistryConstants;
-use Magento\Customer\Model\Converter;
+use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Framework\Registry;
 
 /**
  * Adminhtml catalog product composite helper
  *
  * @author     Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Composite extends \Magento\Framework\App\Helper\AbstractHelper
 {
@@ -54,64 +38,62 @@ class Composite extends \Magento\Framework\App\Helper\AbstractHelper
     protected $_catalogProduct = null;
 
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
     /**
-     * @var ProductFactory
+     * @var \Magento\Framework\View\Result\LayoutFactory
      */
-    protected $_productFactory;
+    protected $resultLayoutFactory;
 
     /**
-     * @var ViewInterface
+     * @var ProductRepositoryInterface
      */
-    protected $_view;
+    protected $productRepository;
 
     /**
-     * @var Converter
+     * @var CustomerRepositoryInterface
      */
-    protected $_converter;
+    protected $customerRepository;
 
     /**
      * @param \Magento\Framework\App\Helper\Context $context
-     * @param ProductFactory $productFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param Product $catalogProduct
      * @param Registry $coreRegistry
-     * @param ViewInterface $view
-     * @param Converter $converter
+     * @param LayoutFactory $resultLayoutFactory
+     * @param ProductRepositoryInterface $productRepository
+     * @param CustomerRepositoryInterface $customerRepository
      */
     public function __construct(
         Context $context,
-        ProductFactory $productFactory,
         StoreManagerInterface $storeManager,
         Product $catalogProduct,
         Registry $coreRegistry,
-        ViewInterface $view,
-        Converter $converter
+        LayoutFactory $resultLayoutFactory,
+        ProductRepositoryInterface $productRepository,
+        CustomerRepositoryInterface $customerRepository
     ) {
-        $this->_productFactory = $productFactory;
         $this->_storeManager = $storeManager;
         $this->_coreRegistry = $coreRegistry;
         $this->_catalogProduct = $catalogProduct;
-        $this->_view = $view;
-        $this->_converter = $converter;
+        $this->resultLayoutFactory = $resultLayoutFactory;
+        $this->productRepository = $productRepository;
+        $this->customerRepository = $customerRepository;
         parent::__construct($context);
     }
 
     /**
      * Init layout of product configuration update result
      *
-     * @return $this
+     * @return \Magento\Framework\View\Result\Layout
      */
     protected function _initUpdateResultLayout()
     {
-        $this->_view->getLayout()->getUpdate()->addHandle('CATALOG_PRODUCT_COMPOSITE_UPDATE_RESULT');
-        $this->_view->loadLayoutUpdates();
-        $this->_view->generateLayoutXml();
-        $this->_view->generateLayoutBlocks();
-        return $this;
+        $resultLayout = $this->resultLayoutFactory->create();
+        $resultLayout->addHandle('CATALOG_PRODUCT_COMPOSITE_UPDATE_RESULT');
+        return $resultLayout;
     }
 
     /**
@@ -119,14 +101,12 @@ class Composite extends \Magento\Framework\App\Helper\AbstractHelper
      * when single configuration submitted
      *
      * @param \Magento\Framework\Object $updateResult
-     * @return void
+     * @return \Magento\Framework\View\Result\Layout
      */
     public function renderUpdateResult(\Magento\Framework\Object $updateResult)
     {
         $this->_coreRegistry->register('composite_update_result', $updateResult);
-
-        $this->_initUpdateResultLayout();
-        $this->_view->renderLayout();
+        return $this->_initUpdateResultLayout();
     }
 
     /**
@@ -137,24 +117,18 @@ class Composite extends \Magento\Framework\App\Helper\AbstractHelper
      *
      * @param bool $isOk
      * @param string $productType
-     * @return $this
+     * @return \Magento\Framework\View\Result\Layout
      */
     protected function _initConfigureResultLayout($isOk, $productType)
     {
-        $update = $this->_view->getLayout()->getUpdate();
+        $resultLayout = $this->resultLayoutFactory->create();
         if ($isOk) {
-            $update->addHandle(
-                'CATALOG_PRODUCT_COMPOSITE_CONFIGURE'
-            )->addHandle(
-                'catalog_product_view_type_' . $productType
-            );
+            $resultLayout->addHandle('CATALOG_PRODUCT_COMPOSITE_CONFIGURE')
+                ->addHandle('catalog_product_view_type_' . $productType);
         } else {
-            $update->addHandle('CATALOG_PRODUCT_COMPOSITE_CONFIGURE_ERROR');
+            $resultLayout->addHandle('CATALOG_PRODUCT_COMPOSITE_CONFIGURE_ERROR');
         }
-        $this->_view->loadLayoutUpdates();
-        $this->_view->generateLayoutXml();
-        $this->_view->generateLayoutBlocks();
-        return $this;
+        return $resultLayout;
     }
 
     /**
@@ -165,13 +139,13 @@ class Composite extends \Magento\Framework\App\Helper\AbstractHelper
      *  - 'error' = true, and 'message' to show
      *
      * @param \Magento\Framework\Object $configureResult
-     * @return void
+     * @return \Magento\Framework\View\Result\Layout
      */
     public function renderConfigureResult(\Magento\Framework\Object $configureResult)
     {
         try {
             if (!$configureResult->getOk()) {
-                throw new \Magento\Framework\Model\Exception($configureResult->getMessage());
+                throw new \Magento\Framework\Exception\LocalizedException(__($configureResult->getMessage()));
             }
 
             $currentStoreId = (int)$configureResult->getCurrentStoreId();
@@ -179,22 +153,18 @@ class Composite extends \Magento\Framework\App\Helper\AbstractHelper
                 $currentStoreId = $this->_storeManager->getStore()->getId();
             }
 
-            $product = $this->_productFactory->create()->setStoreId(
-                $currentStoreId
-            )->load(
-                $configureResult->getProductId()
-            );
-            if (!$product->getId()) {
-                throw new \Magento\Framework\Model\Exception(__('The product is not loaded.'));
-            }
+            $product = $this->productRepository->getById($configureResult->getProductId(), false, $currentStoreId);
+
             $this->_coreRegistry->register('current_product', $product);
             $this->_coreRegistry->register('product', $product);
 
             // Register customer we're working with
             $customerId = (int)$configureResult->getCurrentCustomerId();
             // TODO: Remove the customer model from the registry once all readers are refactored
-            $customerModel = $this->_converter->loadCustomerModel($customerId);
-            $this->_coreRegistry->register(RegistryConstants::CURRENT_CUSTOMER, $customerModel);
+            if ($customerId) {
+                $customerData = $this->customerRepository->getById($customerId);
+                $this->_coreRegistry->register(RegistryConstants::CURRENT_CUSTOMER, $customerData);
+            }
             $this->_coreRegistry->register(RegistryConstants::CURRENT_CUSTOMER_ID, $customerId);
 
             // Prepare buy request values
@@ -211,7 +181,6 @@ class Composite extends \Magento\Framework\App\Helper\AbstractHelper
             $this->_coreRegistry->register('composite_configure_result_error_message', $e->getMessage());
         }
 
-        $this->_initConfigureResultLayout($isOk, $productType);
-        $this->_view->renderLayout();
+        return $this->_initConfigureResultLayout($isOk, $productType);
     }
 }

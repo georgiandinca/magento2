@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  *
  */
 namespace Magento\DesignEditor\Controller\Varien\Router;
@@ -27,14 +9,14 @@ namespace Magento\DesignEditor\Controller\Varien\Router;
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class Standard extends \Magento\Core\App\Router\Base
+class Standard extends \Magento\Framework\App\Router\Base
 {
     /**
      * Routers that must not been matched
      *
      * @var string[]
      */
-    protected $_excludedRouters = array('admin', 'vde');
+    protected $_excludedRouters = ['admin', 'vde'];
 
     /**
      * Router list
@@ -65,11 +47,9 @@ class Standard extends \Magento\Core\App\Router\Base
      * @param \Magento\Framework\App\ResponseFactory $responseFactory
      * @param \Magento\Framework\App\Route\Config $routeConfig
      * @param \Magento\Framework\UrlInterface $url
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
-     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     * @param \Magento\Framework\Url\SecurityInfoInterface $urlSecurityInfo
      * @param string $routerId
      * @param \Magento\Framework\Code\NameBuilder $nameBuilder
+     * @param \Magento\Framework\App\Router\PathConfigInterface $pathConfig
      * @param \Magento\Framework\App\RouterListInterface $routerList
      * @param \Magento\DesignEditor\Helper\Data $designEditorHelper
      * @param \Magento\DesignEditor\Model\State $designEditorState
@@ -84,11 +64,9 @@ class Standard extends \Magento\Core\App\Router\Base
         \Magento\Framework\App\ResponseFactory $responseFactory,
         \Magento\Framework\App\Route\Config $routeConfig,
         \Magento\Framework\UrlInterface $url,
-        \Magento\Framework\StoreManagerInterface $storeManager,
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Framework\Url\SecurityInfoInterface $urlSecurityInfo,
         $routerId,
         \Magento\Framework\Code\NameBuilder $nameBuilder,
+        \Magento\Framework\App\Router\PathConfigInterface $pathConfig,
         \Magento\Framework\App\RouterListInterface $routerList,
         \Magento\DesignEditor\Helper\Data $designEditorHelper,
         \Magento\DesignEditor\Model\State $designEditorState,
@@ -101,11 +79,9 @@ class Standard extends \Magento\Core\App\Router\Base
             $responseFactory,
             $routeConfig,
             $url,
-            $storeManager,
-            $scopeConfig,
-            $urlSecurityInfo,
             $routerId,
-            $nameBuilder
+            $nameBuilder,
+            $pathConfig
         );
         $this->_routerList = $routerList;
         $this->_designEditorHelper = $designEditorHelper;
@@ -168,7 +144,7 @@ class Standard extends \Magento\Core\App\Router\Base
         list($vdeFrontName, $designMode, $themeId) = explode('/', trim($request->getPathInfo(), '/'));
         $request->setAlias('editorMode', $designMode);
         $request->setAlias('themeId', (int)$themeId);
-        $vdePath = implode('/', array($vdeFrontName, $designMode, $themeId));
+        $vdePath = implode('/', [$vdeFrontName, $designMode, $themeId]);
         $noVdePath = substr($request->getPathInfo(), strlen($vdePath) + 1) ?: '/';
         $request->setPathInfo($noVdePath);
         return $this;

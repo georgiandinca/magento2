@@ -1,29 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Sendfriend\Model;
 
-use Magento\Framework\Model\Exception as CoreException;
+use Magento\Framework\Exception\LocalizedException as CoreException;
 
 /**
  * SendFriend Log
@@ -36,6 +18,7 @@ use Magento\Framework\Model\Exception as CoreException;
  * @method \Magento\Sendfriend\Model\Sendfriend setTime(int $value)
  *
  * @author      Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Sendfriend extends \Magento\Framework\Model\AbstractModel
 {
@@ -44,21 +27,21 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
      *
      * @var array
      */
-    protected $_names = array();
+    protected $_names = [];
 
     /**
      * Recipient Emails
      *
      * @var array
      */
-    protected $_emails = array();
+    protected $_emails = [];
 
     /**
      * Sender data array
      *
      * @var \Magento\Framework\Object|array
      */
-    protected $_sender = array();
+    protected $_sender = [];
 
     /**
      * Product Instance
@@ -79,7 +62,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
      *
      * @var string
      */
-    protected $_lastCookieValue = array();
+    protected $_lastCookieValue = [];
 
     /**
      * Sendfriend data
@@ -101,7 +84,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
     protected $_transportBuilder;
 
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
@@ -116,7 +99,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
     protected $inlineTranslation;
 
     /**
-     * @var \Magento\Framework\Stdlib\CookieManager
+     * @var \Magento\Framework\Stdlib\CookieManagerInterface
      */
     protected $cookieManager;
 
@@ -128,34 +111,34 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
     /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Mail\Template\TransportBuilder $transportBuilder
      * @param \Magento\Catalog\Helper\Image $catalogImage
      * @param \Magento\Sendfriend\Helper\Data $sendfriendData
      * @param \Magento\Framework\Escaper $escaper
      * @param \Magento\Framework\HTTP\PhpEnvironment\RemoteAddress $remoteAddress
-     * @param \Magento\Framework\Stdlib\CookieManager $cookieManager
+     * @param \Magento\Framework\Stdlib\CookieManagerInterface $cookieManager
      * @param \Magento\Framework\Translate\Inline\StateInterface $inlineTranslation
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
         \Magento\Framework\Registry $registry,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Mail\Template\TransportBuilder $transportBuilder,
         \Magento\Catalog\Helper\Image $catalogImage,
         \Magento\Sendfriend\Helper\Data $sendfriendData,
         \Magento\Framework\Escaper $escaper,
         \Magento\Framework\HTTP\PhpEnvironment\RemoteAddress $remoteAddress,
-        \Magento\Framework\Stdlib\CookieManager $cookieManager,
+        \Magento\Framework\Stdlib\CookieManagerInterface $cookieManager,
         \Magento\Framework\Translate\Inline\StateInterface $inlineTranslation,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
-
         $this->_storeManager = $storeManager;
         $this->_transportBuilder = $transportBuilder;
         $this->_catalogImage = $catalogImage;
@@ -184,7 +167,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
     public function send()
     {
         if ($this->isExceedLimit()) {
-            throw new \Magento\Framework\Model\Exception(
+            throw new \Magento\Framework\Exception\LocalizedException(
                 __('You\'ve met your limit of %1 sends in an hour.', $this->getMaxSendsToFriend())
             );
         }
@@ -192,24 +175,24 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
         $this->inlineTranslation->suspend();
 
         $message = nl2br(htmlspecialchars($this->getSender()->getMessage()));
-        $sender = array(
+        $sender = [
             'name' => $this->_escaper->escapeHtml($this->getSender()->getName()),
-            'email' => $this->_escaper->escapeHtml($this->getSender()->getEmail())
-        );
+            'email' => $this->_escaper->escapeHtml($this->getSender()->getEmail()),
+        ];
 
         foreach ($this->getRecipients()->getEmails() as $k => $email) {
             $name = $this->getRecipients()->getNames($k);
             $this->_transportBuilder->setTemplateIdentifier(
                 $this->_sendfriendData->getEmailTemplate()
             )->setTemplateOptions(
-                array(
+                [
                     'area' => \Magento\Framework\App\Area::AREA_FRONTEND,
-                    'store' => $this->_storeManager->getStore()->getId()
-                )
+                    'store' => $this->_storeManager->getStore()->getId(),
+                ]
             )->setFrom(
                 $sender
             )->setTemplateVars(
-                array(
+                [
                     'name' => $name,
                     'email' => $email,
                     'product_name' => $this->getProduct()->getName(),
@@ -217,8 +200,8 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
                     'message' => $message,
                     'sender_name' => $sender['name'],
                     'sender_email' => $sender['email'],
-                    'product_image' => $this->_catalogImage->init($this->getProduct(), 'small_image')->resize(75)
-                )
+                    'product_image' => $this->_catalogImage->init($this->getProduct(), 'small_image')->resize(75),
+                ]
             )->addTo(
                 $email,
                 $name
@@ -238,10 +221,12 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
      * Validate Form data
      *
      * @return bool|string[]
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function validate()
     {
-        $errors = array();
+        $errors = [];
 
         $name = $this->getSender()->getName();
         if (empty($name)) {
@@ -287,6 +272,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
      *
      * @param array $recipients
      * @return $this
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function setRecipients($recipients)
     {
@@ -306,8 +292,8 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
             return $this;
         }
 
-        $emails = array();
-        $names = array();
+        $emails = [];
+        $names = [];
         foreach ($recipients['email'] as $k => $email) {
             if (!isset($emails[$email]) && isset($recipients['name'][$k])) {
                 $emails[$email] = true;
@@ -321,7 +307,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
 
         return $this->setData(
             '_recipients',
-            new \Magento\Framework\Object(array('emails' => $emails, 'names' => $names))
+            new \Magento\Framework\Object(['emails' => $emails, 'names' => $names])
         );
     }
 
@@ -334,7 +320,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
     {
         $recipients = $this->_getData('_recipients');
         if (!$recipients instanceof \Magento\Framework\Object) {
-            $recipients = new \Magento\Framework\Object(array('emails' => array(), 'names' => array()));
+            $recipients = new \Magento\Framework\Object(['emails' => [], 'names' => []]);
             $this->setData('_recipients', $recipients);
         }
         return $recipients;
@@ -354,14 +340,14 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
     /**
      * Retrieve Product instance
      *
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @return \Magento\Catalog\Model\Product
      */
     public function getProduct()
     {
         $product = $this->_getData('_product');
         if (!$product instanceof \Magento\Catalog\Model\Product) {
-            throw new \Magento\Framework\Model\Exception(__('Please define a correct Product instance.'));
+            throw new \Magento\Framework\Exception\LocalizedException(__('Please define a correct Product instance.'));
         }
         return $product;
     }
@@ -384,14 +370,16 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
     /**
      * Retrieve Sender Information Object
      *
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @return \Magento\Framework\Object
      */
     public function getSender()
     {
         $sender = $this->_getData('_sender');
         if (!$sender instanceof \Magento\Framework\Object) {
-            throw new \Magento\Framework\Model\Exception(__('Please define the correct Sender information.'));
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __('Please define the correct Sender information.')
+            );
         }
         return $sender;
     }
@@ -444,7 +432,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
      */
     public function getSentCount($useCache = true)
     {
-        if ($useCache && !is_null($this->_sentCount)) {
+        if ($useCache && $this->_sentCount !== null) {
             return $this->_sentCount;
         }
 
@@ -485,7 +473,7 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
     {
         $cookieName = $this->_sendfriendData->getCookieName();
         $time = time();
-        $newTimes = array();
+        $newTimes = [];
 
         if (isset($this->_lastCookieValue[$cookieName])) {
             $oldTimes = $this->_lastCookieValue[$cookieName];
@@ -538,18 +526,5 @@ class Sendfriend extends \Magento\Framework\Model\AbstractModel
             time() - $period,
             $websiteId
         );
-    }
-
-    /**
-     * Register self in global register with name send_to_friend_model
-     *
-     * @return $this
-     */
-    public function register()
-    {
-        if (!$this->_registry->registry('send_to_friend_model')) {
-            $this->_registry->register('send_to_friend_model', $this);
-        }
-        return $this;
     }
 }

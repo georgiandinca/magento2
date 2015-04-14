@@ -1,35 +1,18 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Shipping\Model\Carrier;
 
-use Magento\Framework\Model\Exception;
-use Magento\Sales\Model\Quote\Address\RateRequest;
-use Magento\Sales\Model\Quote\Address\RateResult\Error;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Quote\Model\Quote\Address\RateRequest;
+use Magento\Quote\Model\Quote\Address\RateResult\Error;
 use Magento\Shipping\Model\Shipment\Request;
 
 /**
  * Abstract online shipping carrier model
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 abstract class AbstractCarrierOnline extends AbstractCarrier
 {
@@ -46,7 +29,7 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
      *
      * @var array
      */
-    protected static $_quotesCache = array();
+    protected static $_quotesCache = [];
 
     /**
      * Flag for check carriers for activity
@@ -73,7 +56,7 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
     protected $_rateFactory;
 
     /**
-     * @var \Magento\Sales\Model\Quote\Address\RateResult\MethodFactory
+     * @var \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory
      */
     protected $_rateMethodFactory;
 
@@ -108,9 +91,9 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
     protected $_currencyFactory;
 
     /**
-     * @var \Magento\CatalogInventory\Service\V1\StockItemService
+     * @var \Magento\CatalogInventory\Api\StockRegistryInterface
      */
-    protected $stockItemService;
+    protected $stockRegistry;
 
     /**
      * Raw rate request data
@@ -121,11 +104,11 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
 
     /**
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
-     * @param \Magento\Sales\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory
-     * @param \Magento\Framework\Logger\AdapterFactory $logAdapterFactory
+     * @param \Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Shipping\Model\Simplexml\ElementFactory $xmlElFactory
      * @param \Magento\Shipping\Model\Rate\ResultFactory $rateFactory
-     * @param \Magento\Sales\Model\Quote\Address\RateResult\MethodFactory $rateMethodFactory
+     * @param \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory $rateMethodFactory
      * @param \Magento\Shipping\Model\Tracking\ResultFactory $trackFactory
      * @param \Magento\Shipping\Model\Tracking\Result\ErrorFactory $trackErrorFactory
      * @param \Magento\Shipping\Model\Tracking\Result\StatusFactory $trackStatusFactory
@@ -133,18 +116,18 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
      * @param \Magento\Directory\Model\CountryFactory $countryFactory
      * @param \Magento\Directory\Model\CurrencyFactory $currencyFactory
      * @param \Magento\Directory\Helper\Data $directoryData
-     * @param \Magento\CatalogInventory\Service\V1\StockItemService $stockItemService
+     * @param \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry
      * @param array $data
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Sales\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory,
-        \Magento\Framework\Logger\AdapterFactory $logAdapterFactory,
+        \Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory $rateErrorFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Shipping\Model\Simplexml\ElementFactory $xmlElFactory,
         \Magento\Shipping\Model\Rate\ResultFactory $rateFactory,
-        \Magento\Sales\Model\Quote\Address\RateResult\MethodFactory $rateMethodFactory,
+        \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory $rateMethodFactory,
         \Magento\Shipping\Model\Tracking\ResultFactory $trackFactory,
         \Magento\Shipping\Model\Tracking\Result\ErrorFactory $trackErrorFactory,
         \Magento\Shipping\Model\Tracking\Result\StatusFactory $trackStatusFactory,
@@ -152,8 +135,8 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
         \Magento\Directory\Model\CountryFactory $countryFactory,
         \Magento\Directory\Model\CurrencyFactory $currencyFactory,
         \Magento\Directory\Helper\Data $directoryData,
-        \Magento\CatalogInventory\Service\V1\StockItemService $stockItemService,
-        array $data = array()
+        \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry,
+        array $data = []
     ) {
         $this->_xmlElFactory = $xmlElFactory;
         $this->_rateFactory = $rateFactory;
@@ -165,8 +148,8 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
         $this->_countryFactory = $countryFactory;
         $this->_currencyFactory = $currencyFactory;
         $this->_directoryData = $directoryData;
-        $this->stockItemService = $stockItemService;
-        parent::__construct($scopeConfig, $rateErrorFactory, $logAdapterFactory, $data);
+        $this->stockRegistry = $stockRegistry;
+        parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
 
     /**
@@ -265,13 +248,14 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
      *
      * @param RateRequest $request
      * @return array
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function getAllItems(RateRequest $request)
     {
-        $items = array();
+        $items = [];
         if ($request->getAllItems()) {
             foreach ($request->getAllItems() as $item) {
-                /* @var $item \Magento\Sales\Model\Quote\Item */
+                /* @var $item \Magento\Quote\Model\Quote\Item */
                 if ($item->getProduct()->isVirtual() || $item->getParentItem()) {
                     // Don't process children here - we will process (or already have processed) them below
                     continue;
@@ -297,6 +281,8 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
      *
      * @param RateRequest $request
      * @return $this|bool|Error
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function proccessAdditionalValidation(RateRequest $request)
     {
@@ -311,19 +297,21 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
         $defaultErrorMsg = __('The shipping module is not available.');
         $showMethod = $this->getConfigData('showmethod');
 
-        /** @var $item \Magento\Sales\Model\Quote\Item */
+        /** @var $item \Magento\Quote\Model\Quote\Item */
         foreach ($this->getAllItems($request) as $item) {
             $product = $item->getProduct();
             if ($product && $product->getId()) {
                 $weight = $product->getWeight();
-                $stockItemData = $this->stockItemService->getStockItem($product->getId());
+                $stockItemData = $this->stockRegistry->getStockItem(
+                    $product->getId(),
+                    $item->getStore()->getWebsiteId()
+                );
                 $doValidation = true;
 
                 if ($stockItemData->getIsQtyDecimal() && $stockItemData->getIsDecimalDivided()) {
-                    if ($this->stockItemService->getEnableQtyIncrements($product->getId())
-                        && $this->stockItemService->getQtyIncrements($product->getId())
+                    if ($stockItemData->getEnableQtyIncrements() && $stockItemData->getQtyIncrements()
                     ) {
-                        $weight = $weight * $this->stockItemService->getQtyIncrements($product->getId());
+                        $weight = $weight * $stockItemData->getQtyIncrements();
                     } else {
                         $doValidation = false;
                     }
@@ -365,7 +353,7 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
         if (is_array($requestParams)) {
             $requestParams = implode(
                 ',',
-                array_merge(array($this->getCarrierCode()), array_keys($requestParams), $requestParams)
+                array_merge([$this->getCarrierCode()], array_keys($requestParams), $requestParams)
             );
         }
         return crc32($requestParams);
@@ -403,7 +391,7 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
     /**
      * Prepare service name. Strip tags and entities from name
      *
-     * @param string|object $name  service name or object with implemented __toString() method
+     * @param string|object $name service name or object with implemented __toString() method
      * @return string              prepared service name
      */
     protected function _prepareServiceName($name)
@@ -436,18 +424,18 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
      *
      * @param Request $request
      * @return \Magento\Framework\Object
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function requestToShipment($request)
     {
         $packages = $request->getPackages();
         if (!is_array($packages) || !$packages) {
-            throw new Exception(__('No packages for request'));
+            throw new LocalizedException(__('No packages for request'));
         }
         if ($request->getStoreId() != null) {
             $this->setStore($request->getStoreId());
         }
-        $data = array();
+        $data = [];
         foreach ($packages as $packageId => $package) {
             $request->setPackageId($packageId);
             $request->setPackagingType($package['params']['container']);
@@ -460,10 +448,10 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
                 $this->rollBack($data);
                 break;
             } else {
-                $data[] = array(
+                $data[] = [
                     'tracking_number' => $result->getTrackingNumber(),
-                    'label_content' => $result->getShippingLabelContent()
-                );
+                    'label_content' => $result->getShippingLabelContent(),
+                ];
             }
             if (!isset($isFirstRequest)) {
                 $request->setMasterTrackingId($result->getTrackingNumber());
@@ -471,7 +459,7 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
             }
         }
 
-        $response = new \Magento\Framework\Object(array('info' => $data));
+        $response = new \Magento\Framework\Object(['info' => $data]);
         if ($result->getErrors()) {
             $response->setErrors($result->getErrors());
         }
@@ -483,19 +471,19 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
      *
      * @param Request $request
      * @return \Magento\Framework\Object
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function returnOfShipment($request)
     {
         $request->setIsReturn(true);
         $packages = $request->getPackages();
         if (!is_array($packages) || !$packages) {
-            throw new Exception(__('No packages for request'));
+            throw new LocalizedException(__('No packages for request'));
         }
         if ($request->getStoreId() != null) {
             $this->setStore($request->getStoreId());
         }
-        $data = array();
+        $data = [];
         foreach ($packages as $packageId => $package) {
             $request->setPackageId($packageId);
             $request->setPackagingType($package['params']['container']);
@@ -508,10 +496,10 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
                 $this->rollBack($data);
                 break;
             } else {
-                $data[] = array(
+                $data[] = [
                     'tracking_number' => $result->getTrackingNumber(),
-                    'label_content' => $result->getShippingLabelContent()
-                );
+                    'label_content' => $result->getShippingLabelContent(),
+                ];
             }
             if (!isset($isFirstRequest)) {
                 $request->setMasterTrackingId($result->getTrackingNumber());
@@ -519,7 +507,7 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
             }
         }
 
-        $response = new \Magento\Framework\Object(array('info' => $data));
+        $response = new \Magento\Framework\Object(['info' => $data]);
         if ($result->getErrors()) {
             $response->setErrors($result->getErrors());
         }
@@ -534,6 +522,7 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
      * @return bool
      *
      * @todo implement rollback logic
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function rollBack($data)
     {
@@ -582,6 +571,7 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
      *
      * @param null|string $countyDest
      * @return bool
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function isGirthAllowed($countyDest = null)
     {
@@ -616,5 +606,18 @@ abstract class AbstractCarrierOnline extends AbstractCarrier
         ) <= $this->_rawRequest->getBaseSubtotalInclTax() ? '0.00' : $this->getFinalPriceWithHandlingFee(
             $cost
         );
+    }
+
+    /**
+     * Parse XML string and return XML document object or false
+     *
+     * @param string $xmlContent
+     * @param string $customSimplexml
+     *
+     * @return \SimpleXMLElement|bool
+     */
+    public function parseXml($xmlContent, $customSimplexml = 'SimpleXMLElement')
+    {
+        return simplexml_load_string($xmlContent, $customSimplexml);
     }
 }

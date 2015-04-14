@@ -1,32 +1,16 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Weee\Model\Total\Quote;
 
 use Magento\Framework\Pricing\PriceCurrencyInterface;
+use Magento\Quote\Model\Quote\Address\Total\AbstractTotal;
 use Magento\Store\Model\Store;
-use Magento\Tax\Model\Calculation;
-use Magento\Sales\Model\Quote\Address\Total\AbstractTotal;
 use Magento\Tax\Model\Sales\Total\Quote\CommonTaxCollector;
 
 class Weee extends AbstractTotal
@@ -51,11 +35,11 @@ class Weee extends AbstractTotal
     protected $_store;
 
     /**
-     * Static counter
+     * Counter
      *
      * @var int
      */
-    protected static $counter = 0;
+    protected $counter = 0;
 
     /**
      * Array to keep track of weee taxable item code to quote item
@@ -100,10 +84,10 @@ class Weee extends AbstractTotal
     /**
      * Collect Weee amounts for the quote / order
      *
-     * @param   \Magento\Sales\Model\Quote\Address $address
+     * @param   \Magento\Quote\Model\Quote\Address $address
      * @return  $this
      */
-    public function collect(\Magento\Sales\Model\Quote\Address $address)
+    public function collect(\Magento\Quote\Model\Quote\Address $address)
     {
         AbstractTotal::collect($address);
         $this->_store = $address->getQuote()->getStore();
@@ -142,11 +126,13 @@ class Weee extends AbstractTotal
     /**
      * Calculate item fixed tax and prepare information for discount and regular taxation
      *
-     * @param   \Magento\Sales\Model\Quote\Address $address
-     * @param   \Magento\Sales\Model\Quote\Item\AbstractItem $item
+     * @param   \Magento\Quote\Model\Quote\Address $address
+     * @param   \Magento\Quote\Model\Quote\Item\AbstractItem $item
      * @return  void|$this
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     * @SuppressWarnings(PHPMD.UnusedLocalVariable)
      */
-    protected function _process(\Magento\Sales\Model\Quote\Address $address, $item)
+    protected function _process(\Magento\Quote\Model\Quote\Address $address, $item)
     {
         $attributes = $this->weeeData->getProductWeeeAttributes(
             $item->getProduct(),
@@ -155,7 +141,7 @@ class Weee extends AbstractTotal
             $this->_store->getWebsiteId()
         );
 
-        $productTaxes = array();
+        $productTaxes = [];
 
         $totalValueInclTax = 0;
         $baseTotalValueInclTax = 0;
@@ -170,7 +156,15 @@ class Weee extends AbstractTotal
         $associatedTaxables = $item->getAssociatedTaxables();
         if (!$associatedTaxables) {
             $associatedTaxables = [];
+        } else {
+            // remove existing weee associated taxables
+            foreach ($associatedTaxables as $iTaxable => $taxable) {
+                if ($taxable[CommonTaxCollector::KEY_ASSOCIATED_TAXABLE_TYPE] == self::ITEM_TYPE) {
+                    unset($associatedTaxables[$iTaxable]);
+                }
+            }
         }
+
         foreach ($attributes as $key => $attribute) {
             $title          = $attribute->getName();
 
@@ -193,7 +187,7 @@ class Weee extends AbstractTotal
             $totalRowValueExclTax += $rowValueExclTax;
             $baseTotalRowValueExclTax += $baseRowValueExclTax;
 
-            $productTaxes[] = array(
+            $productTaxes[] = [
                 'title' => $title,
                 'base_amount' => $baseValueExclTax,
                 'amount' => $valueExclTax,
@@ -203,12 +197,12 @@ class Weee extends AbstractTotal
                 'amount_incl_tax' => $valueInclTax,
                 'row_amount_incl_tax' => $rowValueInclTax,
                 'base_row_amount_incl_tax' => $baseRowValueInclTax,
-            );
+            ];
 
             if ($this->weeeData->isTaxable($this->_store)) {
-                $itemTaxCalculationId = $item->getTaxCalculationItemId();
                 $weeeItemCode = self::ITEM_CODE_WEEE_PREFIX . $this->getNextIncrement();
                 $weeeItemCode .= '-' . $title;
+
                 $associatedTaxables[] = [
                     CommonTaxCollector::KEY_ASSOCIATED_TAXABLE_TYPE => self::ITEM_TYPE,
                     CommonTaxCollector::KEY_ASSOCIATED_TAXABLE_CODE => $weeeItemCode,
@@ -246,7 +240,7 @@ class Weee extends AbstractTotal
     /**
      * Process row amount based on FPT total amount configuration setting
      *
-     * @param   \Magento\Sales\Model\Quote\Address $address
+     * @param   \Magento\Quote\Model\Quote\Address $address
      * @param   float $rowValueExclTax
      * @param   float $baseRowValueExclTax
      * @param   float $rowValueInclTax
@@ -272,37 +266,37 @@ class Weee extends AbstractTotal
     }
 
     /**
-     * Increment and return static counter. This function is intended to be used to generate temporary
+     * Increment and return counter. This function is intended to be used to generate temporary
      * id for an item.
      *
      * @return int
      */
     protected function getNextIncrement()
     {
-        return ++self::$counter;
+        return ++$this->counter;
     }
 
     /**
      * Recalculate parent item amounts based on children results
      *
-     * @param   \Magento\Sales\Model\Quote\Item\AbstractItem $item
+     * @param   \Magento\Quote\Model\Quote\Item\AbstractItem $item
      * @return  void
-     * 
+     *
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    protected function _recalculateParent(\Magento\Sales\Model\Quote\Item\AbstractItem $item)
+    protected function _recalculateParent(\Magento\Quote\Model\Quote\Item\AbstractItem $item)
     {
     }
 
     /**
      * Reset information about FPT for shopping cart item
      *
-     * @param   \Magento\Sales\Model\Quote\Item\AbstractItem $item
+     * @param   \Magento\Quote\Model\Quote\Item\AbstractItem $item
      * @return  void
      */
     protected function _resetItemData($item)
     {
-        $this->weeeData->setApplied($item, array());
+        $this->weeeData->setApplied($item, []);
 
         $item->setBaseWeeeTaxDisposition(0);
         $item->setWeeeTaxDisposition(0);
@@ -320,10 +314,11 @@ class Weee extends AbstractTotal
     /**
      * Delegate this to WeeeTax collector
      *
-     * @param   \Magento\Sales\Model\Quote\Address $address
+     * @param   \Magento\Quote\Model\Quote\Address $address
      * @return  $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function fetch(\Magento\Sales\Model\Quote\Address $address)
+    public function fetch(\Magento\Quote\Model\Quote\Address $address)
     {
         return $this;
     }
@@ -335,7 +330,7 @@ class Weee extends AbstractTotal
      * @param   array $config
      * @param   Store $store
      * @return  array
-     * 
+     *
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function processConfigArray($config, $store)

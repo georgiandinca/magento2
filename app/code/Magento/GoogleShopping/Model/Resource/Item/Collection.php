@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GoogleShopping\Model\Resource\Item;
 
@@ -45,8 +27,8 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
     protected $_resourceHelper;
 
     /**
-     * @param \Magento\Core\Model\EntityFactory $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Framework\DB\Helper $resourceHelper
@@ -55,8 +37,8 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
      * @param \Magento\Framework\Model\Resource\Db\AbstractDb $resource
      */
     public function __construct(
-        \Magento\Core\Model\EntityFactory $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Framework\DB\Helper $resourceHelper,
@@ -155,19 +137,19 @@ class Collection extends \Magento\Framework\Model\Resource\Db\Collection\Abstrac
         );
 
         $this->getSelect()->joinLeft(
-            array('p_d' => $attribute->getBackend()->getTable()),
+            ['p_d' => $attribute->getBackend()->getTable()],
             $joinConditionDefault,
-            array()
+            []
         );
 
         $this->getSelect()->joinLeft(
-            array('p' => $attribute->getBackend()->getTable()),
+            ['p' => $attribute->getBackend()->getTable()],
             $joinCondition,
-            array('name' => $this->getConnection()->getIfNullSql('p.value', 'p_d.value'))
+            ['name' => $this->getConnection()->getIfNullSql('p.value', 'p_d.value')]
         );
 
         $this->getSelect()->joinLeft(
-            array('types' => $this->getTable('googleshopping_types')),
+            ['types' => $this->getTable('googleshopping_types')],
             'main_table.type_id=types.type_id'
         );
         $this->_resourceHelper->prepareColumnsList($this->getSelect());

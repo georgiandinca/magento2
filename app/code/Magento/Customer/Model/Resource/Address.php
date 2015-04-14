@@ -2,35 +2,17 @@
 /**
  * Customer address entity resource model
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Customer\Model\Resource;
 
-use \Magento\Framework\Exception\InputException;
+use Magento\Framework\Exception\InputException;
 
 class Address extends \Magento\Eav\Model\Entity\AbstractEntity
 {
     /**
-     * @var \Magento\Core\Model\Validator\Factory
+     * @var \Magento\Framework\Validator\Factory
      */
     protected $_validatorFactory;
 
@@ -40,38 +22,20 @@ class Address extends \Magento\Eav\Model\Entity\AbstractEntity
     protected $_customerFactory;
 
     /**
-     * @param \Magento\Framework\App\Resource $resource
-     * @param \Magento\Eav\Model\Config $eavConfig
-     * @param \Magento\Eav\Model\Entity\Attribute\Set $attrSetEntity
-     * @param \Magento\Framework\Locale\FormatInterface $localeFormat
-     * @param \Magento\Eav\Model\Resource\Helper $resourceHelper
-     * @param \Magento\Framework\Validator\UniversalFactory $universalFactory
-     * @param \Magento\Core\Model\Validator\Factory $validatorFactory
+     * @param \Magento\Eav\Model\Entity\Context $context
+     * @param \Magento\Framework\Validator\Factory $validatorFactory
      * @param \Magento\Customer\Model\CustomerFactory $customerFactory
      * @param array $data
      */
     public function __construct(
-        \Magento\Framework\App\Resource $resource,
-        \Magento\Eav\Model\Config $eavConfig,
-        \Magento\Eav\Model\Entity\Attribute\Set $attrSetEntity,
-        \Magento\Framework\Locale\FormatInterface $localeFormat,
-        \Magento\Eav\Model\Resource\Helper $resourceHelper,
-        \Magento\Framework\Validator\UniversalFactory $universalFactory,
-        \Magento\Core\Model\Validator\Factory $validatorFactory,
+        \Magento\Eav\Model\Entity\Context $context,
+        \Magento\Framework\Validator\Factory $validatorFactory,
         \Magento\Customer\Model\CustomerFactory $customerFactory,
-        $data = array()
+        $data = []
     ) {
         $this->_validatorFactory = $validatorFactory;
         $this->_customerFactory = $customerFactory;
-        parent::__construct(
-            $resource,
-            $eavConfig,
-            $attrSetEntity,
-            $localeFormat,
-            $resourceHelper,
-            $universalFactory,
-            $data
-        );
+        parent::__construct($context, $data);
     }
 
     /**
@@ -135,16 +99,15 @@ class Address extends \Magento\Eav\Model\Entity\AbstractEntity
      *
      * @param \Magento\Framework\Object $address
      * @return void
-     * @throws \Magento\Framework\Validator\ValidatorException When validation failed
+     * @throws \Magento\Framework\Validator\Exception When validation failed
      */
     protected function _validate($address)
     {
         $validator = $this->_validatorFactory->createValidator('customer_address', 'save');
 
         if (!$validator->isValid($address)) {
-            throw new \Magento\Framework\Validator\ValidatorException(
-                InputException::DEFAULT_MESSAGE,
-                [],
+            throw new \Magento\Framework\Validator\Exception(
+                null,
                 null,
                 $validator->getMessages()
             );
@@ -157,5 +120,33 @@ class Address extends \Magento\Eav\Model\Entity\AbstractEntity
     protected function _createCustomer()
     {
         return $this->_customerFactory->create();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function delete($object)
+    {
+        $result = parent::delete($object);
+        $object->setData([]);
+        return $result;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function _afterDelete(\Magento\Framework\Object $address)
+    {
+        if ($address->getId()) {
+            $customer = $this->_createCustomer()->load($address->getCustomerId());
+            if ($customer->getDefaultBilling() == $address->getId()) {
+                $customer->setDefaultBilling(null);
+            }
+            if ($customer->getDefaultShipping() == $address->getId()) {
+                $customer->setDefaultShipping(null);
+            }
+            $customer->save();
+        }
+        return parent::_afterDelete($address);
     }
 }

@@ -1,30 +1,17 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Catalog\Model;
 
 /**
  * @SuppressWarnings(PHPMD.LongVariable)
+ * @SuppressWarnings(PHPMD.TooManyFields)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Config extends \Magento\Eav\Model\Config
 {
@@ -98,7 +85,7 @@ class Config extends \Magento\Eav\Model\Config
     /**
      * Store manager
      *
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
@@ -135,6 +122,7 @@ class Config extends \Magento\Eav\Model\Config
      *
      * @param \Magento\Framework\App\CacheInterface $cache
      * @param \Magento\Eav\Model\Entity\TypeFactory $entityTypeFactory
+     * @param \Magento\Eav\Model\Resource\Entity\Type\CollectionFactory $entityTypeCollectionFactory,
      * @param \Magento\Framework\App\Cache\StateInterface $cacheState
      * @param \Magento\Framework\Validator\UniversalFactory $universalFactory
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
@@ -142,7 +130,7 @@ class Config extends \Magento\Eav\Model\Config
      * @param \Magento\Catalog\Model\Product\TypeFactory $productTypeFactory
      * @param \Magento\Eav\Model\Resource\Entity\Attribute\Group\CollectionFactory $groupCollectionFactory
      * @param \Magento\Eav\Model\Resource\Entity\Attribute\Set\CollectionFactory $setCollectionFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Eav\Model\Config $eavConfig
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
@@ -150,6 +138,7 @@ class Config extends \Magento\Eav\Model\Config
     public function __construct(
         \Magento\Framework\App\CacheInterface $cache,
         \Magento\Eav\Model\Entity\TypeFactory $entityTypeFactory,
+        \Magento\Eav\Model\Resource\Entity\Type\CollectionFactory $entityTypeCollectionFactory,
         \Magento\Framework\App\Cache\StateInterface $cacheState,
         \Magento\Framework\Validator\UniversalFactory $universalFactory,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -157,7 +146,7 @@ class Config extends \Magento\Eav\Model\Config
         \Magento\Catalog\Model\Product\TypeFactory $productTypeFactory,
         \Magento\Eav\Model\Resource\Entity\Attribute\Group\CollectionFactory $groupCollectionFactory,
         \Magento\Eav\Model\Resource\Entity\Attribute\Set\CollectionFactory $setCollectionFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Eav\Model\Config $eavConfig
     ) {
         $this->_scopeConfig = $scopeConfig;
@@ -168,7 +157,7 @@ class Config extends \Magento\Eav\Model\Config
         $this->_storeManager = $storeManager;
         $this->_eavConfig = $eavConfig;
 
-        parent::__construct($cache, $entityTypeFactory, $cacheState, $universalFactory);
+        parent::__construct($cache, $entityTypeFactory, $entityTypeCollectionFactory, $cacheState, $universalFactory);
     }
 
     /**
@@ -217,8 +206,8 @@ class Config extends \Magento\Eav\Model\Config
 
         $attributeSetCollection = $this->_setCollectionFactory->create()->load();
 
-        $this->_attributeSetsById = array();
-        $this->_attributeSetsByName = array();
+        $this->_attributeSetsById = [];
+        $this->_attributeSetsByName = [];
         foreach ($attributeSetCollection as $id => $attributeSet) {
             $entityTypeId = $attributeSet->getEntityTypeId();
             $name = $attributeSet->getAttributeSetName();
@@ -280,8 +269,8 @@ class Config extends \Magento\Eav\Model\Config
 
         $attributeSetCollection = $this->_groupCollectionFactory->create()->load();
 
-        $this->_attributeGroupsById = array();
-        $this->_attributeGroupsByName = array();
+        $this->_attributeGroupsById = [];
+        $this->_attributeGroupsByName = [];
         foreach ($attributeSetCollection as $id => $attributeGroup) {
             $attributeSetId = $attributeGroup->getAttributeSetId();
             $name = $attributeGroup->getAttributeGroupName();
@@ -345,8 +334,8 @@ class Config extends \Magento\Eav\Model\Config
 
         $productTypeCollection = $this->_productTypeFactory->create()->getOptionArray();
 
-        $this->_productTypesById = array();
-        $this->_productTypesByName = array();
+        $this->_productTypesById = [];
+        $this->_productTypesByName = [];
         foreach ($productTypeCollection as $id => $type) {
             $name = $type;
             $this->_productTypesById[$id] = $name;
@@ -432,7 +421,7 @@ class Config extends \Magento\Eav\Model\Config
     public function getAttributesUsedInProductListing()
     {
         if (is_null($this->_usedInProductListing)) {
-            $this->_usedInProductListing = array();
+            $this->_usedInProductListing = [];
             $entityType = \Magento\Catalog\Model\Product::ENTITY;
             $attributesData = $this->_getResource()->setStoreId($this->getStoreId())->getAttributesUsedInListing();
             $this->_eavConfig->importAttributesData($entityType, $attributesData);
@@ -455,7 +444,7 @@ class Config extends \Magento\Eav\Model\Config
     public function getAttributesUsedForSortBy()
     {
         if (is_null($this->_usedForSortBy)) {
-            $this->_usedForSortBy = array();
+            $this->_usedForSortBy = [];
             $entityType = \Magento\Catalog\Model\Product::ENTITY;
             $attributesData = $this->_getResource()->getAttributesUsedForSortBy();
             $this->_eavConfig->importAttributesData($entityType, $attributesData);
@@ -475,7 +464,7 @@ class Config extends \Magento\Eav\Model\Config
      */
     public function getAttributeUsedForSortByArray()
     {
-        $options = array('position' => __('Position'));
+        $options = ['position' => __('Position')];
         foreach ($this->getAttributesUsedForSortBy() as $attribute) {
             /* @var $attribute \Magento\Eav\Model\Entity\Attribute\AbstractAttribute */
             $options[$attribute->getAttributeCode()] = $attribute->getStoreLabel();

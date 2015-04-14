@@ -1,30 +1,15 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Checkout\Block\Cart;
 
-use Magento\Checkout\Block\Cart\AbstractCart;
 use Magento\Framework\View\Block\IdentityInterface;
+use Magento\Store\Model\ScopeInterface;
 
 /**
  * Wishlist sidebar block
@@ -35,6 +20,7 @@ class Sidebar extends AbstractCart implements IdentityInterface
      * Xml pah to chackout sidebar count value
      */
     const XML_PATH_CHECKOUT_SIDEBAR_COUNT = 'checkout/sidebar/count';
+    const XML_PATH_CHECKOUT_SIDEBAR_DISPLAY = 'checkout/sidebar/display';
 
     /**
      * @var \Magento\Catalog\Model\Resource\Url
@@ -69,7 +55,7 @@ class Sidebar extends AbstractCart implements IdentityInterface
         \Magento\Catalog\Model\Resource\Url $catalogUrl,
         \Magento\Checkout\Model\Cart $checkoutCart,
         \Magento\Checkout\Helper\Data $checkoutHelper,
-        array $data = array()
+        array $data = []
     ) {
         $this->_checkoutHelper = $checkoutHelper;
         $this->_catalogUrl = $catalogUrl;
@@ -89,7 +75,7 @@ class Sidebar extends AbstractCart implements IdentityInterface
         if (is_null($count)) {
             $count = $this->_scopeConfig->getValue(
                 self::XML_PATH_CHECKOUT_SIDEBAR_COUNT,
-                \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+                ScopeInterface::SCOPE_STORE
             );
             $this->setData('item_count', $count);
         }
@@ -108,7 +94,7 @@ class Sidebar extends AbstractCart implements IdentityInterface
             $count = $this->getItemCount();
         }
 
-        $items = array();
+        $items = [];
         if (!$this->getSummaryCount()) {
             return $items;
         }
@@ -116,10 +102,10 @@ class Sidebar extends AbstractCart implements IdentityInterface
         $i = 0;
         $allItems = array_reverse($this->getItems());
         foreach ($allItems as $item) {
-            /* @var $item \Magento\Sales\Model\Quote\Item */
+            /* @var $item \Magento\Quote\Model\Quote\Item */
             if (!$item->getProduct()->isVisibleInSiteVisibility()) {
                 $productId = $item->getProduct()->getId();
-                $products = $this->_catalogUrl->getRewriteByProductStore(array($productId => $item->getStoreId()));
+                $products = $this->_catalogUrl->getRewriteByProductStore([$productId => $item->getStoreId()]);
                 if (!isset($products[$productId])) {
                     continue;
                 }
@@ -177,7 +163,7 @@ class Sidebar extends AbstractCart implements IdentityInterface
     /**
      * Get one page checkout page url
      *
-     * @return bool
+     * @return string
      */
     public function getCheckoutUrl()
     {
@@ -185,15 +171,46 @@ class Sidebar extends AbstractCart implements IdentityInterface
     }
 
     /**
+     * Get shoppinc cart page url
+     *
+     * @return string
+     */
+    public function getShoppingCartUrl()
+    {
+        return $this->getUrl('checkout/cart');
+    }
+
+    /**
+     * Get update cart item url
+     *
+     * @return string
+     */
+    public function getUpdateItemQtyUrl()
+    {
+        return $this->getUrl('checkout/sidebar/updateItemQty');
+    }
+
+    /**
+     * Get remove cart item url
+     *
+     * @return string
+     */
+    public function getRemoveItemUrl()
+    {
+        return $this->getUrl('checkout/sidebar/removeItem');
+    }
+
+    /**
      * Define if Mini Shopping Cart Pop-Up Menu enabled
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getIsNeedToDisplaySideBar()
     {
         return (bool)$this->_scopeConfig->getValue(
-            'checkout/sidebar/display',
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+            self::XML_PATH_CHECKOUT_SIDEBAR_DISPLAY,
+            ScopeInterface::SCOPE_STORE
         );
     }
 
@@ -244,12 +261,12 @@ class Sidebar extends AbstractCart implements IdentityInterface
      */
     protected function _serializeRenders()
     {
-        $result = array();
+        $result = [];
         foreach ($this->getLayout()->getChildBlocks(
             $this->_getRendererList()->getNameInLayout()
         ) as $alias => $block) {
             /** @var $block \Magento\Framework\View\Element\Template */
-            $result[] = implode('|', array($alias, get_class($block), $block->getTemplate()));
+            $result[] = implode('|', [$alias, get_class($block), $block->getTemplate()]);
         }
         return implode('|', $result);
     }
@@ -277,7 +294,7 @@ class Sidebar extends AbstractCart implements IdentityInterface
             }
 
             if (!$rendererList->getChildBlock($alias)) {
-                $rendererList->addChild($alias, $block, array('template' => $template));
+                $rendererList->addChild($alias, $block, ['template' => $template]);
             }
         }
         return $this;
@@ -290,16 +307,32 @@ class Sidebar extends AbstractCart implements IdentityInterface
      */
     public function getIdentities()
     {
-        $identities = array();
-        /** @var $item \Magento\Sales\Model\Quote\Item */
+        $identities = [];
+        /** @var $item \Magento\Quote\Model\Quote\Item */
         foreach ($this->getItems() as $item) {
             $identities = array_merge($identities, $item->getProduct()->getIdentities());
         }
         return $identities;
     }
 
+    /**
+     * Retrieve subtotal block html
+     *
+     * @return string
+     */
     public function getTotalsHtml()
     {
         return $this->getLayout()->getBlock('checkout.cart.minicart.totals')->toHtml();
+    }
+
+    /**
+     * Retrieve items qty text
+     *
+     * @param int $qty
+     * @return \Magento\Framework\Phrase
+     */
+    public function getSummaryText($qty)
+    {
+        return ($qty == 1) ? __(' item') : __(' items');
     }
 }

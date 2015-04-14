@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -27,21 +9,24 @@
  */
 namespace Magento\Catalog\Model\System\Config\Backend\Catalog\Url\Rewrite;
 
-use Magento\Framework\App\Resource;
-use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
-use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
-use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator;
+use Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator;
 use Magento\CatalogUrlRewrite\Model\ProductUrlPathGenerator;
-use Magento\UrlRewrite\Model\Storage\DbStorage;
+use Magento\CatalogUrlRewrite\Model\ProductUrlRewriteGenerator;
+use Magento\Framework\App\Resource;
 use Magento\Store\Model\ScopeInterface;
+use Magento\UrlRewrite\Model\Storage\DbStorage;
+use Magento\UrlRewrite\Service\V1\Data\UrlRewrite;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class Suffix extends \Magento\Framework\App\Config\Value
 {
     /** @var \Magento\UrlRewrite\Helper\UrlRewrite */
     protected $urlRewriteHelper;
 
-    /** @var \Magento\Framework\StoreManagerInterface */
+    /** @var \Magento\Store\Model\StoreManagerInterface */
     protected $storeManager;
 
     /** @var \Magento\UrlRewrite\Model\UrlFinderInterface */
@@ -57,22 +42,23 @@ class Suffix extends \Magento\Framework\App\Config\Value
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param \Magento\UrlRewrite\Helper\UrlRewrite $urlRewriteHelper
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\App\Resource $appResource
      * @param \Magento\UrlRewrite\Model\UrlFinderInterface $urlFinder
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
         \Magento\Framework\Registry $registry,
         \Magento\Framework\App\Config\ScopeConfigInterface $config,
         \Magento\UrlRewrite\Helper\UrlRewrite $urlRewriteHelper,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\App\Resource $appResource,
         \Magento\UrlRewrite\Model\UrlFinderInterface $urlFinder,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         parent::__construct($context, $registry, $config, $resource, $resourceCollection, $data);
         $this->urlRewriteHelper = $urlRewriteHelper;
@@ -86,7 +72,7 @@ class Suffix extends \Magento\Framework\App\Config\Value
      *
      * @return $this
      */
-    protected function _beforeSave()
+    public function beforeSave()
     {
         $this->urlRewriteHelper->validateSuffix($this->getValue());
         return $this;
@@ -95,12 +81,12 @@ class Suffix extends \Magento\Framework\App\Config\Value
     /**
      * @return $this
      */
-    protected function _afterSave()
+    public function afterSave()
     {
         if ($this->isValueChanged()) {
             $this->updateSuffixForUrlRewrites();
         }
-        return parent::_afterSave();
+        return parent::afterSave();
     }
 
     /**
@@ -112,7 +98,7 @@ class Suffix extends \Magento\Framework\App\Config\Value
     {
         $map = [
             ProductUrlPathGenerator::XML_PATH_PRODUCT_URL_SUFFIX => ProductUrlRewriteGenerator::ENTITY_TYPE,
-            CategoryUrlPathGenerator::XML_PATH_CATEGORY_URL_SUFFIX => CategoryUrlRewriteGenerator::ENTITY_TYPE
+            CategoryUrlPathGenerator::XML_PATH_CATEGORY_URL_SUFFIX => CategoryUrlRewriteGenerator::ENTITY_TYPE,
         ];
         if (!isset($map[$this->getPath()])) {
             return $this;
@@ -123,7 +109,7 @@ class Suffix extends \Magento\Framework\App\Config\Value
             $dataFilter[UrlRewrite::STORE_ID] = $storesIds;
         }
         $entities = $this->urlFinder->findAllByData($dataFilter);
-        $oldSuffixPattern = '~' . preg_quote($this->getOldValue()). '$~';
+        $oldSuffixPattern = '~' . preg_quote($this->getOldValue()) . '$~';
         $suffix = $this->getValue();
         foreach ($entities as $urlRewrite) {
             $bind = $urlRewrite->getIsAutogenerated()

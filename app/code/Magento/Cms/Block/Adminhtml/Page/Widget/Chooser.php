@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Cms\Block\Adminhtml\Page\Widget;
 
@@ -46,7 +28,7 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
     protected $_collectionFactory;
 
     /**
-     * @var \Magento\Core\Model\PageLayout\Config\Builder
+     * @var \Magento\Framework\View\Model\PageLayout\Config\BuilderInterface
      */
     protected $pageLayoutBuilder;
 
@@ -56,7 +38,7 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
      * @param \Magento\Cms\Model\Page $cmsPage
      * @param \Magento\Cms\Model\PageFactory $pageFactory
      * @param \Magento\Cms\Model\Resource\Page\CollectionFactory $collectionFactory
-     * @param \Magento\Core\Model\PageLayout\Config\Builder $pageLayoutBuilder
+     * @param \Magento\Framework\View\Model\PageLayout\Config\BuilderInterface $pageLayoutBuilder
      * @param array $data
      */
     public function __construct(
@@ -65,8 +47,8 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
         \Magento\Cms\Model\Page $cmsPage,
         \Magento\Cms\Model\PageFactory $pageFactory,
         \Magento\Cms\Model\Resource\Page\CollectionFactory $collectionFactory,
-        \Magento\Core\Model\PageLayout\Config\Builder $pageLayoutBuilder,
-        array $data = array()
+        \Magento\Framework\View\Model\PageLayout\Config\BuilderInterface $pageLayoutBuilder,
+        array $data = []
     ) {
         $this->pageLayoutBuilder = $pageLayoutBuilder;
         $this->_cmsPage = $cmsPage;
@@ -85,7 +67,7 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
         parent::_construct();
         //$this->setDefaultSort('name');
         $this->setUseAjax(true);
-        $this->setDefaultFilter(array('chooser_is_active' => '1'));
+        $this->setDefaultFilter(['chooser_is_active' => '1']);
     }
 
     /**
@@ -97,7 +79,7 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
     public function prepareElementHtml(\Magento\Framework\Data\Form\Element\AbstractElement $element)
     {
         $uniqId = $this->mathRandom->getUniqueHash($element->getId());
-        $sourceUrl = $this->getUrl('cms/page_widget/chooser', array('uniq_id' => $uniqId));
+        $sourceUrl = $this->getUrl('cms/page_widget/chooser', ['uniq_id' => $uniqId]);
 
         $chooser = $this->getLayout()->createBlock(
             'Magento\Widget\Block\Adminhtml\Widget\Chooser'
@@ -112,7 +94,6 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
         )->setUniqId(
             $uniqId
         );
-
 
         if ($element->getValue()) {
             $page = $this->_pageFactory->create()->load((int)$element->getValue());
@@ -160,7 +141,7 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
     protected function _prepareCollection()
     {
         $collection = $this->_collectionFactory->create();
-        /* @var $collection \Magento\Cms\Model\Resource\Page\Collection */
+        /* @var $collection \Magento\Cms\Model\Resource\Page\CollectionFactory */
         $collection->setFirstStoreFlag(true);
         $this->setCollection($collection);
 
@@ -176,56 +157,56 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
     {
         $this->addColumn(
             'chooser_id',
-            array(
+            [
                 'header' => __('ID'),
                 'index' => 'page_id',
                 'header_css_class' => 'col-id',
                 'column_css_class' => 'col-id'
-            )
+            ]
         );
 
         $this->addColumn(
             'chooser_title',
-            array(
+            [
                 'header' => __('Title'),
                 'index' => 'title',
                 'header_css_class' => 'col-title',
                 'column_css_class' => 'col-title'
-            )
+            ]
         );
 
         $this->addColumn(
             'chooser_identifier',
-            array(
+            [
                 'header' => __('URL Key'),
                 'index' => 'identifier',
                 'header_css_class' => 'col-url',
                 'column_css_class' => 'col-url'
-            )
+            ]
         );
 
         $this->addColumn(
             'chooser_page_layout',
-            array(
+            [
                 'header' => __('Layout'),
                 'index' => 'page_layout',
                 'type' => 'options',
                 'options' => $this->pageLayoutBuilder->getPageLayoutsConfig()->getOptions(),
                 'header_css_class' => 'col-layout',
                 'column_css_class' => 'col-layout'
-            )
+            ]
         );
 
         $this->addColumn(
             'chooser_is_active',
-            array(
+            [
                 'header' => __('Status'),
                 'index' => 'is_active',
                 'type' => 'options',
                 'options' => $this->_cmsPage->getAvailableStatuses(),
                 'header_css_class' => 'col-status',
                 'column_css_class' => 'col-status'
-            )
+            ]
         );
 
         return parent::_prepareColumns();
@@ -238,6 +219,6 @@ class Chooser extends \Magento\Backend\Block\Widget\Grid\Extended
      */
     public function getGridUrl()
     {
-        return $this->getUrl('cms/page_widget/chooser', array('_current' => true));
+        return $this->getUrl('cms/page_widget/chooser', ['_current' => true]);
     }
 }

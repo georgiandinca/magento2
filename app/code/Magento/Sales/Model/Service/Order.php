@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Sales\Model\Service;
 
@@ -91,12 +73,12 @@ class Order
      * @param array $qtys
      * @return \Magento\Sales\Model\Order\Invoice
      */
-    public function prepareInvoice($qtys = array())
+    public function prepareInvoice($qtys = [])
     {
         $invoice = $this->_convertor->toInvoice($this->_order);
         $totalQty = 0;
         foreach ($this->_order->getAllItems() as $orderItem) {
-            if (!$this->_canInvoiceItem($orderItem, array())) {
+            if (!$this->_canInvoiceItem($orderItem, [])) {
                 continue;
             }
             $item = $this->_convertor->itemToInvoiceItem($orderItem);
@@ -125,7 +107,7 @@ class Order
      * @param array $qtys
      * @return \Magento\Sales\Model\Order\Shipment
      */
-    public function prepareShipment($qtys = array())
+    public function prepareShipment($qtys = [])
     {
         $totalQty = 0;
         $shipment = $this->_convertor->toShipment($this->_order);
@@ -181,11 +163,11 @@ class Order
      * @param array $data
      * @return \Magento\Sales\Model\Order\Creditmemo
      */
-    public function prepareCreditmemo($data = array())
+    public function prepareCreditmemo($data = [])
     {
         $totalQty = 0;
         $creditmemo = $this->_convertor->toCreditmemo($this->_order);
-        $qtys = isset($data['qtys']) ? $data['qtys'] : array();
+        $qtys = isset($data['qtys']) ? $data['qtys'] : [];
 
         foreach ($this->_order->getAllItems() as $orderItem) {
             if (!$this->_canRefundItem($orderItem, $qtys)) {
@@ -223,15 +205,17 @@ class Order
      * @param object $invoice
      * @param array $data
      * @return \Magento\Sales\Model\Order\Creditmemo
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function prepareInvoiceCreditmemo($invoice, $data = array())
+    public function prepareInvoiceCreditmemo($invoice, $data = [])
     {
         $totalQty = 0;
-        $qtys = isset($data['qtys']) ? $data['qtys'] : array();
+        $qtys = isset($data['qtys']) ? $data['qtys'] : [];
         $creditmemo = $this->_convertor->toCreditmemo($this->_order);
         $creditmemo->setInvoice($invoice);
 
-        $invoiceQtysRefunded = array();
+        $invoiceQtysRefunded = [];
         foreach ($invoice->getOrder()->getCreditmemosCollection() as $createdCreditmemo) {
             if ($createdCreditmemo->getState() != \Magento\Sales\Model\Order\Creditmemo::STATE_CANCELED &&
                 $createdCreditmemo->getInvoiceId() == $invoice->getId()
@@ -247,7 +231,7 @@ class Order
             }
         }
 
-        $invoiceQtysRefundLimits = array();
+        $invoiceQtysRefundLimits = [];
         foreach ($invoice->getAllItems() as $invoiceItem) {
             $invoiceQtyCanBeRefunded = $invoiceItem->getQty();
             $orderItemId = $invoiceItem->getOrderItem()->getId();
@@ -256,7 +240,6 @@ class Order
             }
             $invoiceQtysRefundLimits[$orderItemId] = $invoiceQtyCanBeRefunded;
         }
-
 
         foreach ($invoice->getAllItems() as $invoiceItem) {
             $orderItem = $invoiceItem->getOrderItem();
@@ -335,8 +318,9 @@ class Order
      * @param \Magento\Sales\Model\Order\Item $item
      * @param array $qtys
      * @return bool
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
-    protected function _canInvoiceItem($item, $qtys = array())
+    protected function _canInvoiceItem($item, $qtys = [])
     {
         if ($item->getLockedDoInvoice()) {
             return false;
@@ -375,8 +359,9 @@ class Order
      * @param \Magento\Sales\Model\Order\Item $item
      * @param array $qtys
      * @return bool
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
-    protected function _canShipItem($item, $qtys = array())
+    protected function _canShipItem($item, $qtys = [])
     {
         if ($item->getIsVirtual() || $item->getLockedDoShip()) {
             return false;
@@ -421,8 +406,9 @@ class Order
      * @param array $qtys
      * @param array $invoiceQtysRefundLimits
      * @return bool
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
-    protected function _canRefundItem($item, $qtys = array(), $invoiceQtysRefundLimits = array())
+    protected function _canRefundItem($item, $qtys = [], $invoiceQtysRefundLimits = [])
     {
         if ($item->isDummy()) {
             if ($item->getHasChildren()) {
@@ -458,7 +444,7 @@ class Order
      * @param array $invoiceQtysRefundLimits
      * @return bool
      */
-    protected function _canRefundNoDummyItem($item, $invoiceQtysRefundLimits = array())
+    protected function _canRefundNoDummyItem($item, $invoiceQtysRefundLimits = [])
     {
         if ($item->getQtyToRefund() < 0) {
             return false;

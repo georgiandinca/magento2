@@ -1,36 +1,22 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Eav\Model\Entity;
 
-use Magento\Eav\Exception;
+use Magento\Eav\Exception as EavException;
+use Magento\Framework\Api\AttributeValueFactory;
 
 /**
  * EAV Entity attribute model
  *
  * @method \Magento\Eav\Model\Entity\Attribute setOption($value)
+ * @method \Magento\Eav\Api\Data\AttributeExtensionInterface getExtensionAttributes()
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute implements \Magento\Framework\Object\IdentityInterface
+class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute implements
+    \Magento\Framework\Object\IdentityInterface
 {
     /**
      * Attribute code max length
@@ -81,44 +67,57 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
     /**
      * @param \Magento\Framework\Model\Context $context
      * @param \Magento\Framework\Registry $registry
-     * @param \Magento\Core\Helper\Data $coreData
+     * @param \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory
+     * @param AttributeValueFactory $customAttributeFactory
      * @param \Magento\Eav\Model\Config $eavConfig
-     * @param \Magento\Eav\Model\Entity\TypeFactory $eavTypeFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param TypeFactory $eavTypeFactory
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Eav\Model\Resource\Helper $resourceHelper
      * @param \Magento\Framework\Validator\UniversalFactory $universalFactory
+     * @param \Magento\Eav\Api\Data\AttributeOptionInterfaceFactory $optionDataFactory
+     * @param \Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor
+     * @param \Magento\Framework\Api\DataObjectHelper $dataObjectHelper
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\Catalog\Model\Product\ReservedAttributeList $reservedAttributeList
      * @param \Magento\Framework\Locale\ResolverInterface $localeResolver
      * @param \Magento\Framework\Model\Resource\AbstractResource $resource
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
         \Magento\Framework\Registry $registry,
-        \Magento\Core\Helper\Data $coreData,
+        \Magento\Framework\Api\ExtensionAttributesFactory $extensionFactory,
+        AttributeValueFactory $customAttributeFactory,
         \Magento\Eav\Model\Config $eavConfig,
         \Magento\Eav\Model\Entity\TypeFactory $eavTypeFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Eav\Model\Resource\Helper $resourceHelper,
         \Magento\Framework\Validator\UniversalFactory $universalFactory,
+        \Magento\Eav\Api\Data\AttributeOptionInterfaceFactory $optionDataFactory,
+        \Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor,
+        \Magento\Framework\Api\DataObjectHelper $dataObjectHelper,
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Catalog\Model\Product\ReservedAttributeList $reservedAttributeList,
         \Magento\Framework\Locale\ResolverInterface $localeResolver,
         \Magento\Framework\Model\Resource\AbstractResource $resource = null,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
         parent::__construct(
             $context,
             $registry,
-            $coreData,
+            $extensionFactory,
+            $customAttributeFactory,
             $eavConfig,
             $eavTypeFactory,
             $storeManager,
             $resourceHelper,
             $universalFactory,
+            $optionDataFactory,
+            $dataObjectProcessor,
+            $dataObjectHelper,
             $resource,
             $resourceCollection,
             $data
@@ -196,6 +195,7 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
     public function loadEntityAttributeIdBySet()
     {
         // load attributes collection filtered by attribute_id and attribute_set_id
+
         $filteredAttributes = $this->getResourceCollection()->setAttributeSetFilter(
             $this->getAttributeSetId()
         )->addFieldToFilter(
@@ -213,13 +213,15 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
      * Prepare data for save
      *
      * @return $this
-     * @throws Exception
+     * @throws EavException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    protected function _beforeSave()
+    public function beforeSave()
     {
         // prevent overriding product data
         if (isset($this->_data['attribute_code']) && $this->reservedAttributeList->isReservedAttribute($this)) {
-            throw new Exception(
+            throw new EavException(
                 __(
                     'The attribute code \'%1\' is reserved by system. Please try another attribute code',
                     $this->_data['attribute_code']
@@ -235,10 +237,10 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
         ) && !\Zend_Validate::is(
             $this->_data['attribute_code'],
             'StringLength',
-            array('max' => self::ATTRIBUTE_CODE_MAX_LENGTH)
+            ['max' => self::ATTRIBUTE_CODE_MAX_LENGTH]
         )
         ) {
-            throw new Exception(
+            throw new EavException(
                 __('Maximum length of attribute code must be less than %1 symbols', self::ATTRIBUTE_CODE_MAX_LENGTH)
             );
         }
@@ -247,22 +249,12 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
         $hasDefaultValue = (string)$defaultValue != '';
 
         if ($this->getBackendType() == 'decimal' && $hasDefaultValue) {
-            if (!\Zend_Locale_Format::isNumber(
-                $defaultValue,
-                array('locale' => $this->_localeResolver->getLocaleCode())
-            )
-            ) {
-                throw new Exception(__('Invalid default decimal value'));
+            $numberFormatter = new \NumberFormatter($this->_localeResolver->getLocale(), \NumberFormatter::DECIMAL);
+            $defaultValue = $numberFormatter->parse($defaultValue);
+            if ($defaultValue === false) {
+                throw new EavException(__('Invalid default decimal value'));
             }
-
-            try {
-                $filter = new \Zend_Filter_LocalizedToNormalized(
-                    array('locale' => $this->_localeResolver->getLocaleCode())
-                );
-                $this->setDefaultValue($filter->filter($defaultValue));
-            } catch (\Exception $e) {
-                throw new Exception(__('Invalid default decimal value'));
-            }
+            $this->setDefaultValue($defaultValue);
         }
 
         if ($this->getBackendType() == 'datetime') {
@@ -277,13 +269,13 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
             // save default date value as timestamp
             if ($hasDefaultValue) {
                 $format = $this->_localeDate->getDateFormat(
-                    \Magento\Framework\Stdlib\DateTime\TimezoneInterface::FORMAT_TYPE_SHORT
+                    \IntlDateFormatter::SHORT
                 );
                 try {
-                    $defaultValue = $this->_localeDate->date($defaultValue, $format, null, false)->toValue();
+                    $defaultValue = \IntlDateFormatter::formatObject(new \DateTime($defaultValue), $format);
                     $this->setDefaultValue($defaultValue);
                 } catch (\Exception $e) {
-                    throw new Exception(__('Invalid default date'));
+                    throw new EavException(__('Invalid default date'));
                 }
             }
         }
@@ -294,7 +286,7 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
             }
         }
 
-        return parent::_beforeSave();
+        return parent::beforeSave();
     }
 
     /**
@@ -302,10 +294,10 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
      *
      * @return $this
      */
-    protected function _afterSave()
+    public function afterSave()
     {
         $this->_getResource()->saveInSetIncluding($this);
-        return parent::_afterSave();
+        return parent::afterSave();
     }
 
     /**
@@ -313,6 +305,7 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
      *
      * @param string $type frontend_input field value
      * @return string backend_type field value
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function getBackendTypeByInput($type)
     {
@@ -356,6 +349,7 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
      *
      * @param string $type frontend_input field name
      * @return string default_value field value
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function getDefaultValueByInput($type)
     {
@@ -464,6 +458,6 @@ class Attribute extends \Magento\Eav\Model\Entity\Attribute\AbstractAttribute im
      */
     public function getIdentities()
     {
-        return array(self::CACHE_TAG . '_' . $this->getId());
+        return [self::CACHE_TAG . '_' . $this->getId()];
     }
 }

@@ -1,34 +1,18 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\CatalogImportExport\Model\Import;
+
+use Magento\Framework\App\Filesystem\DirectoryList;
 
 /**
  * Import entity product model
  *
  * @author      Magento Core Team <core@magentocommerce.com>
  */
-class Uploader extends \Magento\Core\Model\File\Uploader
+class Uploader extends \Magento\MediaStorage\Model\File\Uploader
 {
     /**
      * @var string
@@ -43,12 +27,12 @@ class Uploader extends \Magento\Core\Model\File\Uploader
     /**
      * @var array
      */
-    protected $_allowedMimeTypes = array(
+    protected $_allowedMimeTypes = [
         'jpg' => 'image/jpeg',
         'jpeg' => 'image/jpeg',
         'gif' => 'image/gif',
-        'png' => 'image/png'
-    );
+        'png' => 'image/png',
+    ];
 
     const DEFAULT_FILE_TYPE = 'application/octet-stream';
 
@@ -58,34 +42,34 @@ class Uploader extends \Magento\Core\Model\File\Uploader
     protected $_imageFactory;
 
     /**
-     * @var \Magento\Core\Model\File\Validator\NotProtectedExtension
+     * @var \Magento\MediaStorage\Model\File\Validator\NotProtectedExtension
      */
     protected $_validator;
 
     /**
-     * @param \Magento\Core\Helper\File\Storage\Database $coreFileStorageDb
-     * @param \Magento\Core\Helper\File\Storage $coreFileStorage
+     * @param \Magento\MediaStorage\Helper\File\Storage\Database $coreFileStorageDb
+     * @param \Magento\MediaStorage\Helper\File\Storage $coreFileStorage
      * @param \Magento\Framework\Image\AdapterFactory $imageFactory
-     * @param \Magento\Core\Model\File\Validator\NotProtectedExtension $validator
-     * @param \Magento\Framework\App\Filesystem $filesystem
+     * @param \Magento\MediaStorage\Model\File\Validator\NotProtectedExtension $validator
+     * @param \Magento\Framework\Filesystem $filesystem
      * @param string $filePath
      */
     public function __construct(
-        \Magento\Core\Helper\File\Storage\Database $coreFileStorageDb,
-        \Magento\Core\Helper\File\Storage $coreFileStorage,
+        \Magento\MediaStorage\Helper\File\Storage\Database $coreFileStorageDb,
+        \Magento\MediaStorage\Helper\File\Storage $coreFileStorage,
         \Magento\Framework\Image\AdapterFactory $imageFactory,
-        \Magento\Core\Model\File\Validator\NotProtectedExtension $validator,
-        \Magento\Framework\App\Filesystem $filesystem,
+        \Magento\MediaStorage\Model\File\Validator\NotProtectedExtension $validator,
+        \Magento\Framework\Filesystem $filesystem,
         $filePath = null
     ) {
-        if (!is_null($filePath)) {
+        if ($filePath !== null) {
             $this->_setUploadFile($filePath);
         }
         $this->_imageFactory = $imageFactory;
         $this->_coreFileStorageDb = $coreFileStorageDb;
         $this->_coreFileStorage = $coreFileStorage;
         $this->_validator = $validator;
-        $this->_directory = $filesystem->getDirectoryWrite(\Magento\Framework\App\Filesystem::ROOT_DIR);
+        $this->_directory = $filesystem->getDirectoryWrite(DirectoryList::ROOT);
     }
 
     /**
@@ -124,12 +108,14 @@ class Uploader extends \Magento\Core\Model\File\Uploader
      *
      * @param string $filePath
      * @return void
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function _setUploadFile($filePath)
     {
         if (!$this->_directory->isReadable($filePath)) {
-            throw new \Magento\Framework\Model\Exception("File '{$filePath}' was not found or has read restriction.");
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __('File \'%1\' was not found or has read restriction.', $filePath)
+            );
         }
         $this->_file = $this->_readFileInfo($filePath);
 
@@ -145,13 +131,13 @@ class Uploader extends \Magento\Core\Model\File\Uploader
     protected function _readFileInfo($filePath)
     {
         $fileInfo = pathinfo($filePath);
-        return array(
+        return [
             'name' => $fileInfo['basename'],
             'type' => $this->_getMimeTypeByExt($fileInfo['extension']),
             'tmp_name' => $filePath,
             'error' => 0,
             'size' => $this->_directory->stat($filePath)['size']
-        );
+        ];
     }
 
     /**

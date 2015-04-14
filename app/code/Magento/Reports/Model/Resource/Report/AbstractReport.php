@@ -1,31 +1,16 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
 
 namespace Magento\Reports\Model\Resource\Report;
 
 /**
  * Abstract report aggregate resource model
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\AbstractDb
 {
@@ -37,7 +22,7 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
     protected $_flag = null;
 
     /**
-     * @var \Magento\Framework\Logger
+     * @var \Psr\Log\LoggerInterface
      */
     protected $_logger;
 
@@ -52,22 +37,24 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
     protected $_reportsFlagFactory;
 
     /**
-     * @param \Magento\Framework\App\Resource $resource
-     * @param \Magento\Framework\Logger $logger
+     * @param \Magento\Framework\Model\Resource\Db\Context $context
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\Reports\Model\FlagFactory $reportsFlagFactory
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
      * @param \Magento\Framework\Stdlib\DateTime\Timezone\Validator $timezoneValidator
+     * @param string|null $resourcePrefix
      */
     public function __construct(
-        \Magento\Framework\App\Resource $resource,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Model\Resource\Db\Context $context,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Reports\Model\FlagFactory $reportsFlagFactory,
         \Magento\Framework\Stdlib\DateTime $dateTime,
-        \Magento\Framework\Stdlib\DateTime\Timezone\Validator $timezoneValidator
+        \Magento\Framework\Stdlib\DateTime\Timezone\Validator $timezoneValidator,
+        $resourcePrefix = null
     ) {
-        parent::__construct($resource);
+        parent::__construct($context, $resourcePrefix);
         $this->_logger = $logger;
         $this->_localeDate = $localeDate;
         $this->_reportsFlagFactory = $reportsFlagFactory;
@@ -103,7 +90,7 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
             $this->_getFlag()->setFlagData($value);
         }
 
-        $time = $this->dateTime->toTimestamp(true);
+        $time = (new \DateTime())->getTimestamp();
         // touch last_update
         $this->_getFlag()->setLastUpdate($this->dateTime->formatDate($time));
 
@@ -168,7 +155,7 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
         if ($subSelect !== null) {
             $deleteCondition = $this->_makeConditionFromDateRangeSelect($subSelect, 'period');
         } else {
-            $condition = array();
+            $condition = [];
             if ($from !== null) {
                 $condition[] = $this->_getWriteAdapter()->quoteInto('period >= ?', $from);
             }
@@ -188,8 +175,8 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
      * @param string $table
      * @param string $column
      * @param string $whereColumn
-     * @param null|string $from
-     * @param null|string $to
+     * @param null|string|\DateTime $from
+     * @param null|string|\DateTime $to
      * @param array $additionalWhere
      * @param string $alias
      * @return \Magento\Framework\DB\Select
@@ -200,14 +187,14 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
         $whereColumn,
         $from = null,
         $to = null,
-        $additionalWhere = array(),
+        $additionalWhere = [],
         $alias = 'date_range_table'
     ) {
         $adapter = $this->_getReadAdapter();
         $select = $adapter->select()->from(
-            array($alias => $table),
+            [$alias => $table],
             $adapter->getDatePartSql(
-                $this->getStoreTZOffsetQuery(array($alias => $table), $alias . '.' . $column, $from, $to)
+                $this->getStoreTZOffsetQuery([$alias => $table], $alias . '.' . $column, $from, $to)
             )
         )->distinct(
             true
@@ -246,12 +233,12 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
      */
     protected function _makeConditionFromDateRangeSelect($select, $periodColumn)
     {
-        static $selectResultCache = array();
+        static $selectResultCache = [];
         $cacheKey = (string)$select;
 
         if (!array_key_exists($cacheKey, $selectResultCache)) {
             try {
-                $selectResult = array();
+                $selectResult = [];
                 $query = $this->_getReadAdapter()->query($select);
                 while (true == ($date = $query->fetchColumn())) {
                     $selectResult[] = $date;
@@ -267,10 +254,10 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
             return false;
         }
 
-        $whereCondition = array();
+        $whereCondition = [];
         $adapter = $this->_getReadAdapter();
         foreach ($selectResult as $date) {
-            $whereCondition[] = $adapter->prepareSqlCondition($periodColumn, array('like' => $date));
+            $whereCondition[] = $adapter->prepareSqlCondition($periodColumn, ['like' => $date]);
         }
         $whereCondition = implode(' OR ', $whereCondition);
         if ($whereCondition == '') {
@@ -294,6 +281,7 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
      * @param string $alias
      * @param string $relatedAlias
      * @return \Magento\Framework\DB\Select
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     protected function _getTableDateRangeRelatedSelect(
         $table,
@@ -303,24 +291,24 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
         $whereColumn,
         $from = null,
         $to = null,
-        $additionalWhere = array(),
+        $additionalWhere = [],
         $alias = 'date_range_table',
         $relatedAlias = 'related_date_range_table'
     ) {
         $adapter = $this->_getReadAdapter();
-        $joinConditionSql = array();
+        $joinConditionSql = [];
 
         foreach ($joinCondition as $fkField => $pkField) {
             $joinConditionSql[] = sprintf('%s.%s = %s.%s', $alias, $fkField, $relatedAlias, $pkField);
         }
 
         $select = $adapter->select()->from(
-            array($alias => $table),
+            [$alias => $table],
             $adapter->getDatePartSql($adapter->quoteIdentifier($alias . '.' . $column))
         )->joinInner(
-            array($relatedAlias => $relatedTable),
+            [$relatedAlias => $relatedTable],
             implode(' AND ', $joinConditionSql),
-            array()
+            []
         )->distinct(
             true
         );
@@ -342,8 +330,8 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
                     continue;
                 }
                 $condition = str_replace(
-                    array('{{table}}', '{{related_table}}'),
-                    array($adapter->quoteIdentifier($alias), $adapter->quoteIdentifier($relatedAlias)),
+                    ['{{table}}', '{{related_table}}'],
+                    [$adapter->quoteIdentifier($alias), $adapter->quoteIdentifier($relatedAlias)],
                     $condition
                 );
                 $select->where($condition);
@@ -351,26 +339,6 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
         }
 
         return $select;
-    }
-
-    /**
-     * Check range dates and transforms it to strings
-     *
-     * @param mixed &$dateFrom
-     * @param mixed &$dateTo
-     * @return $this
-     */
-    protected function _checkDates(&$dateFrom, &$dateTo)
-    {
-        if ($dateFrom !== null) {
-            $dateFrom = $this->dateTime->formatDate($dateFrom);
-        }
-
-        if ($dateTo !== null) {
-            $dateTo = $this->dateTime->formatDate($dateTo);
-        }
-
-        return $this;
     }
 
     /**
@@ -388,12 +356,12 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
         $column = $this->_getWriteAdapter()->quoteIdentifier($column);
 
         if (null === $from) {
-            $selectOldest = $this->_getWriteAdapter()->select()->from($table, array("MIN({$column})"));
+            $selectOldest = $this->_getWriteAdapter()->select()->from($table, ["MIN({$column})"]);
             $from = $this->_getWriteAdapter()->fetchOne($selectOldest);
         }
 
         $periods = $this->_getTZOffsetTransitions(
-            $this->_localeDate->scopeDate($store)->toString(\Zend_Date::TIMEZONE_NAME),
+            $this->_localeDate->scopeDate($store)->format('e'),
             $from,
             $to
         );
@@ -406,7 +374,7 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
 
         $i = 0;
         foreach ($periods as $offset => $timestamps) {
-            $subParts = array();
+            $subParts = [];
             foreach ($timestamps as $ts) {
                 $subParts[] = "({$column} between {$ts['from']} and {$ts['to']})";
             }
@@ -430,39 +398,41 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
      * @param mixed $from
      * @param mixed $to
      * @return array
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function _getTZOffsetTransitions($timezone, $from = null, $to = null)
     {
-        $tzTransitions = array();
+        $tzTransitions = [];
         try {
             if (!empty($from)) {
-                $from = new \Magento\Framework\Stdlib\DateTime\Date($from, \Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT);
-                $from = $from->getTimestamp();
+                $from = $from instanceof \DateTime
+                    ? $from->getTimestamp()
+                    : (new \DateTime($from))->getTimestamp();
             }
 
-            $to = new \Magento\Framework\Stdlib\DateTime\Date($to, \Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT);
+            $to = $to instanceof \DateTime
+                ? $to
+                : new \DateTime($to);
             $nextPeriod = $this->_getWriteAdapter()->formatDate(
-                $to->toString(\Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT)
+                $to->format('Y-m-d H:i:s')
             );
             $to = $to->getTimestamp();
 
             $dtz = new \DateTimeZone($timezone);
             $transitions = $dtz->getTransitions();
-            $dateTimeObject = new \Magento\Framework\Stdlib\DateTime\Date('c');
 
             for ($i = count($transitions) - 1; $i >= 0; $i--) {
                 $tr = $transitions[$i];
                 try {
                     $this->timezoneValidator->validate($tr['ts'], $to);
-                } catch (\Magento\Framework\Stdlib\DateTime\Timezone\ValidationException $e) {
+                } catch (\Magento\Framework\Exception\ValidatorException $e) {
                     continue;
                 }
 
-                $dateTimeObject->set($tr['time']);
                 $tr['time'] = $this->_getWriteAdapter()->formatDate(
-                    $dateTimeObject->toString(\Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT)
+                    (new \DateTime($tr['time']))->format('Y-m-d H:i:s')
                 );
-                $tzTransitions[$tr['offset']][] = array('from' => $tr['time'], 'to' => $nextPeriod);
+                $tzTransitions[$tr['offset']][] = ['from' => $tr['time'], 'to' => $nextPeriod];
 
                 if (!empty($from) && $tr['ts'] < $from) {
                     break;
@@ -470,7 +440,7 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
                 $nextPeriod = $tr['time'];
             }
         } catch (\Exception $e) {
-            $this->_logger->logException($e);
+            $this->_logger->critical($e);
         }
 
         return $tzTransitions;
@@ -484,22 +454,28 @@ abstract class AbstractReport extends \Magento\Framework\Model\Resource\Db\Abstr
      */
     protected function _getStoreTimezoneUtcOffset($store = null)
     {
-        return $this->_localeDate->scopeDate($store)->toString(\Zend_Date::GMT_DIFF_SEP);
+        return $this->_localeDate->scopeDate($store)->format('P');
     }
 
     /**
      * Retrieve date in UTC timezone
      *
      * @param mixed $date
-     * @return null|\Magento\Framework\Stdlib\DateTime\DateInterface
+     * @return null|\DateTime
      */
     protected function _dateToUtc($date)
     {
         if ($date === null) {
             return null;
         }
-        $dateUtc = new \Magento\Framework\Stdlib\DateTime\Date($date);
-        $dateUtc->setTimezone('Etc/UTC');
-        return $dateUtc;
+
+        if ($date instanceof \DateTimeInterface) {
+            $dateUtc = $date;
+        } else {
+            $dateUtc = new \DateTime($date);
+        }
+
+        $dateUtc->setTimezone(new \DateTimeZone('UTC'));
+        return $dateUtc->format('Y-m-d H:i:s');
     }
 }

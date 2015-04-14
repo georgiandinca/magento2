@@ -1,30 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Sendfriend\Controller;
 
-use Magento\Framework\App\Action\NotFoundException;
+use Magento\Framework\Exception\NotFoundException;
 use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Exception\NoSuchEntityException;
 
 /**
  * Email to a Friend Product Controller
@@ -41,7 +24,7 @@ class Product extends \Magento\Framework\App\Action\Action
     protected $_coreRegistry = null;
 
     /**
-     * @var \Magento\Core\App\Action\FormKeyValidator
+     * @var \Magento\Framework\Data\Form\FormKey\Validator
      */
     protected $_formKeyValidator;
 
@@ -50,22 +33,28 @@ class Product extends \Magento\Framework\App\Action\Action
      */
     protected $sendFriend;
 
+    /** @var  \Magento\Catalog\Api\ProductRepositoryInterface */
+    protected $productRepository;
+
     /**
      * @param \Magento\Framework\App\Action\Context $context
      * @param \Magento\Framework\Registry $coreRegistry
-     * @param \Magento\Core\App\Action\FormKeyValidator $formKeyValidator
+     * @param \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator
      * @param \Magento\Sendfriend\Model\Sendfriend $sendFriend
+     * @param \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
      */
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
         \Magento\Framework\Registry $coreRegistry,
-        \Magento\Core\App\Action\FormKeyValidator $formKeyValidator,
-        \Magento\Sendfriend\Model\Sendfriend $sendFriend
+        \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator,
+        \Magento\Sendfriend\Model\Sendfriend $sendFriend,
+        \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
     ) {
+        parent::__construct($context);
         $this->_coreRegistry = $coreRegistry;
         $this->_formKeyValidator = $formKeyValidator;
         $this->sendFriend = $sendFriend;
-        parent::__construct($context);
+        $this->productRepository = $productRepository;
     }
 
     /**
@@ -74,7 +63,7 @@ class Product extends \Magento\Framework\App\Action\Action
      *
      * @param RequestInterface $request
      * @return \Magento\Framework\App\ResponseInterface
-     * @throws \Magento\Framework\App\Action\NotFoundException
+     * @throws \Magento\Framework\Exception\NotFoundException
      */
     public function dispatch(RequestInterface $request)
     {
@@ -84,25 +73,15 @@ class Product extends \Magento\Framework\App\Action\Action
         $session = $this->_objectManager->get('Magento\Customer\Model\Session');
 
         if (!$helper->isEnabled()) {
-            throw new NotFoundException();
+            throw new NotFoundException(__('Page not found.'));
         }
 
         if (!$helper->isAllowForGuest() && !$session->authenticate($this)) {
             $this->_actionFlag->set('', self::FLAG_NO_DISPATCH, true);
             if ($this->getRequest()->getActionName() == 'sendemail') {
-                $session->setBeforeAuthUrl(
-                    $this->_objectManager->create(
-                        'Magento\Framework\UrlInterface'
-                    )->getUrl(
-                        '*/*/send',
-                        array('_current' => true)
-                    )
-                );
-                $this->_objectManager->get(
-                    'Magento\Catalog\Model\Session'
-                )->setSendfriendFormData(
-                    $request->getPost()
-                );
+                $session->setBeforeAuthUrl($this->_url->getUrl('sendfriend/product/send', ['_current' => true]));
+                $this->_objectManager->get('Magento\Catalog\Model\Session')
+                    ->setSendfriendFormData($request->getPostValue());
             }
         }
         return parent::dispatch($request);
@@ -119,23 +98,16 @@ class Product extends \Magento\Framework\App\Action\Action
         if (!$productId) {
             return false;
         }
-        $product = $this->_objectManager->create('Magento\Catalog\Model\Product')->load($productId);
-        if (!$product->getId() || !$product->isVisibleInCatalog()) {
+        try {
+            $product = $this->productRepository->getById($productId);
+            if (!$product->isVisibleInCatalog()) {
+                return false;
+            }
+        } catch (NoSuchEntityException $noEntityException) {
             return false;
         }
 
         $this->_coreRegistry->register('product', $product);
         return $product;
-    }
-
-    /**
-     * Initialize send friend model
-     *
-     * @return \Magento\Sendfriend\Model\Sendfriend
-     */
-    protected function _initSendToFriendModel()
-    {
-        $this->sendFriend->register();
-        return $this->sendFriend;
     }
 }

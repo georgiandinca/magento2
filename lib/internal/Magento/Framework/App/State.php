@@ -2,26 +2,8 @@
 /**
  *  Application state flags
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework\App;
 
@@ -37,7 +19,7 @@ class State
      *
      * @var string
      */
-    private $_appMode;
+    protected $_appMode;
 
     /**
      * Is downloader flag
@@ -52,13 +34,6 @@ class State
      * @var bool
      */
     protected $_updateMode = false;
-
-    /**
-     * Application install date
-     *
-     * @var string
-     */
-    protected $_installDate;
 
     /**
      * Config scope model
@@ -84,20 +59,16 @@ class State
     const MODE_DEFAULT = 'default';
 
     /**#@-*/
-    const PARAM_INSTALL_DATE = 'install.date';
 
     /**
      * @param \Magento\Framework\Config\ScopeInterface $configScope
-     * @param string $installDate
      * @param string $mode
      * @throws \LogicException
      */
     public function __construct(
         \Magento\Framework\Config\ScopeInterface $configScope,
-        $installDate,
         $mode = self::MODE_DEFAULT
     ) {
-        $this->_installDate = strtotime((string)$installDate);
         $this->_configScope = $configScope;
         switch ($mode) {
             case self::MODE_DEVELOPER:
@@ -108,16 +79,6 @@ class State
             default:
                 throw new \InvalidArgumentException("Unknown application mode: {$mode}");
         }
-    }
-
-    /**
-     * Check if application is installed
-     *
-     * @return bool
-     */
-    public function isInstalled()
-    {
-        return (bool)$this->_installDate;
     }
 
     /**
@@ -164,37 +125,18 @@ class State
     }
 
     /**
-     * Set install date
-     *
-     * @param string $date
-     * @return void
-     */
-    public function setInstallDate($date)
-    {
-        $this->_installDate = $date;
-    }
-
-    /**
-     * Get install date
-     *
-     * @return int
-     */
-    public function getInstallDate()
-    {
-        return $this->_installDate;
-    }
-
-    /**
      * Set area code
      *
      * @param string $code
      * @return void
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function setAreaCode($code)
     {
         if (isset($this->_areaCode)) {
-            throw new \Magento\Framework\Exception('Area code is already set');
+            throw new \Magento\Framework\Exception\LocalizedException(
+                new \Magento\Framework\Phrase('Area code is already set')
+            );
         }
         $this->_configScope->setCurrentScope($code);
         $this->_areaCode = $code;
@@ -204,12 +146,14 @@ class State
      * Get area code
      *
      * @return string
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function getAreaCode()
     {
         if (!isset($this->_areaCode)) {
-            throw new \Magento\Framework\Exception('Area code is not set');
+            throw new \Magento\Framework\Exception\LocalizedException(
+                new \Magento\Framework\Phrase('Area code is not set')
+            );
         }
         return $this->_areaCode;
     }
@@ -223,7 +167,7 @@ class State
      * @return mixed
      * @throws \Exception
      */
-    public function emulateAreaCode($areaCode, $callback, $params = array())
+    public function emulateAreaCode($areaCode, $callback, $params = [])
     {
         $currentArea = $this->_areaCode;
         $this->_areaCode = $areaCode;

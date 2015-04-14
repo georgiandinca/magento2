@@ -1,72 +1,53 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Review\Test\Block;
 
+use Magento\Mtf\Client\Locator;
+use Magento\Mtf\Fixture\FixtureInterface;
+use Magento\Mtf\Client\Element\SimpleElement;
 use Magento\Review\Test\Fixture\Rating;
-use Magento\Review\Test\Fixture\ReviewInjectable;
-use Mtf\Block\Form as AbstractForm;
-use Mtf\Client\Element;
-use Mtf\Client\Element\Locator;
-use Mtf\Fixture\FixtureInterface;
+use Magento\Review\Test\Fixture\Review;
+use Magento\Mtf\Block\Form as AbstractForm;
 
 /**
- * Class Form
- * Review form on frontend
+ * Review form on frontend.
  */
 class Form extends AbstractForm
 {
     /**
-     * Legend selector
+     * Legend selector.
      *
      * @var string
      */
     protected $legendSelector = 'legend';
 
     /**
-     * 'Submit' review button selector
+     * 'Submit' review button selector.
      *
      * @var string
      */
     protected $submitButton = '.action.submit';
 
     /**
-     * Single product rating selector
+     * Single product rating selector.
      *
      * @var string
      */
     protected $rating = './/*[@id="%s_rating_label"]/..[contains(@class,"rating")]';
 
     /**
-     * Selector for label of rating vote
+     * Selector for label of rating vote.
      *
      * @var string
      */
     protected $ratingVoteLabel = './div[contains(@class,"vote")]/label[contains(@id,"_%d_label")]';
 
     /**
-     * Submit review form
+     * Submit review form.
      *
      * @return void
      */
@@ -76,9 +57,9 @@ class Form extends AbstractForm
     }
 
     /**
-     * Get legend
+     * Get legend.
      *
-     * @return Element
+     * @return SimpleElement
      */
     public function getLegend()
     {
@@ -86,7 +67,7 @@ class Form extends AbstractForm
     }
 
     /**
-     * Check rating element is visible
+     * Check rating element is visible.
      *
      * @param Rating $rating
      * @return bool
@@ -97,10 +78,10 @@ class Form extends AbstractForm
     }
 
     /**
-     * Get single product rating
+     * Get single product rating.
      *
      * @param Rating $rating
-     * @return Element
+     * @return SimpleElement
      */
     protected function getRating(Rating $rating)
     {
@@ -108,39 +89,35 @@ class Form extends AbstractForm
     }
 
     /**
-     * Fill the review form
+     * Fill the review form.
      *
      * @param FixtureInterface $review
-     * @param Element|null $element
+     * @param SimpleElement|null $element
      * @return $this
      */
-    public function fill(FixtureInterface $review, Element $element = null)
+    public function fill(FixtureInterface $review, SimpleElement $element = null)
     {
-        if ($review instanceof ReviewInjectable) {
-            $this->fillRatings($review);
+        if ($review->hasData('ratings')) {
+            $this->fillRatings($review->getRatings());
         }
         parent::fill($review, $element);
     }
 
     /**
-     * Fill ratings on the review form
+     * Fill ratings on the review form.
      *
-     * @param ReviewInjectable $review
+     * @param Rating[] $ratings
      * @return void
      */
-    protected function fillRatings(ReviewInjectable $review)
+    protected function fillRatings(array $ratings)
     {
-        if (!$review->hasData('ratings')) {
-            return;
-        }
-
-        foreach ($review->getRatings() as $rating) {
+        foreach ($ratings as $rating) {
             $this->setRating($rating['title'], $rating['rating']);
         }
     }
 
     /**
-     * Set rating vote by rating code
+     * Set rating vote by rating code.
      *
      * @param string $ratingCode
      * @param string $ratingVote

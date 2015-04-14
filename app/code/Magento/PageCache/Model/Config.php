@@ -1,29 +1,12 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\PageCache\Model;
 
-use Magento\Framework\App\Filesystem;
+use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\Filesystem;
 
 /**
  * Model is responsible for replacing default vcl template
@@ -66,9 +49,14 @@ class Config
     protected $_scopeConfig;
 
     /**
-     * XML path to value for saving temporary .vcl configuration
+     * XML path to Varnish 3 config template path
      */
-    const VARNISH_CONFIGURATION_PATH = 'system/full_page_cache/varnish/path';
+    const VARNISH_3_CONFIGURATION_PATH = 'system/full_page_cache/varnish3/path';
+
+    /**
+     * XML path to Varnish 4 config template path
+     */
+    const VARNISH_4_CONFIGURATION_PATH = 'system/full_page_cache/varnish4/path';
 
     /**
      * @var \Magento\Framework\App\Cache\StateInterface $_cacheState
@@ -86,18 +74,18 @@ class Config
      * @param \Magento\Framework\App\Cache\StateInterface $cacheState
      */
     public function __construct(
-        \Magento\Framework\App\Filesystem $filesystem,
+        \Magento\Framework\Filesystem $filesystem,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         \Magento\Framework\App\Cache\StateInterface $cacheState
     ) {
-        $this->_modulesDirectory = $filesystem->getDirectoryRead(\Magento\Framework\App\Filesystem::MODULES_DIR);
+        $this->_modulesDirectory = $filesystem->getDirectoryRead(DirectoryList::MODULES);
         $this->_scopeConfig = $scopeConfig;
         $this->_cacheState = $cacheState;
     }
 
     /**
      * Return currently selected cache type: built in or varnish
-     * 
+     *
      * @return int
      */
     public function getType()
@@ -118,11 +106,12 @@ class Config
     /**
      * Return generated varnish.vcl configuration file
      *
+     * @param string $vclTemplatePath
      * @return string
      */
-    public function getVclFile()
+    public function getVclFile($vclTemplatePath)
     {
-        $data = $this->_modulesDirectory->readFile($this->_scopeConfig->getValue(self::VARNISH_CONFIGURATION_PATH));
+        $data = $this->_modulesDirectory->readFile($this->_scopeConfig->getValue($vclTemplatePath));
         return strtr($data, $this->_getReplacements());
     }
 
@@ -133,18 +122,18 @@ class Config
      */
     protected function _getReplacements()
     {
-        return array(
-            '{{ host }}' => $this->_scopeConfig->getValue(
+        return [
+            '/* {{ host }} */' => $this->_scopeConfig->getValue(
                 self::XML_VARNISH_PAGECACHE_BACKEND_HOST,
                 \Magento\Store\Model\ScopeInterface::SCOPE_STORE
             ),
-            '{{ port }}' => $this->_scopeConfig->getValue(
+            '/* {{ port }} */' => $this->_scopeConfig->getValue(
                 self::XML_VARNISH_PAGECACHE_BACKEND_PORT,
                 \Magento\Store\Model\ScopeInterface::SCOPE_STORE
             ),
-            '{{ ips }}' => $this->_getAccessList(),
-            '{{ design_exceptions_code }}' => $this->_getDesignExceptions()
-        );
+            '/* {{ ips }} */' => $this->_getAccessList(),
+            '/* {{ design_exceptions_code }} */' => $this->_getDesignExceptions()
+        ];
     }
 
     /**
@@ -166,9 +155,9 @@ class Config
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
         if (!empty($accessList)) {
-            $ips = explode(', ', $accessList);
+            $ips = explode(',', $accessList);
             foreach ($ips as $ip) {
-                $result[] = sprintf($tpl, $ip);
+                $result[] = sprintf($tpl, trim($ip));
             }
             return implode("\n", $result);
         }

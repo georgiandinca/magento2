@@ -1,47 +1,41 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Sales\Model\Order\Email\Sender;
 
-use Magento\Sales\Model\Order\Email\NotifySender;
-use Magento\Sales\Model\Order\Creditmemo;
 use Magento\Sales\Model\Order;
-use Magento\Sales\Model\Order\Email\Container\Template;
+use Magento\Sales\Model\Order\Creditmemo;
 use Magento\Sales\Model\Order\Email\Container\CreditmemoCommentIdentity;
+use Magento\Sales\Model\Order\Email\Container\Template;
+use Magento\Sales\Model\Order\Email\NotifySender;
+use Magento\Sales\Model\Order\Address\Renderer;
 
+/**
+ * Class CreditmemoCommentSender
+ */
 class CreditmemoCommentSender extends NotifySender
 {
+    /**
+     * @var Renderer
+     */
+    protected $addressRenderer;
+
     /**
      * @param Template $templateContainer
      * @param CreditmemoCommentIdentity $identityContainer
      * @param Order\Email\SenderBuilderFactory $senderBuilderFactory
+     * @param Renderer $addressRenderer
      */
     public function __construct(
         Template $templateContainer,
         CreditmemoCommentIdentity $identityContainer,
-        \Magento\Sales\Model\Order\Email\SenderBuilderFactory $senderBuilderFactory
+        \Magento\Sales\Model\Order\Email\SenderBuilderFactory $senderBuilderFactory,
+        Renderer $addressRenderer
     ) {
         parent::__construct($templateContainer, $identityContainer, $senderBuilderFactory);
+        $this->addressRenderer = $addressRenderer;
     }
 
     /**
@@ -55,13 +49,21 @@ class CreditmemoCommentSender extends NotifySender
     public function send(Creditmemo $creditmemo, $notify = true, $comment = '')
     {
         $order = $creditmemo->getOrder();
+        if ($order->getShippingAddress()) {
+            $formattedShippingAddress = $this->addressRenderer->format($order->getShippingAddress(), 'html');
+        } else {
+            $formattedShippingAddress = '';
+        }
+        $formattedBillingAddress = $this->addressRenderer->format($order->getBillingAddress(), 'html');
         $this->templateContainer->setTemplateVars(
             [
                 'order' => $order,
                 'creditmemo' => $creditmemo,
                 'comment' => $comment,
                 'billing' => $order->getBillingAddress(),
-                'store' => $order->getStore()
+                'store' => $order->getStore(),
+                'formattedShippingAddress' => $formattedShippingAddress,
+                'formattedBillingAddress' => $formattedBillingAddress,
             ]
         );
 

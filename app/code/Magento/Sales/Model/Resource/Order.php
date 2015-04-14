@@ -1,43 +1,25 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Sales\Model\Resource;
 
-use Magento\Framework\Math\Random;
 use Magento\Framework\App\Resource as AppResource;
-use Magento\Framework\Stdlib\DateTime;
-use Magento\Sales\Model\Increment as SalesIncrement;
-use Magento\Sales\Model\Resource\Entity as SalesResource;
-use Magento\Sales\Model\Resource\Order\Handler\State as StateHandler;
+use Magento\Framework\Math\Random;
+use Magento\SalesSequence\Model\Manager;
+use Magento\Sales\Model\Resource\EntityAbstract as SalesResource;
 use Magento\Sales\Model\Resource\Order\Handler\Address as AddressHandler;
-use Magento\Sales\Model\Resource\Order\Grid as OrderGrid;
+use Magento\Sales\Model\Resource\Order\Handler\State as StateHandler;
+use Magento\Sales\Model\Spi\OrderResourceInterface;
 
 /**
  * Flat sales order resource
  *
  * @author      Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class Order extends SalesResource
+class Order extends SalesResource implements OrderResourceInterface
 {
     /**
      * Event prefix
@@ -70,30 +52,30 @@ class Order extends SalesResource
      */
     protected function _construct()
     {
-        $this->_init('sales_flat_order', 'entity_id');
+        $this->_init('sales_order', 'entity_id');
     }
 
     /**
-     * @param AppResource $resource
-     * @param DateTime $dateTime
+     * @param \Magento\Framework\Model\Resource\Db\Context $context
      * @param Attribute $attribute
-     * @param SalesIncrement $salesIncrement
+     * @param Manager $sequenceManager
+     * @param EntitySnapshot $entitySnapshot
      * @param AddressHandler $addressHandler
      * @param StateHandler $stateHandler
-     * @param OrderGrid $gridAggregator
+     * @param null $resourcePrefix
      */
     public function __construct(
-        AppResource $resource,
-        DateTime $dateTime,
+        \Magento\Framework\Model\Resource\Db\Context $context,
         Attribute $attribute,
-        SalesIncrement $salesIncrement,
+        Manager $sequenceManager,
+        EntitySnapshot $entitySnapshot,
         AddressHandler $addressHandler,
         StateHandler $stateHandler,
-        OrderGrid $gridAggregator
+        $resourcePrefix = null
     ) {
         $this->stateHandler = $stateHandler;
         $this->addressHandler = $addressHandler;
-        parent::__construct($resource, $dateTime, $attribute, $salesIncrement, $gridAggregator);
+        parent::__construct($context, $attribute, $sequenceManager, $entitySnapshot, $resourcePrefix);
     }
 
     /**
@@ -104,16 +86,16 @@ class Order extends SalesResource
      * @param bool $isProductTypeIn
      * @return array
      */
-    public function aggregateProductsByTypes($orderId, $productTypeIds = array(), $isProductTypeIn = false)
+    public function aggregateProductsByTypes($orderId, $productTypeIds = [], $isProductTypeIn = false)
     {
         $adapter = $this->getReadConnection();
         $select = $adapter->select()->from(
-            array('o' => $this->getTable('sales_flat_order_item')),
-            array('o.product_type', new \Zend_Db_Expr('COUNT(*)'))
+            ['o' => $this->getTable('sales_order_item')],
+            ['o.product_type', new \Zend_Db_Expr('COUNT(*)')]
         )->joinInner(
-            array('p' => $this->getTable('catalog_product_entity')),
+            ['p' => $this->getTable('catalog_product_entity')],
             'o.product_id=p.entity_id',
-            array()
+            []
         )->where(
             'o.order_id=?',
             $orderId
@@ -164,11 +146,11 @@ class Order extends SalesResource
             $name = [
                 $store->getWebsite()->getName(),
                 $store->getGroup()->getName(),
-                $store->getName()
+                $store->getName(),
             ];
             $object->setStoreName(implode("\n", $name));
+            $object->setTotalItemCount($this->calculateItems($object));
         }
-        $object->setTotalItemCount($this->calculateItems($object));
         $object->setData(
             'protect_code',
             substr(md5(uniqid(Random::getRandomNumber(), true) . ':' . microtime(true)), 5, 6)
@@ -184,22 +166,41 @@ class Order extends SalesResource
      * @param \Magento\Framework\Model\AbstractModel $object
      * @return $this
      */
-    protected function _afterSave(\Magento\Framework\Model\AbstractModel $object)
+    protected function processRelations(\Magento\Framework\Model\AbstractModel $object)
     {
         /** @var \Magento\Sales\Model\Order $object */
         $this->addressHandler->process($object);
-        if (null !== $object->getItemsCollection()) {
-            $object->getItemsCollection()->save();
+
+        if (null !== $object->getItems()) {
+            /** @var \Magento\Sales\Model\Order\Item $item */
+            foreach ($object->getItems() as $item) {
+                $item->setOrderId($object->getId());
+                $item->setOrder($object);
+                $item->save();
+            }
         }
-        if (null !== $object->getPaymentsCollection()) {
-            $object->getPaymentsCollection()->save();
+        if (null !== $object->getPayments()) {
+            /** @var \Magento\Sales\Model\Order\Payment $payment */
+            foreach ($object->getPayments() as $payment) {
+                $payment->setParentId($object->getId());
+                $payment->setOrder($object);
+                $payment->save();
+            }
         }
-        if (null !== $object->getStatusHistoryCollection()) {
-            $object->getStatusHistoryCollection()->save();
+        if (null !== $object->getStatusHistories()) {
+            /** @var \Magento\Sales\Model\Order\Status\History $statusHistory */
+            foreach ($object->getStatusHistories() as $statusHistory) {
+                $statusHistory->setParentId($object->getId());
+                $statusHistory->save();
+                $statusHistory->setOrder($object);
+            }
         }
-        foreach ($object->getRelatedObjects() as $relatedObject) {
-            $relatedObject->save();
+        if (null !== $object->getRelatedObjects()) {
+            foreach ($object->getRelatedObjects() as $relatedObject) {
+                $relatedObject->save();
+                $relatedObject->setOrder($object);
+            }
         }
-        return parent::_afterSave($object);
+        return parent::processRelations($object);
     }
 }

@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\UrlRewrite\Block\Catalog\Edit;
 
@@ -30,7 +12,7 @@ namespace Magento\UrlRewrite\Block\Catalog\Edit;
 class FormTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * @var \Magento\Framework\ObjectManager
+     * @var \Magento\Framework\ObjectManagerInterface
      */
     protected $objectManager;
 
@@ -45,7 +27,7 @@ class FormTest extends \PHPUnit_Framework_TestCase
      * @param array $args
      * @return \Magento\Framework\Data\Form
      */
-    protected function _getFormInstance($args = array())
+    protected function _getFormInstance($args = [])
     {
         /** @var $layout \Magento\Framework\View\Layout */
         $layout = $this->objectManager->get(
@@ -55,7 +37,7 @@ class FormTest extends \PHPUnit_Framework_TestCase
         $block = $layout->createBlock(
             'Magento\UrlRewrite\Block\Catalog\Edit\Form',
             'block',
-            array('data' => $args)
+            ['data' => $args]
         );
         $block->setTemplate(null);
         $block->toHtml();
@@ -79,17 +61,17 @@ class FormTest extends \PHPUnit_Framework_TestCase
      */
     public function testFormPostInitNew($productData, $categoryData, $action, $requestPath, $targetPath)
     {
-        $args = array();
+        $args = [];
         if ($productData) {
             $args['product'] = $this->objectManager->create(
                 'Magento\Catalog\Model\Product',
-                array('data' => $productData)
+                ['data' => $productData]
             );
         }
         if ($categoryData) {
             $args['category'] = $this->objectManager->create(
                 'Magento\Catalog\Model\Category',
-                array('data' => $categoryData)
+                ['data' => $categoryData]
             );
         }
         $form = $this->_getFormInstance($args);
@@ -106,7 +88,7 @@ class FormTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider getEntityStoresDataProvider
      * @magentoAppIsolation enabled
-     * @magentoDataFixture Magento/Core/_files/store.php
+     * @magentoDataFixture Magento/Store/_files/core_fixturestore.php
      *
      * @param array $productData
      * @param array $categoryData
@@ -114,17 +96,17 @@ class FormTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetEntityStores($productData, $categoryData, $expectedStores)
     {
-        $args = array();
+        $args = [];
         if ($productData) {
             $args['product'] = $this->objectManager->create(
                 'Magento\Catalog\Model\Product',
-                array('data' => $productData)
+                ['data' => $productData]
             );
         }
         if ($categoryData) {
             $args['category'] = $this->objectManager->create(
                 'Magento\Catalog\Model\Category',
-                array('data' => $categoryData)
+                ['data' => $categoryData]
             );
         }
         $form = $this->_getFormInstance($args);
@@ -135,48 +117,69 @@ class FormTest extends \PHPUnit_Framework_TestCase
      * Check exception is thrown when product does not associated with stores
      *
      * @magentoAppIsolation enabled
-     * @magentoDataFixture Magento/Core/_files/store.php
-     *
-     * @expectedException \Magento\Framework\Model\Exception
-     * @expectedExceptionMessage We can't set up a URL rewrite because the product you chose is not associated with
+     * @magentoDataFixture Magento/Store/_files/core_fixturestore.php
      */
     public function testGetEntityStoresProductStoresException()
     {
-        $args = array('product' => new \Magento\Framework\Object(array('id' => 1)));
-        $this->_getFormInstance($args);
+        $args = [
+            'product' => $this->objectManager->create(
+                'Magento\Catalog\Model\Product',
+                ['data' => ['entity_id' => 1]]
+            ),
+        ];
+        $form = $this->_getFormInstance($args);
+        $this->assertEquals([], $form->getElement('store_id')->getValues());
+        $this->assertEquals(
+            'We can\'t set up a URL rewrite because the product you chose is not associated with a website.',
+            $form->getElement('store_id')->getAfterElementHtml()
+        );
     }
 
     /**
      * Check exception is thrown when product stores in intersection with category stores is empty
      *
      * @magentoAppIsolation enabled
-     * @magentoDataFixture Magento/Core/_files/store.php
+     * @magentoDataFixture Magento/Store/_files/core_fixturestore.php
      *
-     * @expectedException \Magento\Framework\Model\Exception
-     * @expectedExceptionMessage We can't set up a URL rewrite because the product you chose is not associated with
      */
     public function testGetEntityStoresProductCategoryStoresException()
     {
-        $args = array(
-            'product' => new \Magento\Framework\Object(array('id' => 1, 'store_ids' => array(1))),
-            'category' => new \Magento\Framework\Object(array('id' => 1, 'store_ids' => array(3)))
+        $args = [
+            'product' => $this->objectManager->create(
+                'Magento\Catalog\Model\Product',
+                ['data' => ['entity_id' => 1, 'store_ids' => [1]]]
+            ),
+            'category' => $this->objectManager->create(
+                'Magento\Catalog\Model\Category',
+                ['data' => ['entity_id' => 1, 'store_ids' => [3]]]
+            ),
+        ];
+        $form = $this->_getFormInstance($args);
+        $this->assertEquals([], $form->getElement('store_id')->getValues());
+        $this->assertEquals(
+            'We can\'t set up a URL rewrite because the product you chose is not associated with a website.',
+            $form->getElement('store_id')->getAfterElementHtml()
         );
-        $this->_getFormInstance($args);
     }
 
     /**
      * Check exception is thrown when category does not associated with stores
      *
      * @magentoAppIsolation enabled
-     * @magentoDataFixture Magento/Core/_files/store.php
-     *
-     * @expectedException \Magento\Framework\Model\Exception
-     * @expectedExceptionMessage We can't set up a URL rewrite because the category your chose is not associated with
+     * @magentoDataFixture Magento/Store/_files/core_fixturestore.php
      */
     public function testGetEntityStoresCategoryStoresException()
     {
-        $args = array('category' => new \Magento\Framework\Object(array('id' => 1)));
-        $this->_getFormInstance($args);
+        $args = ['category' => $this->objectManager->create(
+            'Magento\Catalog\Model\Category',
+            ['data' => ['entity_id' => 1, 'initial_setup_flag' => true]]
+        )];
+        $form = $this->_getFormInstance($args);
+        $this->assertEquals([], $form->getElement('store_id')->getValues());
+        $this->assertEquals(
+            'We can\'t set up a URL rewrite because the category you chose is not associated with a website.',
+            $form->getElement('store_id')->getAfterElementHtml()
+        );
     }
 
     /**
@@ -190,29 +193,29 @@ class FormTest extends \PHPUnit_Framework_TestCase
      */
     public static function formPostInitDataProvider()
     {
-        return array(
-            array(
+        return [
+            [
                 null,
-                array('entity_id' => 3, 'level' => 2, 'url_key' => 'category', 'store_id' => 1),
+                ['entity_id' => 3, 'level' => 2, 'url_key' => 'category', 'store_id' => 1],
                 'category/3',
                 'category.html',
-                'catalog/category/view/id/3'
-            ),
-            array(
-                array('entity_id' => 2, 'level' => 2,  'url_key' => 'product', 'store_id' => 1),
+                'catalog/category/view/id/3',
+            ],
+            [
+                ['entity_id' => 2, 'level' => 2,  'url_key' => 'product', 'store_id' => 1],
                 null,
                 'product/2',
                 'product.html',
                 'catalog/product/view/id/2'
-            ),
-            array(
-                array('entity_id' => 2, 'name' => 'product', 'store_id' => 1),
-                array('entity_id' => 3, 'level' => 2, 'url_key' => 'category', 'store_id' => 1),
+            ],
+            [
+                ['entity_id' => 2, 'name' => 'product', 'store_id' => 1],
+                ['entity_id' => 3, 'level' => 2, 'url_key' => 'category', 'store_id' => 1],
                 'product/2/category/3',
                 'category/product.html',
                 'catalog/product/view/id/2/category/3'
-            )
-        );
+            ]
+        ];
     }
 
     /**
@@ -226,40 +229,40 @@ class FormTest extends \PHPUnit_Framework_TestCase
      */
     public static function getEntityStoresDataProvider()
     {
-        return array(
-            array(
+        return [
+            [
                 null,
-                array('entity_id' => 3, 'store_ids' => array(1)),
-                array(
-                    array('label' => 'Main Website', 'value' => array()),
-                    array(
+                ['entity_id' => 3, 'store_ids' => [1]],
+                [
+                    ['label' => 'Main Website', 'value' => []],
+                    [
                         'label' => '    Main Website Store',
-                        'value' => array(array('label' => '    Default Store View', 'value' => 1))
-                    )
-                )
-            ),
-            array(
-                array('entity_id' => 2, 'store_ids' => array(1)),
+                        'value' => [['label' => '    Default Store View', 'value' => 1]]
+                    ]
+                ],
+            ],
+            [
+                ['entity_id' => 2, 'store_ids' => [1]],
                 null,
-                array(
-                    array('label' => 'Main Website', 'value' => array()),
-                    array(
+                [
+                    ['label' => 'Main Website', 'value' => []],
+                    [
                         'label' => '    Main Website Store',
-                        'value' => array(array('label' => '    Default Store View', 'value' => 1))
-                    )
-                )
-            ),
-            array(
-                array('entity_id' => 2, 'store_ids' => array(1)),
-                array('entity_id' => 3, 'store_ids' => array(1)),
-                array(
-                    array('label' => 'Main Website', 'value' => array()),
-                    array(
+                        'value' => [['label' => '    Default Store View', 'value' => 1]]
+                    ]
+                ]
+            ],
+            [
+                ['entity_id' => 2, 'store_ids' => [1]],
+                ['entity_id' => 3, 'store_ids' => [1]],
+                [
+                    ['label' => 'Main Website', 'value' => []],
+                    [
                         'label' => '    Main Website Store',
-                        'value' => array(array('label' => '    Default Store View', 'value' => 1))
-                    )
-                )
-            )
-        );
+                        'value' => [['label' => '    Default Store View', 'value' => 1]]
+                    ]
+                ]
+            ]
+        ];
     }
 }

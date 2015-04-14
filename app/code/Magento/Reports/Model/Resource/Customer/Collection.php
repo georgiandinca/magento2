@@ -1,27 +1,8 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
-
 
 /**
  * Customers Report collection
@@ -76,18 +57,18 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
     protected $_orderEntityField;
 
     /**
-     * @var \Magento\Sales\Model\QuoteFactory
+     * @var \Magento\Quote\Model\QuoteRepository
      */
-    protected $_quoteFactory;
+    protected $quoteRepository;
 
     /**
-     * @var \Magento\Sales\Model\Resource\Quote\Item\CollectionFactory
+     * @var \Magento\Quote\Model\Resource\Quote\Item\CollectionFactory
      */
     protected $_quoteItemFactory;
 
     /**
-     * @param \Magento\Core\Model\EntityFactory $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Eav\Model\Config $eavConfig
@@ -96,16 +77,16 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
      * @param \Magento\Eav\Model\Resource\Helper $resourceHelper
      * @param \Magento\Framework\Validator\UniversalFactory $universalFactory
      * @param \Magento\Framework\Object\Copy\Config $fieldsetConfig
-     * @param \Magento\Sales\Model\QuoteFactory $quoteFactory
-     * @param \Magento\Sales\Model\Resource\Quote\Item\CollectionFactory $quoteItemFactory
+     * @param \Magento\Quote\Model\QuoteRepository $quoteRepository
+     * @param \Magento\Quote\Model\Resource\Quote\Item\CollectionFactory $quoteItemFactory
      * @param mixed $connection
      * @param string $modelName
-     * 
+     *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        \Magento\Core\Model\EntityFactory $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Eav\Model\Config $eavConfig,
@@ -114,8 +95,8 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
         \Magento\Eav\Model\Resource\Helper $resourceHelper,
         \Magento\Framework\Validator\UniversalFactory $universalFactory,
         \Magento\Framework\Object\Copy\Config $fieldsetConfig,
-        \Magento\Sales\Model\QuoteFactory $quoteFactory,
-        \Magento\Sales\Model\Resource\Quote\Item\CollectionFactory $quoteItemFactory,
+        \Magento\Quote\Model\QuoteRepository $quoteRepository,
+        \Magento\Quote\Model\Resource\Quote\Item\CollectionFactory $quoteItemFactory,
         $connection = null,
         $modelName = self::CUSTOMER_MODEL_NAME
     ) {
@@ -133,7 +114,7 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
             $connection,
             $modelName
         );
-        $this->_quoteFactory = $quoteFactory;
+        $this->quoteRepository = $quoteRepository;
         $this->_quoteItemFactory = $quoteItemFactory;
     }
 
@@ -145,15 +126,15 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
     public function addCartInfo()
     {
         foreach ($this->getItems() as $item) {
-            $quote = $this->_quoteFactory->create()->loadByCustomer($item->getId());
+            try {
+                $quote = $this->quoteRepository->getForCustomer($item->getId());
 
-            if ($quote instanceof \Magento\Sales\Model\Quote) {
                 $totals = $quote->getTotals();
                 $item->setTotal($totals['subtotal']->getValue());
                 $quoteItems = $this->_quoteItemFactory->create()->setQuoteFilter($quote->getId());
                 $quoteItems->load();
                 $item->setItems($quoteItems->count());
-            } else {
+            } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
                 $item->remove();
             }
         }
@@ -187,9 +168,9 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
         }
 
         $this->getSelect()->joinLeft(
-            array('orders' => $this->getTable('sales_flat_order')),
+            ['orders' => $this->getTable('sales_order')],
             "orders.customer_id = e.entity_id" . $dateFilter,
-            array()
+            []
         );
 
         return $this;
@@ -203,7 +184,7 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
     public function addOrdersCount()
     {
         $this->getSelect()->columns(
-            array("orders_count" => "COUNT(orders.entity_id)")
+            ["orders_count" => "COUNT(orders.entity_id)"]
         )->where(
             'orders.state <> ?',
             \Magento\Sales\Model\Order::STATE_CANCELED
@@ -235,9 +216,9 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
             "orders.base_subtotal - {$baseSubtotalCanceled} - {$baseSubtotalRefunded}";
 
         $this->getSelect()->columns(
-            array("orders_avg_amount" => "AVG({$expr})")
+            ["orders_avg_amount" => "AVG({$expr})"]
         )->columns(
-            array("orders_sum_amount" => "SUM({$expr})")
+            ["orders_sum_amount" => "SUM({$expr})"]
         );
 
         return $this;
@@ -288,13 +269,13 @@ class Collection extends \Magento\Customer\Model\Resource\Customer\Collection
 
             $select = $this->getConnection()->select();
             $select->from(
-                array('orders' => $this->getTable('sales_flat_order')),
-                array(
+                ['orders' => $this->getTable('sales_order')],
+                [
                     'orders_avg_amount' => "AVG({$totalExpr})",
                     'orders_sum_amount' => "SUM({$totalExpr})",
                     'orders_count' => 'COUNT(orders.entity_id)',
                     'customer_id'
-                )
+                ]
             )->where(
                 'orders.state <> ?',
                 \Magento\Sales\Model\Order::STATE_CANCELED

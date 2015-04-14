@@ -1,55 +1,52 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\CatalogSearch\Test\Block\Advanced;
 
-use Mtf\Client\Element;
-use Mtf\Fixture\FixtureInterface;
-use Mtf\Block\Form as ParentForm;
+use Magento\Mtf\Block\Form as ParentForm;
+use Magento\Mtf\Client\Element;
+use Magento\Mtf\Client\Locator;
+use Magento\Mtf\Fixture\FixtureInterface;
+use Magento\Mtf\Client\Element\SimpleElement;
 
 /**
- * Class Form
- * Advanced search form
+ * Advanced search form.
  */
 class Form extends ParentForm
 {
     /**
-     * Search button selector
+     * Search button selector.
      *
      * @var string
      */
     protected $searchButtonSelector = '.action.search';
 
     /**
-     * Field selector select tax class
+     * Field selector select tax class.
      *
      * @var string
      */
     protected $taxClassSelector = '#tax_class_id';
 
     /**
-     * Submit search form
+     * Field selector.
+     *
+     * @var string
+     */
+    protected $fieldSelector = './/div[label and div]';
+
+    /**
+     * Label element selector.
+     *
+     * @var string
+     */
+    protected $labelSelector = 'label';
+
+    /**
+     * Submit search form.
      *
      * @return void
      */
@@ -59,13 +56,13 @@ class Form extends ParentForm
     }
 
     /**
-     * Fill the root form
+     * Fill the root form.
      *
      * @param FixtureInterface $fixture
-     * @param Element|null $element
+     * @param SimpleElement|null $element
      * @return $this
      */
-    public function fill(FixtureInterface $fixture, Element $element = null)
+    public function fill(FixtureInterface $fixture, SimpleElement $element = null)
     {
         // Prepare price data
         $data = $fixture->getData();
@@ -82,18 +79,33 @@ class Form extends ParentForm
     }
 
     /**
-     * Fill form with custom fields
+     * Fill form with custom fields.
      * (for End To End Tests)
      *
      * @param FixtureInterface $fixture
      * @param array $fields
-     * @param Element $element
+     * @param SimpleElement $element
      */
-    public function fillCustom(FixtureInterface $fixture, array $fields, Element $element = null)
+    public function fillCustom(FixtureInterface $fixture, array $fields, SimpleElement $element = null)
     {
         $data = $fixture->getData('fields');
         $dataForMapping = array_intersect_key($data, array_flip($fields));
         $mapping = $this->dataMapping($dataForMapping);
         $this->_fill($mapping, $element);
+    }
+
+    /**
+     * Get form fields.
+     *
+     * @return array
+     */
+    public function getFormLabels()
+    {
+        $labels = [];
+        $elements = $this->_rootElement->getElements($this->fieldSelector, Locator::SELECTOR_XPATH);
+        foreach ($elements as $element) {
+            $labels[] = $element->find($this->labelSelector)->getText();
+        }
+        return $labels;
     }
 }

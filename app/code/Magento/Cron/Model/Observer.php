@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -27,6 +9,11 @@
  */
 namespace Magento\Cron\Model;
 
+use Magento\Framework\App\Filesystem\DirectoryList;
+
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class Observer
 {
     /**#@+
@@ -101,22 +88,29 @@ class Observer
     protected $_shell;
 
     /**
-     * @param \Magento\Framework\ObjectManager $objectManager
+     * @var \Magento\Framework\Stdlib\DateTime\TimezoneInterface
+     */
+    protected $timezone;
+
+    /**
+     * @param \Magento\Framework\ObjectManagerInterface $objectManager
      * @param ScheduleFactory $scheduleFactory
      * @param \Magento\Framework\App\CacheInterface $cache
      * @param ConfigInterface $config
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
      * @param \Magento\Framework\App\Console\Request $request
      * @param \Magento\Framework\ShellInterface $shell
+     * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $timezone
      */
     public function __construct(
-        \Magento\Framework\ObjectManager $objectManager,
+        \Magento\Framework\ObjectManagerInterface $objectManager,
         \Magento\Cron\Model\ScheduleFactory $scheduleFactory,
         \Magento\Framework\App\CacheInterface $cache,
         \Magento\Cron\Model\ConfigInterface $config,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
         \Magento\Framework\App\Console\Request $request,
-        \Magento\Framework\ShellInterface $shell
+        \Magento\Framework\ShellInterface $shell,
+        \Magento\Framework\Stdlib\DateTime\TimezoneInterface $timezone
     ) {
         $this->_objectManager = $objectManager;
         $this->_scheduleFactory = $scheduleFactory;
@@ -125,6 +119,7 @@ class Observer
         $this->_scopeConfig = $scopeConfig;
         $this->_request = $request;
         $this->_shell = $shell;
+        $this->timezone = $timezone;
     }
 
     /**
@@ -134,32 +129,34 @@ class Observer
      *
      * @param \Magento\Framework\Event\Observer $observer
      * @return void
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function dispatch($observer)
     {
         $pendingJobs = $this->_getPendingSchedules();
-        $currentTime = time();
+        $currentTime = $this->timezone->scopeTimeStamp();
         $jobGroupsRoot = $this->_config->getJobs();
 
         foreach ($jobGroupsRoot as $groupId => $jobsRoot) {
-            if ($this->_request->getParam(
-                'group'
-            ) === null && $this->_scopeConfig->getValue(
-                'system/cron/' . $groupId . '/use_separate_process',
-                \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-            ) == 1
-            ) {
-                $this->_shell->execute(
-                    '%s -f %s -- --group=%s',
-                    array(
-                        PHP_BINARY,
-                        BP . '/' . \Magento\Framework\App\Filesystem::PUB_DIR . '/cron.php',
-                        $groupId
-                    )
-                );
+            if ($this->_request->getParam('group') !== null && $this->_request->getParam('group') != $groupId) {
                 continue;
             }
-            if ($this->_request->getParam('group') !== null && $this->_request->getParam('group') != $groupId) {
+            if (($this->_request->getParam('standaloneProcessStarted') !== '1') && (
+                    $this->_scopeConfig->getValue(
+                        'system/cron/' . $groupId . '/use_separate_process',
+                        \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+                    ) == 1
+                )) {
+                $this->_shell->execute(
+                    'php -f %s -- --group=%s --standaloneProcessStarted=%s',
+                    [
+                        BP . '/' . DirectoryList::PUB . '/cron.php',
+                        $groupId,
+                        '1'
+                    ]
+                );
                 continue;
             }
 
@@ -170,12 +167,14 @@ class Observer
                 }
 
                 $scheduledTime = strtotime($schedule->getScheduledAt());
-                if ($scheduledTime > $currentTime || !$schedule->tryLockJob()) {
+                if ($scheduledTime > $currentTime) {
                     continue;
                 }
 
                 try {
-                    $this->_runJob($scheduledTime, $currentTime, $jobConfig, $schedule, $groupId);
+                    if ($schedule->tryLockJob()) {
+                        $this->_runJob($scheduledTime, $currentTime, $jobConfig, $schedule, $groupId);
+                    }
                 } catch (\Exception $e) {
                     $schedule->setMessages($e->getMessage());
                 }
@@ -215,7 +214,7 @@ class Observer
             throw new \Exception('No callbacks found');
         }
         $model = $this->_objectManager->create($jobConfig['instance']);
-        $callback = array($model, $jobConfig['method']);
+        $callback = [$model, $jobConfig['method']];
         if (!is_callable($callback)) {
             $schedule->setStatus(Schedule::STATUS_ERROR);
             throw new \Exception(
@@ -223,11 +222,14 @@ class Observer
             );
         }
 
-        $schedule->setExecutedAt(strftime('%Y-%m-%d %H:%M:%S', time()))->save();
+        $schedule->setExecutedAt(strftime('%Y-%m-%d %H:%M:%S', $this->timezone->scopeTimeStamp()))->save();
 
-        call_user_func_array($callback, array($schedule));
+        call_user_func_array($callback, [$schedule]);
 
-        $schedule->setStatus(Schedule::STATUS_SUCCESS)->setFinishedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
+        $schedule->setStatus(Schedule::STATUS_SUCCESS)->setFinishedAt(strftime(
+            '%Y-%m-%d %H:%M:%S',
+            $this->timezone->scopeTimeStamp()
+        ));
     }
 
     /**
@@ -263,12 +265,12 @@ class Observer
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
         $schedulePeriod = $rawSchedulePeriod * self::SECONDS_IN_MINUTE;
-        if ($lastRun > time() - $schedulePeriod) {
+        if ($lastRun > $this->timezone->scopeTimeStamp() - $schedulePeriod) {
             return $this;
         }
 
         $schedules = $this->_getPendingSchedules();
-        $exists = array();
+        $exists = [];
         /** @var Schedule $schedule */
         foreach ($schedules as $schedule) {
             $exists[$schedule->getJobCode() . '/' . $schedule->getScheduledAt()] = 1;
@@ -283,7 +285,12 @@ class Observer
         /**
          * save time schedules generation was ran with no expiration
          */
-        $this->_cache->save(time(), self::CACHE_KEY_LAST_SCHEDULE_GENERATE_AT . $groupId, array('crontab'), null);
+        $this->_cache->save(
+            $this->timezone->scopeTimeStamp(),
+            self::CACHE_KEY_LAST_SCHEDULE_GENERATE_AT . $groupId,
+            ['crontab'],
+            null
+        );
 
         return $this;
     }
@@ -301,7 +308,7 @@ class Observer
         foreach ($jobs as $jobCode => $jobConfig) {
             $cronExpression = null;
             if (isset($jobConfig['config_path'])) {
-                $cronExpression = $this->getConfigSchedule($jobConfig) ? : null;
+                $cronExpression = $this->getConfigSchedule($jobConfig) ?: null;
             }
 
             if (!$cronExpression) {
@@ -334,16 +341,23 @@ class Observer
             'system/cron/' . $groupId . '/' . self::XML_PATH_HISTORY_CLEANUP_EVERY,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
-        if ($lastCleanup > time() - $historyCleanUp * self::SECONDS_IN_MINUTE) {
+        if ($lastCleanup > $this->timezone->scopeTimeStamp() - $historyCleanUp * self::SECONDS_IN_MINUTE) {
             return $this;
         }
+
+        // check how long the record should stay unprocessed before marked as MISSED
+        $scheduleLifetime = (int)$this->_scopeConfig->getValue(
+            'system/cron/' . $groupId . '/' . self::XML_PATH_SCHEDULE_LIFETIME,
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+        $scheduleLifetime = $scheduleLifetime * self::SECONDS_IN_MINUTE;
 
         /**
          * @var \Magento\Cron\Model\Resource\Schedule\Collection $history
          */
         $history = $this->_scheduleFactory->create()->getCollection()->addFieldToFilter(
             'status',
-            array('in' => array(Schedule::STATUS_SUCCESS, Schedule::STATUS_MISSED, Schedule::STATUS_ERROR))
+            ['in' => [Schedule::STATUS_SUCCESS, Schedule::STATUS_MISSED, Schedule::STATUS_ERROR]]
         )->load();
 
         $historySuccess = (int)$this->_scopeConfig->getValue(
@@ -354,22 +368,29 @@ class Observer
             'system/cron/' . $groupId . '/' . self::XML_PATH_HISTORY_FAILURE,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
-        $historyLifetimes = array(
+        $historyLifetimes = [
             Schedule::STATUS_SUCCESS => $historySuccess * self::SECONDS_IN_MINUTE,
             Schedule::STATUS_MISSED => $historyFailure * self::SECONDS_IN_MINUTE,
-            Schedule::STATUS_ERROR => $historyFailure * self::SECONDS_IN_MINUTE
-        );
+            Schedule::STATUS_ERROR => $historyFailure * self::SECONDS_IN_MINUTE,
+        ];
 
-        $now = time();
+        $now = $this->timezone->scopeTimeStamp();
         /** @var Schedule $record */
         foreach ($history as $record) {
-            if (strtotime($record->getExecutedAt()) < $now - $historyLifetimes[$record->getStatus()]) {
+            $checkTime = $record->getExecutedAt() ? strtotime($record->getExecutedAt()) :
+                strtotime($record->getScheduledAt()) + $scheduleLifetime;
+            if ($checkTime < $now - $historyLifetimes[$record->getStatus()]) {
                 $record->delete();
             }
         }
 
         // save time history cleanup was ran with no expiration
-        $this->_cache->save(time(), self::CACHE_KEY_LAST_HISTORY_CLEANUP_AT . $groupId, array('crontab'), null);
+        $this->_cache->save(
+            $this->timezone->scopeTimeStamp(),
+            self::CACHE_KEY_LAST_HISTORY_CLEANUP_AT . $groupId,
+            ['crontab'],
+            null
+        );
 
         return $this;
     }
@@ -397,7 +418,7 @@ class Observer
      */
     protected function saveSchedule($jobCode, $cronExpression, $timeInterval, $exists)
     {
-        $currentTime = time();
+        $currentTime = $this->timezone->scopeTimeStamp();
         $timeAhead = $currentTime + $timeInterval;
         for ($time = $currentTime; $time < $timeAhead; $time += self::SECONDS_IN_MINUTE) {
             $ts = strftime('%Y-%m-%d %H:%M:00', $time);
@@ -405,11 +426,11 @@ class Observer
                 // already scheduled
                 continue;
             }
-
             $schedule = $this->generateSchedule($jobCode, $cronExpression, $time);
             if ($schedule->trySchedule()) {
                 // time matches cron expression
                 $schedule->save();
+                return;
             }
         }
     }
@@ -426,7 +447,7 @@ class Observer
             ->setCronExpr($cronExpression)
             ->setJobCode($jobCode)
             ->setStatus(Schedule::STATUS_PENDING)
-            ->setCreatedAt(strftime('%Y-%m-%d %H:%M:%S', time()))
+            ->setCreatedAt(strftime('%Y-%m-%d %H:%M:%S', $this->timezone->scopeTimeStamp()))
             ->setScheduledAt(strftime('%Y-%m-%d %H:%M', $time));
 
         return $schedule;

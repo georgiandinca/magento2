@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -51,7 +33,7 @@ abstract class AbstractResource extends \Magento\Framework\Model\Resource\Db\Abs
      *
      * @var array
      */
-    protected $_associatedEntitiesMap = array();
+    protected $_associatedEntitiesMap = [];
 
     /**
      * Prepare rule's active "from" and "to" dates
@@ -62,15 +44,15 @@ abstract class AbstractResource extends \Magento\Framework\Model\Resource\Db\Abs
     public function _beforeSave(\Magento\Framework\Model\AbstractModel $object)
     {
         $fromDate = $object->getFromDate();
-        if ($fromDate instanceof \Zend_Date) {
-            $object->setFromDate($fromDate->toString(\Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT));
+        if ($fromDate instanceof \DateTime) {
+            $object->setFromDate($fromDate->format('Y-m-d H:i:s'));
         } elseif (!is_string($fromDate) || empty($fromDate)) {
             $object->setFromDate(null);
         }
 
         $toDate = $object->getToDate();
-        if ($toDate instanceof \Zend_Date) {
-            $object->setToDate($toDate->toString(\Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT));
+        if ($toDate instanceof \DateTime) {
+            $object->setToDate($toDate->format('Y-m-d H:i:s'));
         } elseif (!is_string($toDate) || empty($toDate)) {
             $object->setToDate(null);
         }
@@ -118,28 +100,28 @@ abstract class AbstractResource extends \Magento\Framework\Model\Resource\Db\Abs
             return $this;
         }
         if (!is_array($ruleIds)) {
-            $ruleIds = array((int)$ruleIds);
+            $ruleIds = [(int)$ruleIds];
         }
         if (!is_array($entityIds)) {
-            $entityIds = array((int)$entityIds);
+            $entityIds = [(int)$entityIds];
         }
-        $data = array();
+        $data = [];
         $count = 0;
         $entityInfo = $this->_getAssociatedEntityInfo($entityType);
         foreach ($ruleIds as $ruleId) {
             foreach ($entityIds as $entityId) {
-                $data[] = array(
+                $data[] = [
                     $entityInfo['entity_id_field'] => $entityId,
-                    $entityInfo['rule_id_field'] => $ruleId
-                );
+                    $entityInfo['rule_id_field'] => $ruleId,
+                ];
                 $count++;
                 if ($count % 1000 == 0) {
                     $this->_getWriteAdapter()->insertOnDuplicate(
                         $this->getTable($entityInfo['associations_table']),
                         $data,
-                        array($entityInfo['rule_id_field'])
+                        [$entityInfo['rule_id_field']]
                     );
-                    $data = array();
+                    $data = [];
                 }
             }
         }
@@ -147,7 +129,7 @@ abstract class AbstractResource extends \Magento\Framework\Model\Resource\Db\Abs
             $this->_getWriteAdapter()->insertOnDuplicate(
                 $this->getTable($entityInfo['associations_table']),
                 $data,
-                array($entityInfo['rule_id_field'])
+                [$entityInfo['rule_id_field']]
             );
         }
 
@@ -178,13 +160,13 @@ abstract class AbstractResource extends \Magento\Framework\Model\Resource\Db\Abs
         $entityInfo = $this->_getAssociatedEntityInfo($entityType);
 
         if (!is_array($entityIds)) {
-            $entityIds = array((int)$entityIds);
+            $entityIds = [(int)$entityIds];
         }
         if (!is_array($ruleIds)) {
-            $ruleIds = array((int)$ruleIds);
+            $ruleIds = [(int)$ruleIds];
         }
 
-        $where = array();
+        $where = [];
         if (!empty($ruleIds)) {
             $where[] = $writeAdapter->quoteInto($entityInfo['rule_id_field'] . ' IN (?)', $ruleIds);
         }
@@ -210,7 +192,7 @@ abstract class AbstractResource extends \Magento\Framework\Model\Resource\Db\Abs
 
         $select = $this->_getReadAdapter()->select()->from(
             $this->getTable($entityInfo['associations_table']),
-            array($entityInfo['entity_id_field'])
+            [$entityInfo['entity_id_field']]
         )->where(
             $entityInfo['rule_id_field'] . ' = ?',
             $ruleId
@@ -247,7 +229,7 @@ abstract class AbstractResource extends \Magento\Framework\Model\Resource\Db\Abs
      *
      * @param string $entityType
      * @return array
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function _getAssociatedEntityInfo($entityType)
     {
@@ -255,9 +237,8 @@ abstract class AbstractResource extends \Magento\Framework\Model\Resource\Db\Abs
             return $this->_associatedEntitiesMap[$entityType];
         }
 
-        throw new \Magento\Framework\Model\Exception(
-            __('There is no information about associated entity type "%1".', $entityType),
-            0
+        throw new \Magento\Framework\Exception\LocalizedException(
+            __('There is no information about associated entity type "%1".', $entityType)
         );
     }
 }

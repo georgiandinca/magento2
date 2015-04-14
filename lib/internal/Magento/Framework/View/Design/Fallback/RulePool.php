@@ -1,30 +1,13 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Framework\View\Design\Fallback;
 
-use Magento\Framework\App\Filesystem;
+use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\Filesystem;
 use Magento\Framework\View\Design\Fallback\Rule\Composite;
 use Magento\Framework\View\Design\Fallback\Rule\ModularSwitch;
 use Magento\Framework\View\Design\Fallback\Rule\RuleInterface;
@@ -76,7 +59,7 @@ class RulePool
      */
     protected function createLocaleFileRule()
     {
-        $themesDir = $this->filesystem->getPath(Filesystem::THEMES_DIR);
+        $themesDir = $this->filesystem->getDirectoryRead(DirectoryList::THEMES)->getAbsolutePath();
         return new Theme(
             new Simple("$themesDir/<area>/<theme_path>")
         );
@@ -89,18 +72,18 @@ class RulePool
      */
     protected function createTemplateFileRule()
     {
-        $themesDir = $this->filesystem->getPath(Filesystem::THEMES_DIR);
-        $modulesDir = $this->filesystem->getPath(Filesystem::MODULES_DIR);
+        $themesDir = $this->filesystem->getDirectoryRead(DirectoryList::THEMES)->getAbsolutePath();
+        $modulesDir = $this->filesystem->getDirectoryRead(DirectoryList::MODULES)->getAbsolutePath();
         return new ModularSwitch(
             new Theme(
                 new Simple("$themesDir/<area>/<theme_path>/templates")
             ),
             new Composite(
-                array(
+                [
                     new Theme(new Simple("$themesDir/<area>/<theme_path>/<namespace>_<module>/templates")),
                     new Simple("$modulesDir/<namespace>/<module>/view/<area>/templates"),
                     new Simple("$modulesDir/<namespace>/<module>/view/base/templates"),
-                )
+                ]
             )
         );
     }
@@ -112,16 +95,16 @@ class RulePool
      */
     protected function createFileRule()
     {
-        $themesDir = $this->filesystem->getPath(Filesystem::THEMES_DIR);
-        $modulesDir = $this->filesystem->getPath(Filesystem::MODULES_DIR);
+        $themesDir = $this->filesystem->getDirectoryRead(DirectoryList::THEMES)->getAbsolutePath();
+        $modulesDir = $this->filesystem->getDirectoryRead(DirectoryList::MODULES)->getAbsolutePath();
         return new ModularSwitch(
             new Theme(new Simple("$themesDir/<area>/<theme_path>")),
             new Composite(
-                array(
+                [
                     new Theme(new Simple("$themesDir/<area>/<theme_path>/<namespace>_<module>")),
                     new Simple("$modulesDir/<namespace>/<module>/view/<area>"),
                     new Simple("{$modulesDir}/<namespace>/<module>/view/base"),
-                )
+                ]
             )
         );
     }
@@ -133,47 +116,47 @@ class RulePool
      */
     protected function createViewFileRule()
     {
-        $themesDir = $this->filesystem->getPath(Filesystem::THEMES_DIR);
-        $modulesDir = $this->filesystem->getPath(Filesystem::MODULES_DIR);
-        $libDir = $this->filesystem->getPath(Filesystem::LIB_WEB);
+        $themesDir = rtrim($this->filesystem->getDirectoryRead(DirectoryList::THEMES)->getAbsolutePath(), '/');
+        $modulesDir = rtrim($this->filesystem->getDirectoryRead(DirectoryList::MODULES)->getAbsolutePath(), '/');
+        $libDir = rtrim($this->filesystem->getDirectoryRead(DirectoryList::LIB_WEB)->getAbsolutePath(), '/');
         return new ModularSwitch(
             new Composite(
-                array(
+                [
                     new Theme(
                         new Composite(
-                            array(
-                                new Simple("$themesDir/<area>/<theme_path>/web/i18n/<locale>", array('locale')),
+                            [
+                                new Simple("$themesDir/<area>/<theme_path>/web/i18n/<locale>", ['locale']),
                                 new Simple("$themesDir/<area>/<theme_path>/web"),
-                            )
+                            ]
                         )
                     ),
                     new Simple($libDir),
-                )
+                ]
             ),
             new Composite(
-                array(
+                [
                     new Theme(
                         new Composite(
-                            array(
+                            [
                                 new Simple(
                                     "$themesDir/<area>/<theme_path>/<namespace>_<module>/web/i18n/<locale>",
-                                    array('locale')
+                                    ['locale']
                                 ),
                                 new Simple("$themesDir/<area>/<theme_path>/<namespace>_<module>/web"),
-                            )
+                            ]
                         )
                     ),
                     new Simple(
                         "$modulesDir/<namespace>/<module>/view/<area>/web/i18n/<locale>",
-                        array('locale')
+                        ['locale']
                     ),
                     new Simple(
                         "$modulesDir/<namespace>/<module>/view/base/web/i18n/<locale>",
-                        array('locale')
+                        ['locale']
                     ),
                     new Simple("$modulesDir/<namespace>/<module>/view/<area>/web"),
                     new Simple("{$modulesDir}/<namespace>/<module>/view/base/web"),
-                )
+                ]
             )
         );
     }

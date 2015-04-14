@@ -1,37 +1,18 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Framework\Search\Request;
 
-
-use Magento\Framework\ObjectManager;
+use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\Search\RequestInterface;
 
 class Builder
 {
     /**
-     * @var ObjectManager
+     * @var ObjectManagerInterface
      */
     private $objectManager;
 
@@ -50,7 +31,7 @@ class Builder
      */
     private $data = [
         'dimensions' => [],
-        'placeholder' => []
+        'placeholder' => [],
     ];
     /**
      * @var Cleaner
@@ -60,12 +41,12 @@ class Builder
     /**
      * Request Builder constructor
      *
-     * @param ObjectManager $objectManager
+     * @param ObjectManagerInterface $objectManager
      * @param Config $config
      * @param Binder $binder
      * @param Cleaner $cleaner
      */
-    public function __construct(ObjectManager $objectManager, Config $config, Binder $binder, Cleaner $cleaner)
+    public function __construct(ObjectManagerInterface $objectManager, Config $config, Binder $binder, Cleaner $cleaner)
     {
         $this->objectManager = $objectManager;
         $this->config = $config;
@@ -126,7 +107,7 @@ class Builder
      * Bind data to placeholder
      *
      * @param string $placeholder
-     * @param string $value
+     * @param mixed $value
      * @return $this
      */
     public function bind($placeholder, $value)
@@ -148,7 +129,7 @@ class Builder
         $requestName = $this->data['requestName'];
         /** @var array $data */
         $data = $this->config->get($requestName);
-        if (is_null($data)) {
+        if ($data === null) {
             throw new \InvalidArgumentException("Request name '{$requestName}' doesn't exist.");
         }
 
@@ -197,17 +178,25 @@ class Builder
                 'from' => $data['from'],
                 'size' => $data['size'],
                 'query' => $mapper->getRootQuery(),
-                'dimensions' => array_map(
-                    function ($data) {
-                        return $this->objectManager->create(
-                            'Magento\Framework\Search\Request\Dimension',
-                            $data
-                        );
-                    },
-                    isset($data['dimensions']) ? $data['dimensions'] : []
-                ),
+                'dimensions' => $this->buildDimensions(isset($data['dimensions']) ? $data['dimensions'] : []),
                 'buckets' => $mapper->getBuckets()
             ]
         );
+    }
+
+    /**
+     * @param array $dimensionsData
+     * @return array
+     */
+    private function buildDimensions(array $dimensionsData)
+    {
+        $dimensions = [];
+        foreach ($dimensionsData as $dimensionData) {
+            $dimensions[$dimensionData['name']] = $this->objectManager->create(
+                'Magento\Framework\Search\Request\Dimension',
+                $dimensionData
+            );
+        }
+        return $dimensions;
     }
 }

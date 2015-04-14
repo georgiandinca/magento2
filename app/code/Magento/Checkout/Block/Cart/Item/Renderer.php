@@ -1,30 +1,15 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Checkout\Block\Cart\Item;
 
 use Magento\Framework\Pricing\PriceCurrencyInterface;
-use Magento\Sales\Model\Quote\Item;
+use Magento\Quote\Model\Quote\Item;
 use Magento\Catalog\Pricing\Price\ConfiguredPriceInterface;
 
 /**
@@ -34,6 +19,7 @@ use Magento\Catalog\Pricing\Price\ConfiguredPriceInterface;
  *
  * @method \Magento\Checkout\Block\Cart\Item\Renderer setProductName(string)
  * @method \Magento\Checkout\Block\Cart\Item\Renderer setDeleteUrl(string)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Renderer extends \Magento\Framework\View\Element\Template implements \Magento\Framework\View\Block\IdentityInterface
 {
@@ -74,7 +60,7 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
     protected $_productConfig = null;
 
     /**
-     * @var \Magento\Core\Helper\Url
+     * @var \Magento\Framework\Url\Helper\Data
      */
     protected $_urlHelper;
 
@@ -94,13 +80,19 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
     protected $priceCurrency;
 
     /**
+     * @var \Magento\Framework\Module\Manager
+     */
+    public $moduleManager;
+
+    /**
      * @param \Magento\Framework\View\Element\Template\Context $context
      * @param \Magento\Catalog\Helper\Product\Configuration $productConfig
      * @param \Magento\Checkout\Model\Session $checkoutSession
      * @param \Magento\Catalog\Helper\Image $imageHelper
-     * @param \Magento\Core\Helper\Url $urlHelper
+     * @param \Magento\Framework\Url\Helper\Data $urlHelper
      * @param \Magento\Framework\Message\ManagerInterface $messageManager
      * @param PriceCurrencyInterface $priceCurrency
+     * @param \Magento\Framework\Module\Manager $moduleManager
      * @param array $data
      */
     public function __construct(
@@ -108,10 +100,11 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
         \Magento\Catalog\Helper\Product\Configuration $productConfig,
         \Magento\Checkout\Model\Session $checkoutSession,
         \Magento\Catalog\Helper\Image $imageHelper,
-        \Magento\Core\Helper\Url $urlHelper,
+        \Magento\Framework\Url\Helper\Data $urlHelper,
         \Magento\Framework\Message\ManagerInterface $messageManager,
         PriceCurrencyInterface $priceCurrency,
-        array $data = array()
+        \Magento\Framework\Module\Manager $moduleManager,
+        array $data = []
     ) {
         $this->priceCurrency = $priceCurrency;
         $this->_imageHelper = $imageHelper;
@@ -121,15 +114,16 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
         $this->messageManager = $messageManager;
         parent::__construct($context, $data);
         $this->_isScopePrivate = true;
+        $this->moduleManager = $moduleManager;
     }
 
     /**
      * Set item for render
      *
-     * @param \Magento\Sales\Model\Quote\Item\AbstractItem $item
+     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
      * @return $this
      */
-    public function setItem(\Magento\Sales\Model\Quote\Item\AbstractItem $item)
+    public function setItem(\Magento\Quote\Model\Quote\Item\AbstractItem $item)
     {
         $this->_item = $item;
         return $this;
@@ -329,7 +323,10 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
      */
     public function getConfigureUrl()
     {
-        return $this->getUrl('checkout/cart/configure', array('id' => $this->getItem()->getId()));
+        return $this->getUrl(
+            'checkout/cart/configure',
+            ['id' => $this->getItem()->getId(), 'product_id' => $this->getItem()->getProduct()->getId()]
+        );
     }
 
     /**
@@ -366,14 +363,14 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
      */
     public function getMessages()
     {
-        $messages = array();
+        $messages = [];
         $quoteItem = $this->getItem();
 
         // Add basic messages occurring during this page load
         $baseMessages = $quoteItem->getMessage(false);
         if ($baseMessages) {
             foreach ($baseMessages as $message) {
-                $messages[] = array('text' => $message, 'type' => $quoteItem->getHasError() ? 'error' : 'notice');
+                $messages[] = ['text' => $message, 'type' => $quoteItem->getHasError() ? 'error' : 'notice'];
             }
         }
 
@@ -383,7 +380,7 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
             $additionalMessages = $collection->getItems();
             foreach ($additionalMessages as $message) {
                 /* @var $message \Magento\Framework\Message\MessageInterface */
-                $messages[] = array('text' => $message->getText(), 'type' => $message->getType());
+                $messages[] = ['text' => $message->getText(), 'type' => $message->getType()];
             }
         }
         $this->messageManager->getMessages('quote_item' . $quoteItem->getId())->clear();
@@ -415,10 +412,10 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
     {
         /* @var $helper \Magento\Catalog\Helper\Product\Configuration */
         $helper = $this->_productConfig;
-        $params = array(
+        $params = [
             'max_length' => 55,
             'cut_replacer' => ' <a href="#" class="dots tooltip toggle" onclick="return false">...</a>'
-        );
+        ];
         return $helper->getFormattedOptionValue($optionValue, $params);
     }
 
@@ -473,7 +470,7 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
      */
     public function getIdentities()
     {
-        $identities = array();
+        $identities = [];
         if ($this->getItem()) {
             $identities = $this->getProduct()->getIdentities();
         }
@@ -532,10 +529,10 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
     /**
      * Return the unit price html
      *
-     * @param \Magento\Sales\Model\Quote\Item\AbstractItem $item
+     * @param \Magento\Quote\Model\Quote\Item\AbstractItem $item
      * @return string
      */
-    public function getUnitPriceHtml(\Magento\Sales\Model\Quote\Item\AbstractItem  $item)
+    public function getUnitPriceHtml(\Magento\Quote\Model\Quote\Item\AbstractItem  $item)
     {
         /** @var Renderer $block */
         $block = $this->getLayout()->getBlock('checkout.item.price.unit');
@@ -546,10 +543,10 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
     /**
      * Return row total html
      *
-     * @param \Magento\Sales\Model\Quote\Item\AbstractItem  $item
+     * @param \Magento\Quote\Model\Quote\Item\AbstractItem  $item
      * @return string
      */
-    public function getRowTotalHtml(\Magento\Sales\Model\Quote\Item\AbstractItem  $item)
+    public function getRowTotalHtml(\Magento\Quote\Model\Quote\Item\AbstractItem  $item)
     {
         /** @var Renderer $block */
         $block = $this->getLayout()->getBlock('checkout.item.price.row');
@@ -560,10 +557,10 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
     /**
      * Return item price html for sidebar
      *
-     * @param \Magento\Sales\Model\Quote\Item\AbstractItem  $item
+     * @param \Magento\Quote\Model\Quote\Item\AbstractItem  $item
      * @return string
      */
-    public function getSidebarItemPriceHtml(\Magento\Sales\Model\Quote\Item\AbstractItem  $item)
+    public function getSidebarItemPriceHtml(\Magento\Quote\Model\Quote\Item\AbstractItem  $item)
     {
         /** @var Renderer $block */
         $block = $this->getLayout()->getBlock('checkout.cart.item.price.sidebar');
@@ -577,7 +574,7 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
      * @param Item\AbstractItem $item
      * @return string
      */
-    public function getUnitPriceExclTaxHtml(\Magento\Sales\Model\Quote\Item\AbstractItem  $item)
+    public function getUnitPriceExclTaxHtml(\Magento\Quote\Model\Quote\Item\AbstractItem  $item)
     {
         /** @var Renderer $block */
         $block = $this->getLayout()->getBlock('checkout.onepage.review.item.price.unit.excl');
@@ -591,7 +588,7 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
      * @param Item\AbstractItem $item
      * @return string
      */
-    public function getUnitPriceInclTaxHtml(\Magento\Sales\Model\Quote\Item\AbstractItem  $item)
+    public function getUnitPriceInclTaxHtml(\Magento\Quote\Model\Quote\Item\AbstractItem  $item)
     {
         /** @var Renderer $block */
         $block = $this->getLayout()->getBlock('checkout.onepage.review.item.price.unit.incl');
@@ -605,7 +602,7 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
      * @param Item\AbstractItem $item
      * @return string
      */
-    public function getRowTotalExclTaxHtml(\Magento\Sales\Model\Quote\Item\AbstractItem  $item)
+    public function getRowTotalExclTaxHtml(\Magento\Quote\Model\Quote\Item\AbstractItem  $item)
     {
         /** @var Renderer $block */
         $block = $this->getLayout()->getBlock('checkout.onepage.review.item.price.rowtotal.excl');
@@ -619,7 +616,7 @@ class Renderer extends \Magento\Framework\View\Element\Template implements \Mage
      * @param Item\AbstractItem $item
      * @return string
      */
-    public function getRowTotalInclTaxHtml(\Magento\Sales\Model\Quote\Item\AbstractItem  $item)
+    public function getRowTotalInclTaxHtml(\Magento\Quote\Model\Quote\Item\AbstractItem  $item)
     {
         /** @var Renderer $block */
         $block = $this->getLayout()->getBlock('checkout.onepage.review.item.price.rowtotal.incl');

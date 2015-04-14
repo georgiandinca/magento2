@@ -1,35 +1,20 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Framework\Locale;
 
-class Lists implements \Magento\Framework\Locale\ListsInterface
-{
-    /**
-     * @var \Magento\Framework\App\ScopeResolverInterface
-     */
-    protected $_scopeResolver;
+use Magento\Framework\Locale\Bundle\CurrencyBundle;
+use Magento\Framework\Locale\Bundle\DataBundle;
+use Magento\Framework\Locale\Bundle\LanguageBundle;
+use Magento\Framework\Locale\Bundle\RegionBundle;
 
+class Lists implements ListsInterface
+{
     /**
      * @var \Magento\Framework\Locale\ConfigInterface
      */
@@ -38,25 +23,21 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
     /**
      * @var \Magento\Framework\Locale\ResolverInterface
      */
-    protected $_localeResolver;
+    protected $localeResolver;
 
     /**
-     * @param \Magento\Framework\App\ScopeResolverInterface $scopeResolver
-     * @param \Magento\Framework\Locale\ConfigInterface $config
      * @param \Magento\Framework\Locale\ResolverInterface $localeResolver
      * @param string $locale
      */
     public function __construct(
-        \Magento\Framework\App\ScopeResolverInterface $scopeResolver,
         \Magento\Framework\Locale\ConfigInterface $config,
         \Magento\Framework\Locale\ResolverInterface $localeResolver,
         $locale = null
     ) {
-        $this->_scopeResolver = $scopeResolver;
         $this->_config = $config;
-        $this->_localeResolver = $localeResolver;
+        $this->localeResolver = $localeResolver;
         if ($locale !== null) {
-            $this->_localeResolver->setLocale($locale);
+            $this->localeResolver->setLocale($locale);
         }
     }
 
@@ -81,44 +62,36 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
      *
      * @param   bool $translatedName translation flag
      * @return  array
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function _getOptionLocales($translatedName = false)
     {
-        $options = array();
-        $locales = $this->_localeResolver->getLocale()->getLocaleList();
-        $languages = $this->_localeResolver->getLocale()->getTranslationList(
-            'language',
-            $this->_localeResolver->getLocale()
-        );
-        $countries = $this->_localeResolver->getLocale()->getTranslationList(
-            'territory',
-            $this->_localeResolver->getLocale(),
-            2
-        );
+        $currentLocale = $this->localeResolver->getLocale();
+        $locales = \ResourceBundle::getLocales(null);
+        $languages = (new LanguageBundle())->get($currentLocale)['Languages'];
+        $countries = (new RegionBundle())->get($currentLocale)['Countries'];
 
-        $allowed = $this->_config->getAllowedLocales();
-        foreach (array_keys($locales) as $code) {
-            if (strstr($code, '_')) {
-                if (!in_array($code, $allowed)) {
-                    continue;
-                }
-                $data = explode('_', $code);
-                if (!isset($languages[$data[0]]) || !isset($countries[$data[1]])) {
-                    continue;
-                }
-                if ($translatedName) {
-                    $label = ucwords(
-                        $this->_localeResolver->getLocale()->getTranslation($data[0], 'language', $code)
-                    ) . ' (' . $this->_localeResolver->getLocale()->getTranslation(
-                        $data[1],
-                        'country',
-                        $code
-                    ) . ') / ' . $languages[$data[0]] . ' (' . $countries[$data[1]] . ')';
-                } else {
-                    $label = $languages[$data[0]] . ' (' . $countries[$data[1]] . ')';
-                }
-                $options[] = array('value' => $code, 'label' => $label);
+        $options = [];
+        $allowedLocales = $this->_config->getAllowedLocales();
+        foreach ($locales as $locale) {
+            if (!in_array($locale, $allowedLocales)) {
+                continue;
             }
+            $language = \Locale::getPrimaryLanguage($locale);
+            $country = \Locale::getRegion($locale);
+            if (!$languages[$language] || !$countries[$country]) {
+                continue;
+            }
+            if ($translatedName) {
+                $label = ucwords(\Locale::getDisplayLanguage($locale, $locale))
+                    . ' (' . \Locale::getDisplayRegion($locale, $locale) . ') / '
+                    . $languages[$language]
+                    . ' (' . $countries[$country] . ')';
+            } else {
+                $label = $languages[$language]
+                    . ' (' . $countries[$country] . ')';
+            }
+            $options[] = ['value' => $locale, 'label' => $label];
         }
         return $this->_sortOptionArray($options);
     }
@@ -128,13 +101,19 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
      */
     public function getOptionTimezones()
     {
-        $options = array();
-        $zones = $this->getTranslationList('windowstotimezone');
-        ksort($zones);
-        foreach ($zones as $code => $name) {
-            $name = trim($name);
-            $options[] = array('label' => empty($name) ? $code : $name . ' (' . $code . ')', 'value' => $code);
-        }
+        $options = [];
+        $locale = $this->localeResolver->getLocale();
+        $zones = \DateTimeZone::listIdentifiers(\DateTimeZone::ALL);
+        foreach ($zones as $code) {
+            $options[] = [
+                'label' => \IntlTimeZone::createTimeZone($code)->getDisplayName(
+                        false,
+                        \IntlTimeZone::DISPLAY_LONG,
+                        $locale
+                    ) . ' (' . $code . ')',
+                'value' => $code
+            ];
+    }
         return $this->_sortOptionArray($options);
     }
 
@@ -143,11 +122,14 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
      */
     public function getOptionWeekdays($preserveCodes = false, $ucFirstCode = false)
     {
-        $options = array();
-        $days = $this->getTranslationList('days');
-        $days = $preserveCodes ? $days['format']['wide'] : array_values($days['format']['wide']);
+        $options = [];
+        $days = (new DataBundle())->get(
+            $this->localeResolver->getLocale()
+        )['calendar']['gregorian']['dayNames']['format']['wide'];
+        $englishDays = (new DataBundle())->get('en_US')['calendar']['gregorian']['dayNames']['format']['abbreviated'];
         foreach ($days as $code => $name) {
-            $options[] = array('label' => $name, 'value' => $ucFirstCode ? ucfirst($code) : $code);
+            $code = $preserveCodes ? $englishDays[$code] : $code;
+            $options[] = ['label' => $name, 'value' => $ucFirstCode ? ucfirst($code) : $code];
         }
         return $options;
     }
@@ -157,11 +139,10 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
      */
     public function getOptionCountries()
     {
-        $options = array();
-        $countries = $this->getCountryTranslationList();
-
+        $options = [];
+        $countries = (new RegionBundle())->get($this->localeResolver->getLocale())['Countries'];
         foreach ($countries as $code => $name) {
-            $options[] = array('label' => $name, 'value' => $code);
+            $options[] = ['label' => $name, 'value' => $code];
         }
         return $this->_sortOptionArray($options);
     }
@@ -171,16 +152,14 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
      */
     public function getOptionCurrencies()
     {
-        $currencies = $this->getTranslationList('currencytoname');
-        $options = array();
+        $currencies = (new CurrencyBundle())->get($this->localeResolver->getLocale())['Currencies'];
+        $options = [];
         $allowed = $this->_config->getAllowedCurrencies();
-
-        foreach ($currencies as $name => $code) {
+        foreach ($currencies as $code => $data) {
             if (!in_array($code, $allowed)) {
                 continue;
             }
-
-            $options[] = array('label' => $name, 'value' => $code);
+            $options[] = ['label' => $data[1], 'value' => $code];
         }
         return $this->_sortOptionArray($options);
     }
@@ -190,10 +169,10 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
      */
     public function getOptionAllCurrencies()
     {
-        $currencies = $this->getTranslationList('currencytoname');
-        $options = array();
-        foreach ($currencies as $name => $code) {
-            $options[] = array('label' => $name, 'value' => $code);
+        $currencies = (new CurrencyBundle())->get($this->localeResolver->getLocale())['Currencies'];
+        $options = [];
+        foreach ($currencies as $code => $data) {
+            $options[] = ['label' => $data[1], 'value' => $code];
         }
         return $this->_sortOptionArray($options);
     }
@@ -204,14 +183,14 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
      */
     protected function _sortOptionArray($option)
     {
-        $data = array();
+        $data = [];
         foreach ($option as $item) {
             $data[$item['value']] = $item['label'];
         }
         asort($data);
-        $option = array();
+        $option = [];
         foreach ($data as $key => $label) {
-            $option[] = array('value' => $key, 'label' => $label);
+            $option[] = ['value' => $key, 'label' => $label];
         }
         return $option;
     }
@@ -219,30 +198,8 @@ class Lists implements \Magento\Framework\Locale\ListsInterface
     /**
      * @inheritdoc
      */
-    public function getTranslationList($path = null, $value = null)
-    {
-        return $this->_localeResolver->getLocale()->getTranslationList(
-            $path,
-            $this->_localeResolver->getLocale(),
-            $value
-        );
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function getCountryTranslation($value)
     {
-        $locale = $this->_localeResolver->getLocale();
-        return $locale->getTranslation($value, 'country', $locale);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getCountryTranslationList()
-    {
-        $locale = $this->_localeResolver->getLocale();
-        return $locale->getTranslationList('territory', $locale, 2);
+        return (new RegionBundle())->get($this->localeResolver->getLocale())['Countries'][$value];
     }
 }

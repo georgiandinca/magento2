@@ -1,30 +1,16 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Framework\Model\Resource\Db\Collection;
 
 /**
  * Abstract Resource Collection
+ * @SuppressWarnings(PHPMD.NumberOfChildren)
  */
 abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
 {
@@ -75,7 +61,7 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
      *
      * @var array
      */
-    protected $_joinedTables = array();
+    protected $_joinedTables = [];
 
     /**
      * Collection main table
@@ -114,7 +100,7 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
 
     /**
      * @param \Magento\Framework\Data\Collection\EntityFactoryInterface $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Zend_Db_Adapter_Abstract $connection
@@ -122,7 +108,7 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
      */
     public function __construct(
         \Magento\Framework\Data\Collection\EntityFactoryInterface $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         $connection = null,
@@ -187,7 +173,7 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
      */
     protected function _initSelect()
     {
-        $this->getSelect()->from(array('main_table' => $this->getMainTable()));
+        $this->getSelect()->from(['main_table' => $this->getMainTable()]);
         return $this;
     }
 
@@ -209,11 +195,13 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
      * Init fields for select
      *
      * @return $this
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function _initSelectFields()
     {
         $columns = $this->_select->getPart(\Zend_Db_Select::COLUMNS);
-        $columnsToSelect = array();
+        $columnsToSelect = [];
         foreach ($columns as $columnEntry) {
             list($correlationName, $column, $alias) = $columnEntry;
             if ($correlationName !== 'main_table') {
@@ -253,13 +241,13 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
                     continue;
                 }
 
-                $columnEntry = array('main_table', $field, $alias);
-                array_splice($columns, $insertIndex, 0, array($columnEntry));
+                $columnEntry = ['main_table', $field, $alias];
+                array_splice($columns, $insertIndex, 0, [$columnEntry]);
                 // Insert column
                 $insertIndex++;
             }
         } else {
-            array_unshift($columns, array('main_table', '*', null));
+            array_unshift($columns, ['main_table', '*', null]);
         }
 
         $this->_select->setPart(\Zend_Db_Select::COLUMNS, $columns);
@@ -275,7 +263,7 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
     protected function _getInitialFieldsToSelect()
     {
         if ($this->_initialFieldsToSelect === null) {
-            $this->_initialFieldsToSelect = array();
+            $this->_initialFieldsToSelect = [];
             $this->_initInitialFieldsToSelect();
         }
 
@@ -350,7 +338,7 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
     {
         // validate alias
         if (!is_array($fields)) {
-            $fields = array($fields => $fields);
+            $fields = [$fields => $fields];
         }
 
         $fullExpression = $expression;
@@ -358,7 +346,7 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
             $fullExpression = str_replace('{{' . $fieldKey . '}}', $fieldItem, $fullExpression);
         }
 
-        $this->getSelect()->columns(array($alias => $fullExpression));
+        $this->getSelect()->columns([$alias => $fullExpression]);
 
         return $this;
     }
@@ -523,8 +511,8 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
             $alias = $table;
         }
 
-        if (!isset($this->_joinedTables[$table])) {
-            $this->getSelect()->join(array($alias => $this->getTable($table)), $cond, $cols);
+        if (!isset($this->_joinedTables[$alias])) {
+            $this->getSelect()->join([$alias => $this->getTable($table)], $cond, $cols);
             $this->_joinedTables[$alias] = true;
         }
         return $this;
@@ -538,9 +526,9 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
     protected function _beforeLoad()
     {
         parent::_beforeLoad();
-        $this->_eventManager->dispatch('core_collection_abstract_load_before', array('collection' => $this));
+        $this->_eventManager->dispatch('core_collection_abstract_load_before', ['collection' => $this]);
         if ($this->_eventPrefix && $this->_eventObject) {
-            $this->_eventManager->dispatch($this->_eventPrefix . '_load_before', array($this->_eventObject => $this));
+            $this->_eventManager->dispatch($this->_eventPrefix . '_load_before', [$this->_eventObject => $this]);
         }
         return $this;
     }
@@ -585,9 +573,9 @@ abstract class AbstractCollection extends \Magento\Framework\Data\Collection\Db
                 $item->setDataChanges(false);
             }
         }
-        $this->_eventManager->dispatch('core_collection_abstract_load_after', array('collection' => $this));
+        $this->_eventManager->dispatch('core_collection_abstract_load_after', ['collection' => $this]);
         if ($this->_eventPrefix && $this->_eventObject) {
-            $this->_eventManager->dispatch($this->_eventPrefix . '_load_after', array($this->_eventObject => $this));
+            $this->_eventManager->dispatch($this->_eventPrefix . '_load_after', [$this->_eventObject => $this]);
         }
         return $this;
     }

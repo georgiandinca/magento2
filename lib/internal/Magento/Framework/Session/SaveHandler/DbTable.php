@@ -1,27 +1,12 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework\Session\SaveHandler;
+
+use Magento\Framework\Exception\SessionException;
+use Magento\Framework\Phrase;
 
 /**
  * Data base session save handler
@@ -49,7 +34,7 @@ class DbTable extends \SessionHandler
      */
     public function __construct(\Magento\Framework\App\Resource $resource)
     {
-        $this->_sessionTable = $resource->getTableName('core_session');
+        $this->_sessionTable = $resource->getTableName('session');
         $this->_write = $resource->getConnection('core_write');
         $this->checkConnection();
     }
@@ -58,15 +43,15 @@ class DbTable extends \SessionHandler
      * Check DB connection
      *
      * @return void
-     * @throws \Magento\Framework\Session\SaveHandlerException
+     * @throws \Magento\Framework\Exception\SessionException
      */
     protected function checkConnection()
     {
         if (!$this->_write) {
-            throw new \Magento\Framework\Session\SaveHandlerException('Write DB connection is not available');
+            throw new SessionException(new Phrase('Write DB connection is not available'));
         }
         if (!$this->_write->isTableExists($this->_sessionTable)) {
-            throw new \Magento\Framework\Session\SaveHandlerException('DB storage table does not exist');
+            throw new SessionException(new Phrase('DB storage table does not exist'));
         }
     }
 
@@ -76,6 +61,7 @@ class DbTable extends \SessionHandler
      * @param string $savePath ignored
      * @param string $sessionName ignored
      * @return bool
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function open($savePath, $sessionName)
     {
@@ -103,11 +89,11 @@ class DbTable extends \SessionHandler
         // need to use write connection to get the most fresh DB sessions
         $select = $this->_write->select()->from(
             $this->_sessionTable,
-            array('session_data')
+            ['session_data']
         )->where(
             'session_id = :session_id'
         );
-        $bind = array('session_id' => $sessionId);
+        $bind = ['session_id' => $sessionId];
         $data = $this->_write->fetchOne($select, $bind);
 
         // check if session data is a base64 encoded string
@@ -128,16 +114,16 @@ class DbTable extends \SessionHandler
     public function write($sessionId, $sessionData)
     {
         // need to use write connection to get the most fresh DB sessions
-        $bindValues = array('session_id' => $sessionId);
+        $bindValues = ['session_id' => $sessionId];
         $select = $this->_write->select()->from($this->_sessionTable)->where('session_id = :session_id');
         $exists = $this->_write->fetchOne($select, $bindValues);
 
         // encode session serialized data to prevent insertion of incorrect symbols
         $sessionData = base64_encode($sessionData);
-        $bind = array('session_expires' => time(), 'session_data' => $sessionData);
+        $bind = ['session_expires' => time(), 'session_data' => $sessionData];
 
         if ($exists) {
-            $this->_write->update($this->_sessionTable, $bind, array('session_id=?' => $sessionId));
+            $this->_write->update($this->_sessionTable, $bind, ['session_id=?' => $sessionId]);
         } else {
             $bind['session_id'] = $sessionId;
             $this->_write->insert($this->_sessionTable, $bind);
@@ -153,7 +139,7 @@ class DbTable extends \SessionHandler
      */
     public function destroy($sessionId)
     {
-        $where = array('session_id = ?' => $sessionId);
+        $where = ['session_id = ?' => $sessionId];
         $this->_write->delete($this->_sessionTable, $where);
         return true;
     }
@@ -163,10 +149,11 @@ class DbTable extends \SessionHandler
      *
      * @param int $maxLifeTime
      * @return bool
+     * @SuppressWarnings(PHPMD.ShortMethodName)
      */
     public function gc($maxLifeTime)
     {
-        $where = array('session_expires < ?' => time() - $maxLifeTime);
+        $where = ['session_expires < ?' => time() - $maxLifeTime];
         $this->_write->delete($this->_sessionTable, $where);
         return true;
     }

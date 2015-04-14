@@ -2,36 +2,19 @@
 /**
  * Backend area front name resolver. Reads front name from configuration
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Backend\App\Area;
+
+use Magento\Backend\Setup\ConfigOptionsList;
+use Magento\Framework\App\DeploymentConfig;
 
 class FrontNameResolver implements \Magento\Framework\App\Area\FrontNameResolverInterface
 {
     const XML_PATH_USE_CUSTOM_ADMIN_PATH = 'admin/url/use_custom_path';
 
     const XML_PATH_CUSTOM_ADMIN_PATH = 'admin/url/custom_path';
-
-    const PARAM_BACKEND_FRONT_NAME = 'backend.frontName';
 
     /**
      * Backend area code
@@ -41,21 +24,28 @@ class FrontNameResolver implements \Magento\Framework\App\Area\FrontNameResolver
     /**
      * @var string
      */
-    protected $_defaultFrontName;
+    protected $defaultFrontName;
 
     /**
      * @var \Magento\Backend\App\ConfigInterface
      */
-    protected $_config;
+    protected $config;
+
+    /**
+     * Deployment configuration
+     *
+     * @var DeploymentConfig
+     */
+    protected $deploymentConfig;
 
     /**
      * @param \Magento\Backend\App\Config $config
-     * @param string $defaultFrontName
+     * @param DeploymentConfig $deploymentConfig
      */
-    public function __construct(\Magento\Backend\App\Config $config, $defaultFrontName)
+    public function __construct(\Magento\Backend\App\Config $config, DeploymentConfig $deploymentConfig)
     {
-        $this->_config = $config;
-        $this->_defaultFrontName = $defaultFrontName;
+        $this->config = $config;
+        $this->defaultFrontName = $deploymentConfig->get(ConfigOptionsList::CONFIG_PATH_BACKEND_FRONTNAME);
     }
 
     /**
@@ -65,10 +55,10 @@ class FrontNameResolver implements \Magento\Framework\App\Area\FrontNameResolver
      */
     public function getFrontName()
     {
-        $isCustomPathUsed = (bool)(string)$this->_config->getValue(self::XML_PATH_USE_CUSTOM_ADMIN_PATH);
+        $isCustomPathUsed = (bool)(string)$this->config->getValue(self::XML_PATH_USE_CUSTOM_ADMIN_PATH);
         if ($isCustomPathUsed) {
-            return (string)$this->_config->getValue(self::XML_PATH_CUSTOM_ADMIN_PATH);
+            return (string)$this->config->getValue(self::XML_PATH_CUSTOM_ADMIN_PATH);
         }
-        return $this->_defaultFrontName;
+        return $this->defaultFrontName;
     }
 }

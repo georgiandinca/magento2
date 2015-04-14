@@ -1,35 +1,16 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Test\TestCase\ProductAttribute;
 
-use Mtf\TestCase\Injectable;
-use Magento\Catalog\Test\Fixture\CatalogProductSimple;
 use Magento\Catalog\Test\Fixture\CatalogAttributeSet;
 use Magento\Catalog\Test\Fixture\CatalogProductAttribute;
 use Magento\Catalog\Test\Page\Adminhtml\CatalogProductAttributeIndex;
 use Magento\Catalog\Test\Page\Adminhtml\CatalogProductAttributeNew;
+use Magento\Mtf\TestCase\Injectable;
 
 /**
  * Test Creation for UpdateProductAttributeEntity
@@ -52,11 +33,16 @@ use Magento\Catalog\Test\Page\Adminhtml\CatalogProductAttributeNew;
  */
 class UpdateProductAttributeEntityTest extends Injectable
 {
+    /* tags */
+    const MVP = 'yes';
+    const DOMAIN = 'MX';
+    /* end tags */
+
     /**
      * Run UpdateProductAttributeEntity test
      *
      * @param CatalogProductAttribute $productAttributeOriginal
-     * @param CatalogProductAttribute $productAttribute
+     * @param CatalogProductAttribute $attribute
      * @param CatalogAttributeSet $productTemplate
      * @param CatalogProductAttributeIndex $attributeIndex
      * @param CatalogProductAttributeNew $attributeNew
@@ -64,7 +50,7 @@ class UpdateProductAttributeEntityTest extends Injectable
      */
     public function testUpdateProductAttribute(
         CatalogProductAttribute $productAttributeOriginal,
-        CatalogProductAttribute $productAttribute,
+        CatalogProductAttribute $attribute,
         CatalogAttributeSet $productTemplate,
         CatalogProductAttributeIndex $attributeIndex,
         CatalogProductAttributeNew $attributeNew
@@ -80,7 +66,7 @@ class UpdateProductAttributeEntityTest extends Injectable
         //Steps
         $attributeIndex->open();
         $attributeIndex->getGrid()->searchAndOpen($filter);
-        $attributeNew->getAttributeForm()->fill($productAttribute);
+        $attributeNew->getAttributeForm()->fill($attribute);
         $attributeNew->getPageActions()->save();
     }
 }

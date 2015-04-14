@@ -1,34 +1,20 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\CatalogSearch\Model\Resource\Search;
 
 /**
  * Search collection
  *
- * @author      Magento Core Team <core@magentocommerce.com>
+ * @deprecated
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
+class Collection extends \Magento\Catalog\Model\Resource\Product\Collection implements \Magento\Search\Model\SearchCollectionInterface
 {
     /**
      * Attribute collection
@@ -52,8 +38,8 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
     protected $_attributeCollectionFactory;
 
     /**
-     * @param \Magento\Core\Model\EntityFactory $entityFactory
-     * @param \Magento\Framework\Logger $logger
+     * @param \Magento\Framework\Data\Collection\EntityFactory $entityFactory
+     * @param \Psr\Log\LoggerInterface $logger
      * @param \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
      * @param \Magento\Eav\Model\Config $eavConfig
@@ -61,7 +47,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      * @param \Magento\Eav\Model\EntityFactory $eavEntityFactory
      * @param \Magento\Catalog\Model\Resource\Helper $resourceHelper
      * @param \Magento\Framework\Validator\UniversalFactory $universalFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Module\Manager $moduleManager
      * @param \Magento\Catalog\Model\Indexer\Product\Flat\State $catalogProductFlatState
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
@@ -70,14 +56,15 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\Customer\Model\Session $customerSession
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
+     * @param \Magento\Customer\Api\GroupManagementInterface $groupManagement
      * @param \Magento\Catalog\Model\Resource\Product\Attribute\CollectionFactory $attributeCollectionFactory
      * @param \Zend_Db_Adapter_Abstract $connection
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        \Magento\Core\Model\EntityFactory $entityFactory,
-        \Magento\Framework\Logger $logger,
+        \Magento\Framework\Data\Collection\EntityFactory $entityFactory,
+        \Psr\Log\LoggerInterface $logger,
         \Magento\Framework\Data\Collection\Db\FetchStrategyInterface $fetchStrategy,
         \Magento\Framework\Event\ManagerInterface $eventManager,
         \Magento\Eav\Model\Config $eavConfig,
@@ -85,7 +72,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
         \Magento\Eav\Model\EntityFactory $eavEntityFactory,
         \Magento\Catalog\Model\Resource\Helper $resourceHelper,
         \Magento\Framework\Validator\UniversalFactory $universalFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Module\Manager $moduleManager,
         \Magento\Catalog\Model\Indexer\Product\Flat\State $catalogProductFlatState,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -94,6 +81,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Customer\Model\Session $customerSession,
         \Magento\Framework\Stdlib\DateTime $dateTime,
+        \Magento\Customer\Api\GroupManagementInterface $groupManagement,
         \Magento\Catalog\Model\Resource\Product\Attribute\CollectionFactory $attributeCollectionFactory,
         $connection = null
     ) {
@@ -117,6 +105,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
             $localeDate,
             $customerSession,
             $dateTime,
+            $groupManagement,
             $connection
         );
     }
@@ -130,7 +119,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
     public function addSearchFilter($query)
     {
         $this->_searchQuery = $query;
-        $this->addFieldToFilter('entity_id', array('in' => new \Zend_Db_Expr($this->_getSearchEntityIdsSql($query))));
+        $this->addFieldToFilter('entity_id', ['in' => new \Zend_Db_Expr($this->_getSearchEntityIdsSql($query))]);
         return $this;
     }
 
@@ -145,7 +134,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
         $this->_searchQuery = $query;
         $this->addFieldToFilter(
             'entity_id',
-            array('in' => new \Zend_Db_Expr($this->_getSearchEntityIdsSql($query, false)))
+            ['in' => new \Zend_Db_Expr($this->_getSearchEntityIdsSql($query, false))]
         );
         return $this;
     }
@@ -177,10 +166,10 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
     {
         if ($attribute->getIsSearchable() && !in_array(
             $attribute->getFrontendInput(),
-            array('select', 'multiselect')
+            ['select', 'multiselect']
         ) && (in_array(
             $attribute->getBackendType(),
-            array('varchar', 'text')
+            ['varchar', 'text']
         ) || $attribute->getBackendType() == 'static')
         ) {
             return true;
@@ -196,7 +185,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      */
     protected function _hasAttributeOptionsAndSearchable($attribute)
     {
-        if ($attribute->getIsSearchable() && in_array($attribute->getFrontendInput(), array('select', 'multiselect'))
+        if ($attribute->getIsSearchable() && in_array($attribute->getFrontendInput(), ['select', 'multiselect'])
         ) {
             return true;
         }
@@ -213,10 +202,10 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      */
     protected function _getSearchEntityIdsSql($query, $searchOnlyInCurrentStore = true)
     {
-        $tables = array();
-        $selects = array();
+        $tables = [];
+        $selects = [];
 
-        $likeOptions = array('position' => 'any');
+        $likeOptions = ['position' => 'any'];
 
         /**
          * Collect tables and attribute ids of attributes with string values
@@ -227,7 +216,7 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
             if ($this->_isAttributeTextAndSearchable($attribute)) {
                 $table = $attribute->getBackendTable();
                 if (!isset($tables[$table]) && $attribute->getBackendType() != 'static') {
-                    $tables[$table] = array();
+                    $tables[$table] = [];
                 }
 
                 if ($attribute->getBackendType() == 'static') {
@@ -255,12 +244,12 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
         $ifValueId = $this->getConnection()->getIfNullSql('t2.value', 't1.value');
         foreach ($tables as $table => $attributeIds) {
             $selects[] = $this->getConnection()->select()->from(
-                array('t1' => $table),
+                ['t1' => $table],
                 'entity_id'
             )->joinLeft(
-                array('t2' => $table),
+                ['t2' => $table],
                 $joinCondition,
-                array()
+                []
             )->where(
                 't1.attribute_id IN (?)',
                 $attributeIds
@@ -286,11 +275,13 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
      *
      * @param mixed $query
      * @return string
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     protected function _getSearchInOptionSql($query)
     {
-        $attributeIds = array();
-        $attributeTables = array();
+        $attributeIds = [];
+        $attributeTables = [];
         $storeId = (int)$this->getStoreId();
 
         /**
@@ -316,27 +307,27 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
         $ifStoreId = $this->getConnection()->getIfNullSql('s.store_id', 'd.store_id');
         $ifValue = $this->getConnection()->getCheckSql('s.value_id > 0', 's.value', 'd.value');
         $select = $this->getConnection()->select()->from(
-            array('d' => $optionValueTable),
-            array('option_id', 'o.attribute_id', 'store_id' => $ifStoreId, 'a.frontend_input')
+            ['d' => $optionValueTable],
+            ['option_id', 'o.attribute_id', 'store_id' => $ifStoreId, 'a.frontend_input']
         )->joinLeft(
-            array('s' => $optionValueTable),
+            ['s' => $optionValueTable],
             $this->getConnection()->quoteInto('s.option_id = d.option_id AND s.store_id=?', $storeId),
-            array()
+            []
         )->join(
-            array('o' => $optionTable),
+            ['o' => $optionTable],
             'o.option_id=d.option_id',
-            array()
+            []
         )->join(
-            array('a' => $attributesTable),
+            ['a' => $attributesTable],
             'o.attribute_id=a.attribute_id',
-            array()
+            []
         )->where(
             'd.store_id=0'
         )->where(
             'o.attribute_id IN (?)',
             $attributeIds
         )->where(
-            $this->_resourceHelper->getCILike($ifValue, $this->_searchQuery, array('position' => 'any'))
+            $this->_resourceHelper->getCILike($ifValue, $this->_searchQuery, ['position' => 'any'])
         );
 
         $options = $this->getConnection()->fetchAll($select);
@@ -345,15 +336,15 @@ class Collection extends \Magento\Catalog\Model\Resource\Product\Collection
         }
 
         // build selects of entity ids for specified options ids by frontend input
-        $selects = array();
-        foreach (array('select' => 'eq', 'multiselect' => 'finset') as $frontendInput => $condition) {
+        $selects = [];
+        foreach (['select' => 'eq', 'multiselect' => 'finset'] as $frontendInput => $condition) {
             if (isset($attributeTables[$frontendInput])) {
-                $where = array();
+                $where = [];
                 foreach ($options as $option) {
                     if ($frontendInput === $option['frontend_input']) {
                         $findSet = $this->getConnection()->prepareSqlCondition(
                             'value',
-                            array($condition => $option['option_id'])
+                            [$condition => $option['option_id']]
                         );
                         $whereCond = "(attribute_id=%d AND store_id=%d AND {$findSet})";
                         $where[] = sprintf($whereCond, $option['attribute_id'], $option['store_id']);

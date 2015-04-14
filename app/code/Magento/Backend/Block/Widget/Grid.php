@@ -1,26 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
+
 namespace Magento\Backend\Block\Widget;
 
 /**
@@ -28,6 +13,7 @@ namespace Magento\Backend\Block\Widget;
  *
  * @method string getRowClickCallback() getRowClickCallback()
  * @method \Magento\Backend\Block\Widget\Grid setRowClickCallback() setRowClickCallback(string $value)
+ * @SuppressWarnings(PHPMD.TooManyFields)
  */
 class Grid extends \Magento\Backend\Block\Widget
 {
@@ -81,7 +67,7 @@ class Grid extends \Magento\Backend\Block\Widget
     /**
      * @var array
      */
-    protected $_defaultFilter = array();
+    protected $_defaultFilter = [];
 
     /**
      * Empty grid text
@@ -155,7 +141,7 @@ class Grid extends \Magento\Backend\Block\Widget
     public function __construct(
         \Magento\Backend\Block\Template\Context $context,
         \Magento\Backend\Helper\Data $backendHelper,
-        array $data = array()
+        array $data = []
     ) {
         $this->_backendHelper = $backendHelper;
         $this->_backendSession = $context->getBackendSession();
@@ -164,6 +150,7 @@ class Grid extends \Magento\Backend\Block\Widget
 
     /**
      * @return void
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function _construct()
     {
@@ -230,13 +217,15 @@ class Grid extends \Magento\Backend\Block\Widget
     /**
      * Retrieve export block
      *
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @return \Magento\Framework\View\Element\AbstractBlock|bool
      */
     public function getExportBlock()
     {
         if (!$this->getChildBlock('grid.export')) {
-            throw new \Magento\Framework\Model\Exception('Export block for grid ' . $this->getNameInLayout() . ' is not defined');
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __('Export block for grid %1 is not defined', $this->getNameInLayout())
+            );
         }
         return $this->getChildBlock('grid.export');
     }
@@ -349,11 +338,11 @@ class Grid extends \Magento\Backend\Block\Widget
      * Apply sorting and filtering to collection
      *
      * @return $this
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function _prepareCollection()
     {
         if ($this->getCollection()) {
-
             $this->_preparePage();
 
             $columnId = $this->getParam($this->getVarNameSort(), $this->_defaultSort);
@@ -368,9 +357,9 @@ class Grid extends \Magento\Backend\Block\Widget
                 $data = $this->_backendHelper->prepareFilterString($filter);
                 $data = array_merge($data, (array)$this->getRequest()->getPost($this->getVarNameFilter()));
                 $this->_setFilterValues($data);
-            } else if ($filter && is_array($filter)) {
+            } elseif ($filter && is_array($filter)) {
                 $this->_setFilterValues($filter);
-            } else if (0 !== sizeof($this->_defaultFilter)) {
+            } elseif (0 !== sizeof($this->_defaultFilter)) {
                 $this->_setFilterValues($this->_defaultFilter);
             }
 
@@ -443,7 +432,7 @@ class Grid extends \Magento\Backend\Block\Widget
             $this->getLayout()->createBlock(
                 'Magento\Backend\Block\Widget\Button'
             )->setData(
-                array('label' => __('Reset Filter'), 'onclick' => $this->getJsObjectName() . '.resetFilter()', 'class' => 'action-reset')
+                ['label' => __('Reset Filter'), 'onclick' => $this->getJsObjectName() . '.resetFilter()', 'class' => 'action-reset']
             )
         );
         $this->setChild(
@@ -451,11 +440,11 @@ class Grid extends \Magento\Backend\Block\Widget
             $this->getLayout()->createBlock(
                 'Magento\Backend\Block\Widget\Button'
             )->setData(
-                array(
+                [
                     'label' => __('Search'),
                     'onclick' => $this->getJsObjectName() . '.doFilter()',
-                    'class' => 'task'
-                )
+                    'class' => 'task',
+                ]
             )
         );
     }
@@ -597,6 +586,7 @@ class Grid extends \Magento\Backend\Block\Widget
      * Return visibility of pager
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getPagerVisibility()
     {
@@ -618,6 +608,7 @@ class Grid extends \Magento\Backend\Block\Widget
      * Return visibility of message blocks
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getMessageBlockVisibility()
     {
@@ -714,7 +705,7 @@ class Grid extends \Magento\Backend\Block\Widget
      * @param array $params url parameters
      * @return string current grid url
      */
-    public function getAbsoluteGridUrl($params = array())
+    public function getAbsoluteGridUrl($params = [])
     {
         return $this->getCurrentUrl($params);
     }
@@ -780,6 +771,7 @@ class Grid extends \Magento\Backend\Block\Widget
      * Return count totals
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getCountTotals()
     {

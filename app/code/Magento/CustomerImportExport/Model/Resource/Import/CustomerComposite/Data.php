@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\CustomerImportExport\Model\Resource\Import\CustomerComposite;
 
@@ -39,21 +21,23 @@ class Data extends \Magento\ImportExport\Model\Resource\Import\Data
      *
      * @var array
      */
-    protected $_customerAttributes = array();
+    protected $_customerAttributes = [];
 
     /**
      * Class constructor
      *
-     * @param \Magento\Framework\App\Resource $resource
-     * @param \Magento\Core\Helper\Data $coreHelper
+     * @param \Magento\Framework\Model\Resource\Db\Context $context
+     * @param \Magento\Framework\Json\Helper\Data $coreHelper
+     * @param string|null $resourcePrefix
      * @param array $arguments
      */
     public function __construct(
-        \Magento\Framework\App\Resource $resource,
-        \Magento\Core\Helper\Data $coreHelper,
-        array $arguments = array()
+        \Magento\Framework\Model\Resource\Db\Context $context,
+        \Magento\Framework\Json\Helper\Data $jsonHelper,
+        $resourcePrefix = null,
+        array $arguments = []
     ) {
-        parent::__construct($resource, $coreHelper, $arguments);
+        parent::__construct($context, $jsonHelper, $resourcePrefix);
 
         if (isset($arguments['entity_type'])) {
             $this->_entityType = $arguments['entity_type'];
@@ -72,7 +56,7 @@ class Data extends \Magento\ImportExport\Model\Resource\Import\Data
     {
         $bunchRows = parent::getNextBunch();
         if ($bunchRows != null) {
-            $rows = array();
+            $rows = [];
             foreach ($bunchRows as $rowNumber => $rowData) {
                 $rowData = $this->_prepareRow($rowData);
                 if ($rowData !== null) {
@@ -114,13 +98,13 @@ class Data extends \Magento\ImportExport\Model\Resource\Import\Data
      */
     protected function _prepareAddressRowData(array $rowData)
     {
-        $excludedAttributes = array(
+        $excludedAttributes = [
             CustomerComposite::COLUMN_DEFAULT_BILLING,
-            CustomerComposite::COLUMN_DEFAULT_SHIPPING
-        );
+            CustomerComposite::COLUMN_DEFAULT_SHIPPING,
+        ];
         $prefix = CustomerComposite::COLUMN_ADDRESS_PREFIX;
 
-        $result = array();
+        $result = [];
         foreach ($rowData as $key => $value) {
             if (!in_array($key, $this->_customerAttributes)) {
                 if (!in_array($key, $excludedAttributes)) {

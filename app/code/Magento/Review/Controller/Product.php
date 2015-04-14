@@ -1,36 +1,20 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Review\Controller;
 
-use Magento\Framework\App\RequestInterface;
 use Magento\Catalog\Model\Product as CatalogProduct;
+use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Review\Model\Review;
 
 /**
  * Review controller
  *
  * @author     Magento Core Team <core@magentocommerce.com>
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class Product extends \Magento\Framework\App\Action\Action
 {
@@ -58,23 +42,23 @@ class Product extends \Magento\Framework\App\Action\Action
     /**
      * Catalog catgory model
      *
-     * @var \Magento\Catalog\Model\CategoryFactory
+     * @var \Magento\Catalog\Api\CategoryRepositoryInterface
      */
-    protected $_categoryFactory;
+    protected $categoryRepository;
 
     /**
      * Logger
      *
-     * @var \Magento\Framework\Logger
+     * @var \Psr\Log\LoggerInterface
      */
     protected $_logger;
 
     /**
      * Catalog product model
      *
-     * @var \Magento\Catalog\Model\ProductFactory
+     * @var \Magento\Catalog\Api\ProductRepositoryInterface
      */
-    protected $_productFactory;
+    protected $productRepository;
 
     /**
      * Review model
@@ -100,14 +84,14 @@ class Product extends \Magento\Framework\App\Action\Action
     /**
      * Core model store manager interface
      *
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
     /**
      * Core form key validator
      *
-     * @var \Magento\Core\App\Action\FormKeyValidator
+     * @var \Magento\Framework\Data\Form\FormKey\Validator
      */
     protected $_formKeyValidator;
 
@@ -115,37 +99,38 @@ class Product extends \Magento\Framework\App\Action\Action
      * @param \Magento\Framework\App\Action\Context $context
      * @param \Magento\Framework\Registry $coreRegistry
      * @param \Magento\Customer\Model\Session $customerSession
-     * @param \Magento\Catalog\Model\CategoryFactory $categoryFactory
-     * @param \Magento\Framework\Logger $logger
-     * @param \Magento\Catalog\Model\ProductFactory $productFactory
+     * @param \Magento\Catalog\Api\CategoryRepositoryInterface $categoryRepository
+     * @param \Psr\Log\LoggerInterface $logger
+     * @param \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
      * @param \Magento\Review\Model\ReviewFactory $reviewFactory
      * @param \Magento\Review\Model\RatingFactory $ratingFactory
      * @param \Magento\Catalog\Model\Design $catalogDesign
      * @param \Magento\Framework\Session\Generic $reviewSession
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
-     * @param \Magento\Core\App\Action\FormKeyValidator $formKeyValidator
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
+     * @param \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
         \Magento\Framework\Registry $coreRegistry,
         \Magento\Customer\Model\Session $customerSession,
-        \Magento\Catalog\Model\CategoryFactory $categoryFactory,
-        \Magento\Framework\Logger $logger,
-        \Magento\Catalog\Model\ProductFactory $productFactory,
+        \Magento\Catalog\Api\CategoryRepositoryInterface $categoryRepository,
+        \Psr\Log\LoggerInterface $logger,
+        \Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
         \Magento\Review\Model\ReviewFactory $reviewFactory,
         \Magento\Review\Model\RatingFactory $ratingFactory,
         \Magento\Catalog\Model\Design $catalogDesign,
         \Magento\Framework\Session\Generic $reviewSession,
-        \Magento\Framework\StoreManagerInterface $storeManager,
-        \Magento\Core\App\Action\FormKeyValidator $formKeyValidator
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
+        \Magento\Framework\Data\Form\FormKey\Validator $formKeyValidator
     ) {
         $this->_storeManager = $storeManager;
         $this->_coreRegistry = $coreRegistry;
         $this->_customerSession = $customerSession;
         $this->_reviewSession = $reviewSession;
-        $this->_categoryFactory = $categoryFactory;
+        $this->categoryRepository = $categoryRepository;
         $this->_logger = $logger;
-        $this->_productFactory = $productFactory;
+        $this->productRepository = $productRepository;
         $this->_reviewFactory = $reviewFactory;
         $this->_ratingFactory = $ratingFactory;
         $this->_catalogDesign = $catalogDesign;
@@ -170,14 +155,14 @@ class Product extends \Magento\Framework\App\Action\Action
         if (!$allowGuest && $request->getActionName() == 'post' && $request->isPost()) {
             if (!$this->_customerSession->isLoggedIn()) {
                 $this->_actionFlag->set('', self::FLAG_NO_DISPATCH, true);
-                $this->_customerSession->setBeforeAuthUrl($this->_url->getUrl('*/*/*', array('_current' => true)));
+                $this->_customerSession->setBeforeAuthUrl($this->_url->getUrl('*/*/*', ['_current' => true]));
                 $this->_reviewSession->setFormData(
-                    $request->getPost()
+                    $request->getPostValue()
                 )->setRedirectUrl(
                     $this->_redirect->getRefererUrl()
                 );
                 $this->getResponse()->setRedirect(
-                    $this->_objectManager->get('Magento\Customer\Helper\Data')->getLoginUrl()
+                    $this->_objectManager->get('Magento\Customer\Model\Url')->getLoginUrl()
                 );
             }
         }
@@ -192,7 +177,7 @@ class Product extends \Magento\Framework\App\Action\Action
      */
     protected function _initProduct()
     {
-        $this->_eventManager->dispatch('review_controller_product_init_before', array('controller_action' => $this));
+        $this->_eventManager->dispatch('review_controller_product_init_before', ['controller_action' => $this]);
         $categoryId = (int)$this->getRequest()->getParam('category', false);
         $productId = (int)$this->getRequest()->getParam('id');
 
@@ -202,18 +187,18 @@ class Product extends \Magento\Framework\App\Action\Action
         }
 
         if ($categoryId) {
-            $category = $this->_categoryFactory->create()->load($categoryId);
+            $category = $this->categoryRepository->get($categoryId);
             $this->_coreRegistry->register('current_category', $category);
         }
 
         try {
-            $this->_eventManager->dispatch('review_controller_product_init', array('product' => $product));
+            $this->_eventManager->dispatch('review_controller_product_init', ['product' => $product]);
             $this->_eventManager->dispatch(
                 'review_controller_product_init_after',
-                array('product' => $product, 'controller_action' => $this)
+                ['product' => $product, 'controller_action' => $this]
             );
-        } catch (\Magento\Framework\Model\Exception $e) {
-            $this->_logger->logException($e);
+        } catch (\Magento\Framework\Exception\LocalizedException $e) {
+            $this->_logger->critical($e);
             return false;
         }
 
@@ -233,13 +218,12 @@ class Product extends \Magento\Framework\App\Action\Action
             return false;
         }
 
-        $product = $this->_productFactory->create()->setStoreId(
-            $this->_storeManager->getStore()->getId()
-        )->load(
-            $productId
-        );
-        /* @var $product CatalogProduct */
-        if (!$product->getId() || !$product->isVisibleInCatalog() || !$product->isVisibleInSiteVisibility()) {
+        try {
+            $product = $this->productRepository->getById($productId);
+            if (!$product->isVisibleInCatalog() || !$product->isVisibleInSiteVisibility()) {
+                throw new NoSuchEntityException();
+            }
+        } catch (NoSuchEntityException $noEntityException) {
             return false;
         }
 

@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\SalesRule\Model\Coupon;
 
@@ -157,7 +139,7 @@ class Massgenerator extends \Magento\Framework\Model\AbstractModel implements
     /**
      * Generate Coupons Pool
      *
-     * @throws \Magento\Framework\Model\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @return $this
      */
     public function generatePool()
@@ -174,7 +156,7 @@ class Massgenerator extends \Magento\Framework\Model\AbstractModel implements
             $attempt = 0;
             do {
                 if ($attempt >= $maxAttempts) {
-                    throw new \Magento\Framework\Model\Exception(
+                    throw new \Magento\Framework\Exception\LocalizedException(
                         __('We cannot create the requested Coupon Qty. Please check your settings and try again.')
                     );
                 }
@@ -183,10 +165,8 @@ class Massgenerator extends \Magento\Framework\Model\AbstractModel implements
             } while ($this->getResource()->exists($code));
 
             $expirationDate = $this->getToDate();
-            if ($expirationDate instanceof \Zend_Date) {
-                $expirationDate = $expirationDate->toString(
-                    \Magento\Framework\Stdlib\DateTime::DATETIME_INTERNAL_FORMAT
-                );
+            if ($expirationDate instanceof \DateTime) {
+                $expirationDate = $expirationDate->format('Y-m-d H:i:s');
             }
 
             $coupon->setId(null)

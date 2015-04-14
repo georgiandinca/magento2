@@ -1,28 +1,11 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GiftMessage\Block\Message;
 
+use Magento\Customer\Model\Context;
 use Magento\GiftMessage\Model\Message;
 
 /**
@@ -95,7 +78,7 @@ class Inline extends \Magento\Framework\View\Element\Template
         \Magento\GiftMessage\Helper\Message $giftMessageMessage,
         \Magento\Catalog\Helper\Image $imageHelper,
         \Magento\Framework\App\Http\Context $httpContext,
-        array $data = array()
+        array $data = []
     ) {
         $this->_imageHelper = $imageHelper;
         $this->_giftMessageMessage = $giftMessageMessage;
@@ -199,7 +182,7 @@ class Inline extends \Magento\Framework\View\Element\Template
      */
     public function getDefaultFrom()
     {
-        if ($this->httpContext->getValue(\Magento\Customer\Helper\Data::CONTEXT_AUTH)) {
+        if ($this->httpContext->getValue(Context::CONTEXT_AUTH)) {
             return $this->_customerSession->getCustomer()->getName();
         } else {
             return $this->getEntity()->getBillingAddress()->getName();
@@ -228,7 +211,7 @@ class Inline extends \Magento\Framework\View\Element\Template
      */
     public function getMessage($entity = null)
     {
-        if (is_null($this->_giftMessage)) {
+        if ($this->_giftMessage === null) {
             $this->_initMessage();
         }
 
@@ -250,10 +233,10 @@ class Inline extends \Magento\Framework\View\Element\Template
     public function getItems()
     {
         if (!$this->getData('items')) {
-            $items = array();
+            $items = [];
 
             $entityItems = $this->getEntity()->getAllItems();
-            $this->_eventManager->dispatch('gift_options_prepare_items', array('items' => $entityItems));
+            $this->_eventManager->dispatch('gift_options_prepare_items', ['items' => $entityItems]);
 
             foreach ($entityItems as $item) {
                 if ($item->getParentItem()) {
@@ -266,16 +249,6 @@ class Inline extends \Magento\Framework\View\Element\Template
             $this->setData('items', $items);
         }
         return $this->getData('items');
-    }
-
-    /**
-     * Retrieve additional url
-     *
-     * @return string
-     */
-    public function getAdditionalUrl()
-    {
-        return $this->getUrl('*/*/getAdditional');
     }
 
     /**
@@ -302,6 +275,7 @@ class Inline extends \Magento\Framework\View\Element\Template
      * Check if items has messages
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getItemsHasMesssages()
     {
@@ -317,6 +291,7 @@ class Inline extends \Magento\Framework\View\Element\Template
      * Check if entity has message
      *
      * @return bool
+     * @SuppressWarnings(PHPMD.BooleanGetMethodName)
      */
     public function getEntityHasMessage()
     {
@@ -342,7 +317,7 @@ class Inline extends \Magento\Framework\View\Element\Template
      */
     public function isMessagesAvailable()
     {
-        return $this->_giftMessageMessage->isMessagesAvailable('quote', $this->getEntity());
+        return $this->_giftMessageMessage->isMessagesAllowed('quote', $this->getEntity());
     }
 
     /**
@@ -354,7 +329,7 @@ class Inline extends \Magento\Framework\View\Element\Template
     public function isItemMessagesAvailable($item)
     {
         $type = substr($this->getType(), 0, 5) == 'multi' ? 'address_item' : 'item';
-        return $this->_giftMessageMessage->isMessagesAvailable($type, $item);
+        return $this->_giftMessageMessage->isMessagesAllowed($type, $item);
     }
 
     /**

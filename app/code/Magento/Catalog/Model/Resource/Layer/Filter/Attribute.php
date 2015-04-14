@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Model\Resource\Layer\Filter;
 
@@ -43,27 +25,28 @@ class Attribute extends \Magento\Framework\Model\Resource\Db\AbstractDb
     /**
      * Apply attribute filter to product collection
      *
-     * @param \Magento\Catalog\Model\Layer\Filter\Attribute $filter
+     * @param \Magento\Catalog\Model\Layer\Filter\FilterInterface $filter
      * @param int $value
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @return $this
      */
-    public function applyFilterToCollection($filter, $value)
+    public function applyFilterToCollection(\Magento\Catalog\Model\Layer\Filter\FilterInterface $filter, $value)
     {
         $collection = $filter->getLayer()->getProductCollection();
         $attribute = $filter->getAttributeModel();
         $connection = $this->_getReadAdapter();
         $tableAlias = $attribute->getAttributeCode() . '_idx';
-        $conditions = array(
+        $conditions = [
             "{$tableAlias}.entity_id = e.entity_id",
             $connection->quoteInto("{$tableAlias}.attribute_id = ?", $attribute->getAttributeId()),
             $connection->quoteInto("{$tableAlias}.store_id = ?", $collection->getStoreId()),
-            $connection->quoteInto("{$tableAlias}.value = ?", $value)
-        );
+            $connection->quoteInto("{$tableAlias}.value = ?", $value),
+        ];
 
         $collection->getSelect()->join(
-            array($tableAlias => $this->getMainTable()),
+            [$tableAlias => $this->getMainTable()],
             implode(' AND ', $conditions),
-            array()
+            []
         );
 
         return $this;
@@ -72,10 +55,11 @@ class Attribute extends \Magento\Framework\Model\Resource\Db\AbstractDb
     /**
      * Retrieve array with products counts per attribute option
      *
-     * @param \Magento\Catalog\Model\Layer\Filter\Attribute $filter
+     * @param \Magento\Catalog\Model\Layer\Filter\FilterInterface $filter
+     * @throws \Magento\Framework\Exception\LocalizedException
      * @return array
      */
-    public function getCount($filter)
+    public function getCount(\Magento\Catalog\Model\Layer\Filter\FilterInterface $filter)
     {
         // clone select from collection with filters
         $select = clone $filter->getLayer()->getProductCollection()->getSelect();
@@ -88,16 +72,16 @@ class Attribute extends \Magento\Framework\Model\Resource\Db\AbstractDb
         $connection = $this->_getReadAdapter();
         $attribute = $filter->getAttributeModel();
         $tableAlias = sprintf('%s_idx', $attribute->getAttributeCode());
-        $conditions = array(
+        $conditions = [
             "{$tableAlias}.entity_id = e.entity_id",
             $connection->quoteInto("{$tableAlias}.attribute_id = ?", $attribute->getAttributeId()),
-            $connection->quoteInto("{$tableAlias}.store_id = ?", $filter->getStoreId())
-        );
+            $connection->quoteInto("{$tableAlias}.store_id = ?", $filter->getStoreId()),
+        ];
 
         $select->join(
-            array($tableAlias => $this->getMainTable()),
+            [$tableAlias => $this->getMainTable()],
             join(' AND ', $conditions),
-            array('value', 'count' => new \Zend_Db_Expr("COUNT({$tableAlias}.entity_id)"))
+            ['value', 'count' => new \Zend_Db_Expr("COUNT({$tableAlias}.entity_id)")]
         )->group(
             "{$tableAlias}.value"
         );

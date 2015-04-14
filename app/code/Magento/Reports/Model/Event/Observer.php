@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Reports\Model\Event;
 
@@ -29,7 +11,7 @@ namespace Magento\Reports\Model\Event;
 class Observer
 {
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
@@ -59,7 +41,7 @@ class Observer
     protected $_customerVisitor;
 
     /**
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Reports\Model\EventFactory $event
      * @param \Magento\Reports\Model\Product\Index\ComparedFactory $productCompFactory
      * @param \Magento\Reports\Model\Product\Index\ViewedFactory $productIndxFactory
@@ -67,7 +49,7 @@ class Observer
      * @param \Magento\Customer\Model\Visitor $customerVisitor
      */
     public function __construct(
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Reports\Model\EventFactory $event,
         \Magento\Reports\Model\Product\Index\ComparedFactory $productCompFactory,
         \Magento\Reports\Model\Product\Index\ViewedFactory $productIndxFactory,
@@ -95,7 +77,7 @@ class Observer
      */
     protected function _event($eventTypeId, $objectId, $subjectId = null, $subtype = 0)
     {
-        if (is_null($subjectId)) {
+        if ($subjectId === null) {
             if ($this->_customerSession->isLoggedIn()) {
                 $subjectId = $this->_customerSession->getCustomerId();
             } else {
@@ -104,19 +86,17 @@ class Observer
             }
         }
 
+        /** @var \Magento\Reports\Model\Event $eventModel */
         $eventModel = $this->_eventFactory->create();
         $storeId = $this->_storeManager->getStore()->getId();
-        $eventModel->setEventTypeId(
-            $eventTypeId
-        )->setObjectId(
-            $objectId
-        )->setSubjectId(
-            $subjectId
-        )->setSubtype(
-            $subtype
-        )->setStoreId(
-            $storeId
-        );
+        $eventModel->setData([
+            'event_type_id' => $eventTypeId,
+            'object_id' => $objectId,
+            'subject_id' => $subjectId,
+            'subtype' => $subtype,
+            'store_id' => $storeId,
+        ]);
+
         $eventModel->save();
 
         return $this;
@@ -127,6 +107,7 @@ class Observer
      *
      * @param \Magento\Framework\Event\Observer $observer
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function customerLogin(\Magento\Framework\Event\Observer $observer)
     {
@@ -150,6 +131,7 @@ class Observer
      *
      * @param \Magento\Framework\Event\Observer $observer
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function customerLogout(\Magento\Framework\Event\Observer $observer)
     {
@@ -168,7 +150,15 @@ class Observer
     {
         $productId = $observer->getEvent()->getProduct()->getId();
 
-        $this->_productIndxFactory->create()->setProductId($productId)->save()->calculate();
+        $viewData['product_id'] = $productId;
+
+        if ($this->_customerSession->isLoggedIn()) {
+            $viewData['customer_id'] = $this->_customerSession->getCustomerId();
+        } else {
+            $viewData['visitor_id'] = $this->_customerVisitor->getId();
+        }
+
+        $this->_productIndxFactory->create()->setData($viewData)->save()->calculate();
 
         return $this->_event(\Magento\Reports\Model\Event::EVENT_PRODUCT_VIEW, $productId);
     }
@@ -194,6 +184,7 @@ class Observer
      *
      * @param \Magento\Framework\Event\Observer $observer
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function catalogProductCompareRemoveProduct(\Magento\Framework\Event\Observer $observer)
     {
@@ -209,6 +200,7 @@ class Observer
      *
      * @param \Magento\Framework\Event\Observer $observer
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function catalogProductCompareClear(\Magento\Framework\Event\Observer $observer)
     {
@@ -228,9 +220,13 @@ class Observer
     public function catalogProductCompareAddProduct(\Magento\Framework\Event\Observer $observer)
     {
         $productId = $observer->getEvent()->getProduct()->getId();
-
-        $this->_productCompFactory->create()->setProductId($productId)->save()->calculate();
-
+        $viewData = ['product_id' => $productId];
+        if ($this->_customerSession->isLoggedIn()) {
+            $viewData['customer_id'] = $this->_customerSession->getCustomerId();
+        } else {
+            $viewData['visitor_id'] = $this->_customerVisitor->getId();
+        }
+        $this->_productCompFactory->create()->setData($viewData)->save()->calculate();
         return $this->_event(\Magento\Reports\Model\Event::EVENT_PRODUCT_COMPARE, $productId);
     }
 

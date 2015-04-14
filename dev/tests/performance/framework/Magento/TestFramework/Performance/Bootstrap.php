@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -65,7 +47,7 @@ class Bootstrap
     /**
      * Ensure reports directory exists, empty, and has write permissions
      *
-     * @throws \Magento\Framework\Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function cleanupReports()
     {
@@ -75,9 +57,11 @@ class Bootstrap
             if ($filesystemAdapter->isExists($reportDir)) {
                 $filesystemAdapter->deleteDirectory($reportDir);
             }
-        } catch (\Magento\Framework\Filesystem\FilesystemException $e) {
+        } catch (\Magento\Framework\Exception\FileSystemException $e) {
             if (file_exists($reportDir)) {
-                throw new \Magento\Framework\Exception("Cannot cleanup reports directory '{$reportDir}'.");
+                throw new \Magento\Framework\Exception\LocalizedException(
+                    new \Magento\Framework\Phrase("Cannot cleanup reports directory '%1'.", $reportDir)
+                );
             }
         }
         mkdir($reportDir, 0777, true);
@@ -123,7 +107,9 @@ class Bootstrap
             $configFile = "{$this->testsBaseDir}/config.php";
             $configFile = file_exists($configFile) ? $configFile : "{$configFile}.dist";
             $configData = require $configFile;
-            $this->config = new Config($configData, $this->testsBaseDir, $this->appBootstrap->getDirList()->getRoot());
+            /** @var \Magento\Framework\App\Filesystem\DirectoryList $dirList */
+            $dirList = $this->appBootstrap->getObjectManager()->get('Magento\Framework\App\Filesystem\DirectoryList');
+            $this->config = new Config($configData, $this->testsBaseDir, $dirList->getRoot());
         }
         return $this->config;
     }

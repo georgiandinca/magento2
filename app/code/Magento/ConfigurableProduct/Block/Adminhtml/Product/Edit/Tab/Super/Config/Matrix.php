@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -27,7 +9,9 @@
  */
 namespace Magento\ConfigurableProduct\Block\Adminhtml\Product\Edit\Tab\Super\Config;
 
+use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Catalog\Model\Product;
+use Magento\Framework\Exception\NoSuchEntityException;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -47,11 +31,6 @@ class Matrix extends \Magento\Backend\Block\Template
     protected $_configurableType;
 
     /**
-     * @var \Magento\Catalog\Model\ProductFactory
-     */
-    protected $_productFactory;
-
-    /**
      * @var \Magento\Framework\App\Config\ScopeConfigInterface
      */
     protected $_applicationConfig;
@@ -62,9 +41,9 @@ class Matrix extends \Magento\Backend\Block\Template
     protected $_localeCurrency;
 
     /**
-     * @var \Magento\CatalogInventory\Service\V1\StockItemServiceInterface
+     * @var \Magento\CatalogInventory\Api\StockRegistryInterface
      */
-    protected $stockItemService;
+    protected $stockRegistry;
 
     /**
      * @var \Magento\ConfigurableProduct\Model\Product\Type\VariationMatrix
@@ -72,36 +51,41 @@ class Matrix extends \Magento\Backend\Block\Template
     protected $variationMatrix;
 
     /**
+     * @var ProductRepositoryInterface
+     */
+    protected $productRepository;
+
+    /**
      * @param \Magento\Backend\Block\Template\Context $context
      * @param \Magento\ConfigurableProduct\Model\Product\Type\Configurable $configurableType
      * @param \Magento\Catalog\Model\Config $config
-     * @param \Magento\Catalog\Model\ProductFactory $productFactory
      * @param \Magento\Framework\Registry $coreRegistry
      * @param \Magento\Framework\Locale\CurrencyInterface $localeCurrency
-     * @param \Magento\CatalogInventory\Service\V1\StockItemServiceInterface $stockItemService
+     * @param \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry
      * @param \Magento\ConfigurableProduct\Model\Product\Type\VariationMatrix $variationMatrix
+     * @param ProductRepositoryInterface $productRepository
      * @param array $data
      */
     public function __construct(
         \Magento\Backend\Block\Template\Context $context,
         \Magento\ConfigurableProduct\Model\Product\Type\Configurable $configurableType,
         \Magento\Catalog\Model\Config $config,
-        \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Framework\Registry $coreRegistry,
         \Magento\Framework\Locale\CurrencyInterface $localeCurrency,
-        \Magento\CatalogInventory\Service\V1\StockItemServiceInterface $stockItemService,
+        \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry,
         \Magento\ConfigurableProduct\Model\Product\Type\VariationMatrix $variationMatrix,
-        array $data = array()
+        ProductRepositoryInterface $productRepository,
+        array $data = []
     ) {
         parent::__construct($context, $data);
         $this->_configurableType = $configurableType;
-        $this->_productFactory = $productFactory;
         $this->_config = $config;
         $this->_coreRegistry = $coreRegistry;
         $this->_localeCurrency = $localeCurrency;
-        $this->stockItemService = $stockItemService;
+        $this->stockRegistry = $stockRegistry;
         parent::__construct($context, $data);
         $this->variationMatrix = $variationMatrix;
+        $this->productRepository = $productRepository;
     }
 
     /**
@@ -147,7 +131,7 @@ class Matrix extends \Magento\Backend\Block\Template
      */
     public function getEditProductUrl($id)
     {
-        return $this->getUrl('catalog/*/edit', array('id' => $id));
+        return $this->getUrl('catalog/*/edit', ['id' => $id]);
     }
 
     /**
@@ -166,10 +150,10 @@ class Matrix extends \Magento\Backend\Block\Template
                     if (isset($configurableData[$key])) {
                         $attributes[$key] = array_replace_recursive($attribute, $configurableData[$key]);
                         $attributes[$key]['values'] = array_merge(
-                            isset($attribute['values']) ? $attribute['values'] : array(),
+                            isset($attribute['values']) ? $attribute['values'] : [],
                             isset($configurableData[$key]['values'])
                             ? array_filter($configurableData[$key]['values'])
-                            : array()
+                            : []
                         );
                     }
                 }
@@ -196,9 +180,9 @@ class Matrix extends \Magento\Backend\Block\Template
      */
     public function getAssociatedProducts()
     {
-        $productByUsedAttributes = array();
+        $productByUsedAttributes = [];
         foreach ($this->_getAssociatedProducts() as $product) {
-            $keys = array();
+            $keys = [];
             foreach ($this->getUsedAttributes() as $attribute) {
                 /** @var $attribute \Magento\Catalog\Model\Resource\Eav\Attribute */
                 $keys[] = $product->getData($attribute->getAttributeCode());
@@ -222,12 +206,12 @@ class Matrix extends \Magento\Backend\Block\Template
             // form data overrides any relations stored in database
             return $this->_configurableType->getUsedProducts($product);
         }
-        $products = array();
+        $products = [];
         foreach ($ids as $productId) {
-            /** @var $product Product */
-            $product = $this->_productFactory->create()->load($productId);
-            if ($product->getId()) {
-                $products[] = $product;
+            try {
+                $products[] = $this->productRepository->getById($productId);
+            } catch (NoSuchEntityException $e) {
+                continue;
             }
         }
         return $products;
@@ -258,11 +242,11 @@ class Matrix extends \Magento\Backend\Block\Template
     }
 
     /**
-     * @param int $productId
+     * @param Product $product
      * @return float
      */
-    public function getProductStockQty($productId)
+    public function getProductStockQty(Product $product)
     {
-        return $this->stockItemService->getStockItem($productId)->getQty();
+        return $this->stockRegistry->getStockItem($product->getId(), $product->getStore()->getWebsiteId())->getQty();
     }
 }

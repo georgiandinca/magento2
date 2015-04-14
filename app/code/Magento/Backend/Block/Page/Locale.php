@@ -2,26 +2,8 @@
 /**
  * Backend locale switcher block
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Backend\Block\Page;
 
@@ -45,7 +27,7 @@ class Locale extends \Magento\Backend\Block\Template
     protected $_localeResolver;
 
     /**
-     * @var \Magento\Core\Helper\Url
+     * @var \Magento\Framework\Url\Helper\Data
      */
     protected $_urlHelper;
 
@@ -53,15 +35,15 @@ class Locale extends \Magento\Backend\Block\Template
      * @param \Magento\Backend\Block\Template\Context $context
      * @param \Magento\Framework\Locale\ListsInterface $localeLists
      * @param \Magento\Framework\Locale\ResolverInterface $localeResolver
-     * @param \Magento\Core\Helper\Url $urlHelper
+     * @param \Magento\Framework\Url\Helper\Data $urlHelper
      * @param array $data
      */
     public function __construct(
         \Magento\Backend\Block\Template\Context $context,
         \Magento\Framework\Locale\ListsInterface $localeLists,
         \Magento\Framework\Locale\ResolverInterface $localeResolver,
-        \Magento\Core\Helper\Url $urlHelper,
-        array $data = array()
+        \Magento\Framework\Url\Helper\Data $urlHelper,
+        array $data = []
     ) {
         $this->_localeLists = $localeLists;
         $this->_localeResolver = $localeResolver;
@@ -98,10 +80,10 @@ class Locale extends \Magento\Backend\Block\Template
     {
         $html = $this->getLayout()->createBlock('Magento\Framework\View\Element\Html\Select')
             ->setName('locale')
-            ->setId('interface_locale')
+            ->setId('footer_interface_locale')
             ->setTitle(__('Interface Language'))
-            ->setClass('select locale-switcher-select')
-            ->setValue($this->_localeResolver->getLocale()->__toString())
+            ->setClass('admin__control-select')
+            ->setValue($this->_localeResolver->getLocale())
             ->setOptions($this->_localeLists->getTranslatedOptionLocales())
             ->getHtml();
 

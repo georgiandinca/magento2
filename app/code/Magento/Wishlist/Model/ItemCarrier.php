@@ -1,38 +1,23 @@
 <?php
 /**
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Wishlist\Model;
 
+use Magento\Checkout\Helper\Cart as CartHelper;
 use Magento\Checkout\Model\Cart;
 use Magento\Customer\Model\Session;
 use Magento\Framework\App\Response\RedirectInterface;
-use Magento\Framework\Logger;
+use Psr\Log\LoggerInterface as Logger;
+use Magento\Framework\Message\ManagerInterface as MessageManager;
 use Magento\Framework\UrlInterface;
 use Magento\Wishlist\Helper\Data as WishlistHelper;
-use Magento\Checkout\Helper\Cart as CartHelper;
-use Magento\Framework\Message\ManagerInterface as MessageManager;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 class ItemCarrier
 {
     /**
@@ -51,7 +36,7 @@ class ItemCarrier
     protected $cart;
 
     /**
-     * @var \Magento\Framework\Logger
+     * @var \Psr\Log\LoggerInterface
      */
     protected $logger;
 
@@ -119,15 +104,18 @@ class ItemCarrier
      * @param Wishlist $wishlist
      * @param array $qtys
      * @return string
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
     public function moveAllToCart(Wishlist $wishlist, $qtys)
     {
         $isOwner = $wishlist->isOwner($this->customerSession->getCustomerId());
 
-        $messages = array();
-        $addedItems = array();
-        $notSalable = array();
-        $hasOptions = array();
+        $messages = [];
+        $addedItems = [];
+        $notSalable = [];
+        $hasOptions = [];
 
         $cart = $this->cart;
         $collection = $wishlist->getItemCollection()->setVisibilityFilter();
@@ -150,7 +138,7 @@ class ItemCarrier
                 if ($item->addToCart($cart, $isOwner)) {
                     $addedItems[] = $item->getProduct();
                 }
-            } catch (\Magento\Framework\Model\Exception $e) {
+            } catch (\Magento\Framework\Exception\LocalizedException $e) {
                 if ($e->getCode() == \Magento\Wishlist\Model\Item::EXCEPTION_CODE_NOT_SALABLE) {
                     $notSalable[] = $item;
                 } elseif ($e->getCode() == \Magento\Wishlist\Model\Item::EXCEPTION_CODE_HAS_REQUIRED_OPTIONS) {
@@ -164,7 +152,7 @@ class ItemCarrier
                     $cart->getQuote()->deleteItem($cartItem);
                 }
             } catch (\Exception $e) {
-                $this->logger->logException($e);
+                $this->logger->critical($e);
                 $messages[] = __('We cannot add this item to your shopping cart.');
             }
         }
@@ -172,7 +160,7 @@ class ItemCarrier
         if ($isOwner) {
             $indexUrl = $this->helper->getListUrl($wishlist->getId());
         } else {
-            $indexUrl = $this->urlBuilder->getUrl('wishlist/shared', array('code' => $wishlist->getSharingCode()));
+            $indexUrl = $this->urlBuilder->getUrl('wishlist/shared', ['code' => $wishlist->getSharingCode()]);
         }
         if ($this->cartHelper->getShouldRedirectToCart()) {
             $redirectUrl = $this->cartHelper->getCartUrl();
@@ -183,7 +171,7 @@ class ItemCarrier
         }
 
         if ($notSalable) {
-            $products = array();
+            $products = [];
             foreach ($notSalable as $item) {
                 $products[] = '"' . $item->getProduct()->getName() . '"';
             }
@@ -194,7 +182,7 @@ class ItemCarrier
         }
 
         if ($hasOptions) {
-            $products = array();
+            $products = [];
             foreach ($hasOptions as $item) {
                 $products[] = '"' . $item->getProduct()->getName() . '"';
             }
@@ -229,7 +217,7 @@ class ItemCarrier
                 $redirectUrl = $indexUrl;
             }
 
-            $products = array();
+            $products = [];
             foreach ($addedItems as $product) {
                 $products[] = '"' . $product->getName() . '"';
             }

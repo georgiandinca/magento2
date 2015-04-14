@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\User\Controller\Adminhtml;
 
@@ -58,10 +40,10 @@ class UserTest extends \Magento\Backend\Utility\Controller
         $userId = $user->getId();
         $this->assertNotEmpty($userId, 'Broken fixture');
         $user->delete();
-        $this->getRequest()->setPost('user_id', $userId);
+        $this->getRequest()->setPostValue('user_id', $userId);
         $this->dispatch('backend/admin/user/save');
         $this->assertSessionMessages(
-            $this->equalTo(array('This user no longer exists.')),
+            $this->equalTo(['This user no longer exists.']),
             \Magento\Framework\Message\MessageInterface::TYPE_ERROR
         );
         $this->assertRedirect($this->stringContains('backend/admin/user/index/'));
@@ -73,18 +55,18 @@ class UserTest extends \Magento\Backend\Utility\Controller
     public function testSaveActionMissingCurrentAdminPassword()
     {
         $fixture = uniqid();
-        $this->getRequest()->setPost(
-            array(
+        $this->getRequest()->setPostValue(
+            [
                 'username' => $fixture,
                 'email' => "{$fixture}@example.com",
                 'firstname' => 'First',
                 'lastname' => 'Last',
                 'password' => 'password_with_1_number',
-                'password_confirmation' => 'password_with_1_number'
-            )
+                'password_confirmation' => 'password_with_1_number',
+            ]
         );
         $this->dispatch('backend/admin/user/save');
-        $this->assertSessionMessages($this->equalTo(array('You have entered an invalid password for current user.')));
+        $this->assertSessionMessages($this->equalTo(['You have entered an invalid password for current user.']));
         $this->assertRedirect($this->stringContains('backend/admin/user/edit'));
     }
 
@@ -94,23 +76,49 @@ class UserTest extends \Magento\Backend\Utility\Controller
     public function testSaveAction()
     {
         $fixture = uniqid();
-        $this->getRequest()->setPost(
-            array(
+        $this->getRequest()->setPostValue(
+            [
                 'username' => $fixture,
                 'email' => "{$fixture}@example.com",
                 'firstname' => 'First',
                 'lastname' => 'Last',
                 'password' => 'password_with_1_number',
                 'password_confirmation' => 'password_with_1_number',
-                \Magento\User\Block\User\Edit\Tab\Main::CURRENT_USER_PASSWORD_FIELD => Bootstrap::ADMIN_PASSWORD
-            )
+                \Magento\User\Block\User\Edit\Tab\Main::CURRENT_USER_PASSWORD_FIELD => Bootstrap::ADMIN_PASSWORD,
+            ]
         );
         $this->dispatch('backend/admin/user/save');
         $this->assertSessionMessages(
-            $this->equalTo(array('You saved the user.')),
+            $this->equalTo(['You saved the user.']),
             \Magento\Framework\Message\MessageInterface::TYPE_SUCCESS
         );
         $this->assertRedirect($this->stringContains('backend/admin/user/index/'));
+    }
+
+    /**
+     * @magentoDbIsolation enabled
+     * @magentoDataFixture Magento/User/_files/user_with_role.php
+     */
+    public function testSaveActionDuplicateUser()
+    {
+        $this->getRequest()->setPostValue(
+            [
+                'username' => 'adminUser',
+                'email' => 'adminUser@example.com',
+                'firstname' => 'John',
+                'lastname' => 'Doe',
+                'password' => \Magento\TestFramework\Bootstrap::ADMIN_PASSWORD,
+                'password_confirmation' => \Magento\TestFramework\Bootstrap::ADMIN_PASSWORD,
+                \Magento\User\Block\User\Edit\Tab\Main::CURRENT_USER_PASSWORD_FIELD => Bootstrap::ADMIN_PASSWORD,
+            ]
+        );
+        $this->dispatch('backend/admin/user/save/active_tab/main_section');
+        $this->assertSessionMessages(
+            $this->equalTo(['A user with the same user name or email already exists.']),
+            \Magento\Framework\Message\MessageInterface::TYPE_ERROR
+        );
+        $this->assertRedirect($this->stringContains('backend/admin/user/edit/'));
+        $this->assertRedirect($this->matchesRegularExpression('/^((?!active_tab).)*$/'));
     }
 
     /**
@@ -119,7 +127,7 @@ class UserTest extends \Magento\Backend\Utility\Controller
      */
     public function testSaveActionPasswordChange($postData, $isPasswordCorrect)
     {
-        $this->getRequest()->setPost($postData);
+        $this->getRequest()->setPostValue($postData);
         $this->dispatch('backend/admin/user/save');
 
         $objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
@@ -143,26 +151,26 @@ class UserTest extends \Magento\Backend\Utility\Controller
     public function resetPasswordDataProvider()
     {
         $password = uniqid('123q');
-        $passwordPairs = array(
-            array('password' => $password, 'password_confirmation' => $password, 'is_correct' => true),
-            array('password' => $password, 'password_confirmation' => '', 'is_correct' => false),
-            array('password' => $password, 'password_confirmation' => $password . '123', 'is_correct' => false),
-            array('password' => '', 'password_confirmation' => '', 'is_correct' => false),
-            array('password' => '', 'password_confirmation' => $password, 'is_correct' => false)
-        );
-        $data = array();
+        $passwordPairs = [
+            ['password' => $password, 'password_confirmation' => $password, 'is_correct' => true],
+            ['password' => $password, 'password_confirmation' => '', 'is_correct' => false],
+            ['password' => $password, 'password_confirmation' => $password . '123', 'is_correct' => false],
+            ['password' => '', 'password_confirmation' => '', 'is_correct' => false],
+            ['password' => '', 'password_confirmation' => $password, 'is_correct' => false],
+        ];
+        $data = [];
         foreach ($passwordPairs as $passwordPair) {
             $fixture = uniqid();
-            $postData = array(
+            $postData = [
                 'username' => $fixture,
                 'email' => "{$fixture}@example.com",
                 'firstname' => 'First',
                 'lastname' => 'Last',
                 'password' => $passwordPair['password'],
                 'password_confirmation' => $passwordPair['password_confirmation'],
-                \Magento\User\Block\User\Edit\Tab\Main::CURRENT_USER_PASSWORD_FIELD => Bootstrap::ADMIN_PASSWORD
-            );
-            $data[] = array($postData, $passwordPair['is_correct']);
+                \Magento\User\Block\User\Edit\Tab\Main::CURRENT_USER_PASSWORD_FIELD => Bootstrap::ADMIN_PASSWORD,
+            ];
+            $data[] = [$postData, $passwordPair['is_correct']];
         }
         return $data;
     }
@@ -211,7 +219,7 @@ class UserTest extends \Magento\Backend\Utility\Controller
             'password_confirmation' => 'password123',
         ];
 
-        $this->getRequest()->setPost($data);
+        $this->getRequest()->setPostValue($data);
         $this->dispatch('backend/admin/user/validate');
         $body = $this->getResponse()->getBody();
 
@@ -232,7 +240,7 @@ class UserTest extends \Magento\Backend\Utility\Controller
         /**
          * set customer data
          */
-        $this->getRequest()->setPost($data);
+        $this->getRequest()->setPostValue($data);
         $this->dispatch('backend/admin/user/validate');
         $body = $this->getResponse()->getBody();
 

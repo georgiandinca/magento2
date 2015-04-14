@@ -2,26 +2,8 @@
 /**
  * Automated replacement of factory names into real ones and put result information into file
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 define(
@@ -46,9 +28,6 @@ if (isset($options['h'])) {
 require_once realpath(
     dirname(dirname(dirname(dirname(dirname(__DIR__)))))
 ) . '/dev/tests/static/framework/bootstrap.php';
-require_once realpath(
-    dirname(dirname(dirname(dirname(dirname(__DIR__)))))
-) . '/dev/tests/static/framework/Magento/TestFramework/Utility/Classes.php';
 require_once realpath(dirname(dirname(dirname(dirname(dirname(__DIR__)))))) . '/lib/internal/Zend/Json.php';
 
 $magentoBaseDir = dirname(__DIR__) . '/../../../../';
@@ -56,18 +35,18 @@ if (isset($options['p'])) {
     $magentoBaseDir = $options['p'];
 }
 
-$utilityFiles = new Magento\TestFramework\Utility\Files($magentoBaseDir);
-$map = array();
+$utilityFiles = new Magento\Framework\App\Utility\Files($magentoBaseDir);
+$map = [];
 $compositeModules = getFilesCombinedArray(__DIR__ . '/aliases_map', '/^composite_modules_.*\.php$/');
 // PHP code
 foreach ($utilityFiles->getPhpFiles(true, true, true, false) as $file) {
     $content = file_get_contents($file);
-    $classes = \Magento\TestFramework\Utility\Classes::collectPhpCodeClasses($content);
+    $classes = \Magento\Framework\App\Utility\Classes::collectPhpCodeClasses($content);
     if ($classes) {
         $factoryNames = array_filter($classes, 'isFactoryName');
         foreach ($factoryNames as $factoryName) {
             list($module, $name) = getModuleName($factoryName, $compositeModules);
-            $patterns = array(
+            $patterns = [
                 '::getModel(\'%s\'' => 'Model',
                 '::getSingleton(\'%s\'' => 'Model',
                 '::getResourceModel(\'%s\'' => 'Model_Resource',
@@ -75,13 +54,13 @@ foreach ($utilityFiles->getPhpFiles(true, true, true, false) as $file) {
                 'addBlock(\'%s\'' => 'Block',
                 'createBlock(\'%s\'' => 'Block',
                 'getBlockClassName(\'%s\'' => 'Block',
-                'getBlockSingleton(\'%s\'' => 'Block'
-            );
+                'getBlockSingleton(\'%s\'' => 'Block',
+            ];
 
             foreach ($patterns as $pattern => $classType) {
                 if (isPatternExist($content, $pattern, $factoryName)) {
                     if (!isset($map[$classType])) {
-                        $map[$classType] = array();
+                        $map[$classType] = [];
                     }
 
                     $map[$classType][$factoryName] = getClassName($module, $classType, $name);
@@ -93,10 +72,10 @@ foreach ($utilityFiles->getPhpFiles(true, true, true, false) as $file) {
 
 // layouts
 $classType = 'Block';
-$layouts = $utilityFiles->getLayoutFiles(array(), false);
+$layouts = $utilityFiles->getLayoutFiles([], false);
 foreach ($layouts as $file) {
     $xml = simplexml_load_file($file);
-    $classes = \Magento\TestFramework\Utility\Classes::collectLayoutClasses($xml);
+    $classes = \Magento\Framework\App\Utility\Classes::collectLayoutClasses($xml);
     $factoryNames = array_filter($classes, 'isFactoryName');
     if (!$factoryNames) {
         continue;
@@ -118,7 +97,7 @@ echo Zend_Json::prettyPrint(Zend_Json::encode($map));
  */
 function getFilesCombinedArray($dirPath, $filePattern)
 {
-    $result = array();
+    $result = [];
     $directoryIterator = new DirectoryIterator($dirPath);
     $patternIterator = new RegexIterator($directoryIterator, $filePattern);
 
@@ -181,7 +160,7 @@ function isFactoryName($class)
  * @param array $compositeModules
  * @return array
  */
-function getModuleName($factoryName, $compositeModules = array())
+function getModuleName($factoryName, $compositeModules = [])
 {
     if (false !== strpos($factoryName, '/')) {
         list($module, $name) = explode('/', $factoryName);
@@ -194,5 +173,5 @@ function getModuleName($factoryName, $compositeModules = array())
     } elseif (false === strpos($module, '_')) {
         $module = "Magento_{$module}";
     }
-    return array($module, $name);
+    return [$module, $name];
 }

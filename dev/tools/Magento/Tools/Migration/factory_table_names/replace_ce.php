@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -28,7 +10,7 @@
  * value => Magento2 table name
  */
 
-return array(
+return [
     'admin/assert' => 'admin_assert',
     'admin/role' => 'authorization_role',
     'admin/rule' => 'authorization_rule',
@@ -132,7 +114,7 @@ return array(
     'catalogrule/website' => 'catalogrule_website',
     'catalogsearch/fulltext' => 'catalogsearch_fulltext',
     'catalogsearch/result' => 'catalogsearch_result',
-    'catalogsearch/search_query' => 'catalogsearch_query',
+    'catalogsearch/search_query' => 'search_query',
     'checkout/agreement' => 'checkout_agreement',
     'checkout/agreement_store' => 'checkout_agreement_store',
     'chronopay/api_debug' => 'chronopay_api_debug',
@@ -141,25 +123,22 @@ return array(
     'cms/page' => 'cms_page',
     'cms/page_store' => 'cms_page_store',
     'compiler/configuration' => 'compiler_configuration',
-    'core/cache' => 'core_cache',
-    'core/cache_option' => 'core_cache_option',
-    'core/cache_tag' => 'core_cache_tag',
+    'core/cache' => 'cache',
+    'core/cache_tag' => 'cache_tag',
     'core/config_data' => 'core_config_data',
-    'core/config_field' => 'core_config_field',
     'core/design_change' => 'design_change',
-    'core/directory_storage' => 'core_directory_storage',
-    'core/email_template' => 'core_email_template',
-    'core/file_storage' => 'core_file_storage',
-    'core/flag' => 'core_flag',
-    'core/layout_link' => 'core_layout_link',
-    'core/layout_update' => 'core_layout_update',
-    'core/resource' => 'core_resource',
-    'core/session' => 'core_session',
+    'core/directory_storage' => 'media_storage_directory_storage',
+    'core/email_template' => 'email_template',
+    'core/file_storage' => 'media_storage_file_storage',
+    'core/flag' => 'flag',
+    'core/layout_link' => 'layout_link',
+    'core/layout_update' => 'layout_update',
+    'core_resource' => 'setup_module',
+    'core/session' => 'session',
     'core/store' => 'store',
     'core/store_group' => 'store_group',
-    'core/translate' => 'core_translate',
-    'core/variable' => 'core_variable',
-    'core/variable_value' => 'core_variable_value',
+    'core/variable' => 'variable',
+    'core/variable_value' => 'variable_value',
     'core/website' => 'store_website',
     'cron/schedule' => 'cron_schedule',
     'customer/address_entity' => 'customer_address_entity',
@@ -298,56 +277,54 @@ return array(
     'sales/bestsellers_aggregated_yearly' => 'sales_bestsellers_aggregated_yearly',
     'sales/billing_agreement' => 'paypal_billing_agreement',
     'sales/billing_agreement_order' => 'paypal_billing_agreement_order',
-    'sales/creditmemo' => 'sales_flat_creditmemo',
-    'sales/creditmemo_comment' => 'sales_flat_creditmemo_comment',
-    'sales/creditmemo_grid' => 'sales_flat_creditmemo_grid',
-    'sales/creditmemo_item' => 'sales_flat_creditmemo_item',
-    'sales/invoice' => 'sales_flat_invoice',
-    'sales/invoice_comment' => 'sales_flat_invoice_comment',
-    'sales/invoice_grid' => 'sales_flat_invoice_grid',
-    'sales/invoice_item' => 'sales_flat_invoice_item',
+    'sales/creditmemo' => 'sales_creditmemo',
+    'sales/creditmemo_comment' => 'sales_creditmemo_comment',
+    'sales/creditmemo_grid' => 'sales_creditmemo_grid',
+    'sales/creditmemo_item' => 'sales_creditmemo_item',
+    'sales/invoice' => 'sales_invoice',
+    'sales/invoice_comment' => 'sales_invoice_comment',
+    'sales/invoice_grid' => 'sales_invoice_grid',
+    'sales/invoice_item' => 'sales_invoice_item',
     'sales/invoiced_aggregated' => 'sales_invoiced_aggregated',
     'sales/invoiced_aggregated_order' => 'sales_invoiced_aggregated_order',
-    'sales/order' => 'sales_flat_order',
-    'sales/order_address' => 'sales_flat_order_address',
+    'sales/order' => 'sales_order',
+    'sales/order_address' => 'sales_order_address',
     'sales/order_aggregated_created' => 'sales_order_aggregated_created',
     'sales/order_aggregated_updated' => 'sales_order_aggregated_updated',
     'sales/order_entity' => 'sales_order_entity',
-    'sales/order_grid' => 'sales_flat_order_grid',
-    'sales/order_item' => 'sales_flat_order_item',
-    'sales/order_item_option' => 'sales_flat_order_item_option',
-    'sales/order_payment' => 'sales_flat_order_payment',
+    'sales/order_grid' => 'sales_order_grid',
+    'sales/order_item' => 'sales_order_item',
+    'sales/order_item_option' => 'sales_order_item_option',
+    'sales/order_payment' => 'sales_order_payment',
     'sales/order_status' => 'sales_order_status',
-    'sales/order_status_history' => 'sales_flat_order_status_history',
+    'sales/order_status_history' => 'sales_order_status_history',
     'sales/order_status_label' => 'sales_order_status_label',
     'sales/order_status_state' => 'sales_order_status_state',
     'sales/order_tax' => 'sales_order_tax',
     'sales/payment_transaction' => 'sales_payment_transaction',
-    'sales/quote' => 'sales_flat_quote',
-    'sales/quote_address' => 'sales_flat_quote_address',
-    'sales/quote_address_item' => 'sales_flat_quote_address_item',
-    'sales/quote_address_shipping_rate' => 'sales_flat_quote_shipping_rate',
-    'sales/quote_item' => 'sales_flat_quote_item',
-    'sales/quote_item_option' => 'sales_flat_quote_item_option',
-    'sales/quote_payment' => 'sales_flat_quote_payment',
-    'sales/recurring_payment' => 'recurring_payment',
-    'sales/recurring_payment_order' => 'recurring_payment_order',
+    'sales/quote' => 'quote',
+    'sales/quote_address' => 'quote_address',
+    'sales/quote_address_item' => 'quote_address_item',
+    'sales/quote_address_shipping_rate' => 'quote_shipping_rate',
+    'sales/quote_item' => 'quote_item',
+    'sales/quote_item_option' => 'quote_item_option',
+    'sales/quote_payment' => 'quote_payment',
     'sales/refunded_aggregated' => 'sales_refunded_aggregated',
     'sales/refunded_aggregated_order' => 'sales_refunded_aggregated_order',
-    'sales/shipment' => 'sales_flat_shipment',
-    'sales/shipment_comment' => 'sales_flat_shipment_comment',
-    'sales/shipment_grid' => 'sales_flat_shipment_grid',
-    'sales/shipment_item' => 'sales_flat_shipment_item',
-    'sales/shipment_track' => 'sales_flat_shipment_track',
+    'sales/shipment' => 'sales_shipment',
+    'sales/shipment_comment' => 'sales_shipment_comment',
+    'sales/shipment_grid' => 'sales_shipment_grid',
+    'sales/shipment_item' => 'sales_shipment_item',
+    'sales/shipment_track' => 'sales_shipment_track',
     'sales/shipping_aggregated' => 'sales_shipping_aggregated',
     'sales/shipping_aggregated_order' => 'sales_shipping_aggregated_order',
     'sales_entity/order' => 'sales_order',
     'sales_entity/order_entity' => 'sales_order_entity',
-    'sales_entity/quote' => 'sales_quote',
-    'sales_entity/quote_address' => 'sales_quote_address',
-    'sales_entity/quote_entity' => 'sales_quote_entity',
-    'sales_entity/quote_item' => 'sales_quote_item',
-    'sales_entity/quote_temp' => 'sales_quote_temp',
+    'sales_entity/quote' => 'quote',
+    'sales_entity/quote_address' => 'quote_address',
+    'sales_entity/quote_entity' => 'quote_entity',
+    'sales_entity/quote_item' => 'quote_item',
+    'sales_entity/quote_temp' => 'quote_temp',
     'salesrule/coupon' => 'salesrule_coupon',
     'salesrule/coupon_aggregated' => 'coupon_aggregated',
     'salesrule/coupon_aggregated_order' => 'coupon_aggregated_order',
@@ -372,7 +349,6 @@ return array(
     'tax/tax_class' => 'tax_class',
     'tax/tax_order_aggregated_created' => 'tax_order_aggregated_created',
     'tax/tax_order_aggregated_updated' => 'tax_order_aggregated_updated',
-    'weee/discount' => 'weee_discount',
     'weee/tax' => 'weee_tax',
     'widget/widget' => 'widget',
     'widget/widget_instance' => 'widget_instance',
@@ -381,4 +357,4 @@ return array(
     'wishlist/item' => 'wishlist_item',
     'wishlist/item_option' => 'wishlist_item_option',
     'wishlist/wishlist' => 'wishlist'
-);
+];

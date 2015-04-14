@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License (AFL 3.0)
- * that is bundled with this package in the file LICENSE_AFL.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/afl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 ?>
 <?php
@@ -31,10 +13,10 @@
 ?>
 
 <div class="categories-side-col">
-    <button data-folder="create" class="action-folder-create" title="<?php echo __('Create Folder'); ?>">
+    <button type="button" data-folder="create" class="action-folder-create" title="<?php echo __('Create Folder'); ?>">
         <span><?php echo __('Create Folder'); ?></span>
     </button>
-    <button data-folder="delete" class="action-delete">
+    <button type="button" data-folder="delete" class="action-delete">
         <span><?php echo __('Delete Folder'); ?></span>
     </button>
     <p></p>
@@ -46,19 +28,21 @@
 </div>
 
 <div id="tree" style="width:100%; overflow:auto;"></div>
-
-<script type="text/javascript">
+<!--[if IE]>
+<script id="ie-deferred-loader" defer="defer" src=""></script>
+<![endif]-->
+<script>
 require([
     'jquery',
+    "extjs/ext-tree-checkbox",
     'Magento_DesignEditor/js/tools-files'
 ], function(jQuery){
-
-Ext.onReady(function(){
+jQuery(function(){
     var Tree = Ext.tree;
     var tree = new Tree.TreePanel('tree', {
         animate:true,
         loader: new Tree.TreeLoader({
-            dataUrl:'<?php echo $this->getTreeLoaderUrl() ?>'
+            dataUrl:'<?php echo $block->getTreeLoaderUrl() ?>'
         }),
         enableDD:false,
         containerScroll: true
@@ -66,7 +50,7 @@ Ext.onReady(function(){
 
     // set the root node
     var root = new Tree.AsyncTreeNode({
-        text: '<?php echo $this->getRootNodeName() ?>',
+        text: '<?php echo $block->getRootNodeName() ?>',
         draggable:false,
         id:'root'
     });
@@ -86,7 +70,7 @@ Ext.onReady(function(){
 
     MediabrowserInstance.setTree(tree);
     tree.addListener('click', MediabrowserInstance.selectFolder.bind(MediabrowserInstance));
-    tree.expandPath('<?php echo $this->getTreeCurrentPath() ?>','', function(success, node) {
+    tree.expandPath('<?php echo $block->getTreeCurrentPath() ?>','', function(success, node) {
         MediabrowserInstance.selectFolder(node);
     });
 });

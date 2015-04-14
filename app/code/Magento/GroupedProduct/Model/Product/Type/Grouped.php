@@ -2,28 +2,12 @@
 /**
  * Grouped product type implementation
  *
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GroupedProduct\Model\Product\Type;
+
+use Magento\Catalog\Api\ProductRepositoryInterface;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -77,7 +61,7 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
     /**
      * Store manager
      *
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
@@ -97,42 +81,38 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
     protected $msrpData;
 
     /**
-     * @param \Magento\Catalog\Model\ProductFactory $productFactory
      * @param \Magento\Catalog\Model\Product\Option $catalogProductOption
      * @param \Magento\Eav\Model\Config $eavConfig
      * @param \Magento\Catalog\Model\Product\Type $catalogProductType
      * @param \Magento\Framework\Event\ManagerInterface $eventManager
-     * @param \Magento\Core\Helper\Data $coreData
-     * @param \Magento\Core\Helper\File\Storage\Database $fileStorageDb
-     * @param \Magento\Framework\App\Filesystem $filesystem
+     * @param \Magento\MediaStorage\Helper\File\Storage\Database $fileStorageDb
+     * @param \Magento\Framework\Filesystem $filesystem
      * @param \Magento\Framework\Registry $coreRegistry
-     * @param \Magento\Framework\Logger $logger
+     * @param \Psr\Log\LoggerInterface $logger
+     * @param ProductRepositoryInterface $productRepository
      * @param \Magento\GroupedProduct\Model\Resource\Product\Link $catalogProductLink
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Catalog\Model\Product\Attribute\Source\Status $catalogProductStatus
      * @param \Magento\Framework\App\State $appState
      * @param \Magento\Msrp\Helper\Data $msrpData
-     * @param array $data
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Catalog\Model\Product\Option $catalogProductOption,
         \Magento\Eav\Model\Config $eavConfig,
         \Magento\Catalog\Model\Product\Type $catalogProductType,
         \Magento\Framework\Event\ManagerInterface $eventManager,
-        \Magento\Core\Helper\Data $coreData,
-        \Magento\Core\Helper\File\Storage\Database $fileStorageDb,
-        \Magento\Framework\App\Filesystem $filesystem,
+        \Magento\MediaStorage\Helper\File\Storage\Database $fileStorageDb,
+        \Magento\Framework\Filesystem $filesystem,
         \Magento\Framework\Registry $coreRegistry,
-        \Magento\Framework\Logger $logger,
+        \Psr\Log\LoggerInterface $logger,
+        ProductRepositoryInterface $productRepository,
         \Magento\GroupedProduct\Model\Resource\Product\Link $catalogProductLink,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Catalog\Model\Product\Attribute\Source\Status $catalogProductStatus,
         \Magento\Framework\App\State $appState,
-        \Magento\Msrp\Helper\Data $msrpData,
-        array $data = array()
+        \Magento\Msrp\Helper\Data $msrpData
     ) {
         $this->productLinks = $catalogProductLink;
         $this->_storeManager = $storeManager;
@@ -140,17 +120,15 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
         $this->_appState = $appState;
         $this->msrpData = $msrpData;
         parent::__construct(
-            $productFactory,
             $catalogProductOption,
             $eavConfig,
             $catalogProductType,
             $eventManager,
-            $coreData,
             $fileStorageDb,
             $filesystem,
             $coreRegistry,
             $logger,
-            $data
+            $productRepository
         );
     }
 
@@ -217,7 +195,7 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
     public function getAssociatedProducts($product)
     {
         if (!$product->hasData($this->_keyAssociatedProducts)) {
-            $associatedProducts = array();
+            $associatedProducts = [];
 
             $this->setSaleableStatus($product);
 
@@ -229,7 +207,7 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
                 $this->getStoreFilter($product)
             )->addAttributeToFilter(
                 'status',
-                array('in' => $this->getStatusFilters($product))
+                ['in' => $this->getStatusFilters($product)]
             );
 
             foreach ($collection as $item) {
@@ -252,7 +230,7 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
     {
         $statusFilters = $product->getData($this->_keyStatusFilters);
         if (!is_array($statusFilters)) {
-            $statusFilters = array();
+            $statusFilters = [];
         }
 
         $statusFilters[] = $status;
@@ -282,10 +260,10 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
     public function getStatusFilters($product)
     {
         if (!$product->hasData($this->_keyStatusFilters)) {
-            return array(
+            return [
                 \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED,
-                \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED
-            );
+                \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED,
+            ];
         }
         return $product->getData($this->_keyStatusFilters);
     }
@@ -299,7 +277,7 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
     public function getAssociatedProductIds($product)
     {
         if (!$product->hasData($this->_keyAssociatedProductIds)) {
-            $associatedProductIds = array();
+            $associatedProductIds = [];
             /** @var $item \Magento\Catalog\Model\Product */
             foreach ($this->getAssociatedProducts($product) as $item) {
                 $associatedProductIds[] = $item->getId();
@@ -342,10 +320,36 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
         parent::save($product);
 
         $data = $product->getGroupedLinkData();
-        if (!is_null($data)) {
+        if ($data !== null) {
             $this->productLinks->saveGroupedLinks($product, $data);
         }
         return $this;
+    }
+
+    /**
+     * @param \Magento\Framework\Object $buyRequest
+     * @param \Magento\Catalog\Model\Product $product
+     * @param bool $isStrictProcessMode
+     * @return array|string
+     */
+    protected function getProductInfo(\Magento\Framework\Object $buyRequest, $product, $isStrictProcessMode)
+    {
+        $productsInfo = $buyRequest->getSuperGroup() ?: [];
+        $associatedProducts = $this->getAssociatedProducts($product);
+
+        if (!is_array($productsInfo)) {
+            return __('Please specify the quantity of product(s).')->render();
+        }
+        foreach ($associatedProducts as $subProduct) {
+            if (!isset($productsInfo[$subProduct->getId()])) {
+                if ($isStrictProcessMode && !$subProduct->getQty()) {
+                    return __('Please specify the quantity of product(s).')->render();
+                }
+                $productsInfo[$subProduct->getId()] = intval($subProduct->getQty());
+            }
+        }
+
+        return $productsInfo;
     }
 
     /**
@@ -355,75 +359,69 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
      * @param \Magento\Framework\Object $buyRequest
      * @param \Magento\Catalog\Model\Product $product
      * @param string $processMode
-     * @return array|string
+     * @return \Magento\Framework\Phrase|array|string
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function _prepareProduct(\Magento\Framework\Object $buyRequest, $product, $processMode)
     {
-        $productsInfo = $buyRequest->getSuperGroup();
+        $products = [];
+        $associatedProductsInfo = [];
         $isStrictProcessMode = $this->_isStrictProcessMode($processMode);
+        $productsInfo = $this->getProductInfo($buyRequest, $product, $isStrictProcessMode);
+        if (is_string($productsInfo)) {
+            return $productsInfo;
+        }
+        $associatedProducts = !$isStrictProcessMode || !empty($productsInfo)
+            ? $this->getAssociatedProducts($product)
+            : false;
 
-        if (!$isStrictProcessMode || !empty($productsInfo) && is_array($productsInfo)) {
-            $products = array();
-            $associatedProductsInfo = array();
-            $associatedProducts = $this->getAssociatedProducts($product);
-            if ($associatedProducts || !$isStrictProcessMode) {
-                foreach ($associatedProducts as $subProduct) {
-                    $subProductId = $subProduct->getId();
-                    if (isset($productsInfo[$subProductId])) {
-                        $qty = $productsInfo[$subProductId];
-                        if (!empty($qty) && is_numeric($qty)) {
-
-                            $_result = $subProduct->getTypeInstance()->_prepareProduct(
-                                $buyRequest,
-                                $subProduct,
-                                $processMode
-                            );
-                            if (is_string($_result) && !is_array($_result)) {
-                                return $_result;
-                            }
-
-                            if (!isset($_result[0])) {
-                                return __('We cannot process the item.');
-                            }
-
-                            if ($isStrictProcessMode) {
-                                $_result[0]->setCartQty($qty);
-                                $_result[0]->addCustomOption('product_type', self::TYPE_CODE, $product);
-                                $_result[0]->addCustomOption(
-                                    'info_buyRequest',
-                                    serialize(
-                                        array(
-                                            'super_product_config' => array(
-                                                'product_type' => self::TYPE_CODE,
-                                                'product_id' => $product->getId()
-                                            )
-                                        )
-                                    )
-                                );
-                                $products[] = $_result[0];
-                            } else {
-                                $associatedProductsInfo[] = array($subProductId => $qty);
-                                $product->addCustomOption('associated_product_' . $subProductId, $qty);
-                            }
-                        }
-                    }
-                }
+        foreach ($associatedProducts as $subProduct) {
+            $qty = $productsInfo[$subProduct->getId()];
+            if (!is_numeric($qty)) {
+                continue;
             }
 
-            if (!$isStrictProcessMode || count($associatedProductsInfo)) {
-                $product->addCustomOption('product_type', self::TYPE_CODE, $product);
-                $product->addCustomOption('info_buyRequest', serialize($buyRequest->getData()));
+            $_result = $subProduct->getTypeInstance()->_prepareProduct($buyRequest, $subProduct, $processMode);
 
-                $products[] = $product;
+            if (is_string($_result)) {
+                return $_result;
+            } elseif (!isset($_result[0])) {
+                return __('Cannot process the item.')->render();
             }
 
-            if (count($products)) {
-                return $products;
+            if ($isStrictProcessMode) {
+                $_result[0]->setCartQty($qty);
+                $_result[0]->addCustomOption(
+                    'info_buyRequest',
+                    serialize(
+                        [
+                            'super_product_config' => [
+                                'product_type' => self::TYPE_CODE,
+                                'product_id' => $product->getId(),
+                            ],
+                        ]
+                    )
+                );
+                $products[] = $_result[0];
+            } else {
+                $associatedProductsInfo[] = [$subProduct->getId() => $qty];
+                $product->addCustomOption('associated_product_' . $subProduct->getId(), $qty);
             }
         }
 
-        return __('Please specify the quantity of product(s).');
+        if (!$isStrictProcessMode || count($associatedProductsInfo)) {
+            $product->addCustomOption('product_type', self::TYPE_CODE, $product);
+            $product->addCustomOption('info_buyRequest', serialize($buyRequest->getData()));
+
+            $products[] = $product;
+        }
+
+        if (count($products)) {
+            return $products;
+        }
+
+        return __('Please specify the quantity of product(s).')->render();
     }
 
     /**
@@ -435,7 +433,7 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
      */
     public function getProductsToPurchaseByReqGroups($product)
     {
-        return array($this->getAssociatedProducts($product));
+        return [$this->getAssociatedProducts($product)];
     }
 
     /**
@@ -449,9 +447,9 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
     public function processBuyRequest($product, $buyRequest)
     {
         $superGroup = $buyRequest->getSuperGroup();
-        $superGroup = is_array($superGroup) ? array_filter($superGroup, 'intval') : array();
+        $superGroup = is_array($superGroup) ? array_filter($superGroup, 'intval') : [];
 
-        $options = array('super_group' => $superGroup);
+        $options = ['super_group' => $superGroup];
 
         return $options;
     }
@@ -500,6 +498,6 @@ class Grouped extends \Magento\Catalog\Model\Product\Type\AbstractType
                 $prices[] = $item->getMsrp();
             }
         }
-        return min($prices);
+        return $prices ? min($prices) : 0;
     }
 }

@@ -1,62 +1,50 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Catalog\Test\Block\Adminhtml\Product\Edit\Tab\Attributes;
 
-use Mtf\Client\Element;
-use Mtf\Client\Driver\Selenium\Element\SuggestElement;
+use Magento\Mtf\Client\Element\SuggestElement;
 use Magento\Catalog\Test\Fixture\CatalogProductAttribute;
+use Magento\Mtf\Client\Locator;
 
 /**
- * Class FormAttributeSearch
- * Form Attribute Search on Product page
+ * Form Attribute Search on Product page.
  */
 class Search extends SuggestElement
 {
     /**
-     * Attribute Set locator
+     * Attributes locator.
      *
      * @var string
      */
     protected $value = '.action-toggle > span';
 
     /**
-     * Attribute Set button
+     * Attributes button.
      *
      * @var string
      */
     protected $actionToggle = '.action-toggle';
 
     /**
-     * Search attribute result locator
+     * Saerch result dropdown.
      *
      * @var string
      */
-    protected $searchResult = '.mage-suggest-dropdown .ui-corner-all';
+    protected $searchResult = '.mage-suggest-dropdown';
 
     /**
-     * Set value
+     * Searched attribute result locator.
+     *
+     * @var string
+     */
+    protected $searchArrtibute = './/a[text()="%s"]';
+
+    /**
+     * Set value.
      *
      * @param string $value
      * @return void
@@ -68,7 +56,7 @@ class Search extends SuggestElement
     }
 
     /**
-     * Get value
+     * Get value.
      *
      * @return string
      */
@@ -78,7 +66,7 @@ class Search extends SuggestElement
     }
 
     /**
-     * Checking not exist attribute in search result
+     * Checking not exist attribute in search result.
      *
      * @param CatalogProductAttribute $productAttribute
      * @return bool
@@ -88,9 +76,24 @@ class Search extends SuggestElement
         $this->find($this->actionToggle)->click();
         $this->find($this->suggest)->setValue($productAttribute->getFrontendLabel());
         $this->waitResult();
-        if ($this->find($this->searchResult)->getText() == $productAttribute->getFrontendLabel()) {
-            return true;
-        }
-        return false;
+        $attributeSelector = sprintf($this->searchArrtibute, $productAttribute->getFrontendLabel());
+        return $this->find($this->searchResult)->find($attributeSelector, Locator::SELECTOR_XPATH)->isVisible();
+    }
+
+    /**
+     * Wait for search result is visible.
+     *
+     * @return void
+     */
+    public function waitResult()
+    {
+        $browser = $this;
+        $selector = $this->searchResult;
+        $browser->waitUntil(
+            function () use ($browser, $selector) {
+                $element = $browser->find($selector);
+                return $element->isVisible() ? true : null;
+            }
+        );
     }
 }

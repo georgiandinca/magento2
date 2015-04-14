@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework\View\Layout;
 
@@ -34,6 +16,13 @@ class ScheduledStructure
      * @var array
      */
     protected $_scheduledStructure;
+
+    /**
+     * Scheduled structure data
+     *
+     * @var array
+     */
+    protected $_scheduledData;
 
     /**
      * Full information about elements to be populated in the layout structure after generating structure
@@ -57,6 +46,13 @@ class ScheduledStructure
     protected $_scheduledRemoves;
 
     /**
+     * Scheduled structure elements with ifconfig attribute
+     *
+     * @var array
+     */
+    protected $_scheduledIfconfig;
+
+    /**
      * Materialized paths for overlapping workaround of scheduled structural elements
      *
      * @var array
@@ -64,17 +60,26 @@ class ScheduledStructure
     protected $_scheduledPaths;
 
     /**
+     * Elements with reference to non-existing parent element
+     *
+     * @var array
+     */
+    protected $_brokenParent = [];
+
+    /**
      * @param array $data
      *
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function __construct(array $data = array())
+    public function __construct(array $data = [])
     {
-        $this->_scheduledStructure = isset($data['scheduledStructure']) ? $data['scheduledStructure'] : array();
-        $this->_scheduledElements = isset($data['scheduledElements']) ? $data['scheduledElements'] : array();
-        $this->_scheduledMoves = isset($data['scheduledMoves']) ? $data['scheduledMoves'] : array();
-        $this->_scheduledRemoves = isset($data['scheduledRemoves']) ? $data['scheduledRemoves'] : array();
-        $this->_scheduledPaths = isset($data['scheduledPaths']) ? $data['scheduledPaths'] : array();
+        $this->_scheduledStructure = isset($data['scheduledStructure']) ? $data['scheduledStructure'] : [];
+        $this->_scheduledData = isset($data['scheduledData']) ? $data['scheduledData'] : [];
+        $this->_scheduledElements = isset($data['scheduledElements']) ? $data['scheduledElements'] : [];
+        $this->_scheduledMoves = isset($data['scheduledMoves']) ? $data['scheduledMoves'] : [];
+        $this->_scheduledRemoves = isset($data['scheduledRemoves']) ? $data['scheduledRemoves'] : [];
+        $this->_scheduledIfconfig = isset($data['scheduledIfconfig']) ? $data['scheduledIfconfig'] : [];
+        $this->_scheduledPaths = isset($data['scheduledPaths']) ? $data['scheduledPaths'] : [];
     }
 
     /**
@@ -98,6 +103,16 @@ class ScheduledStructure
     }
 
     /**
+     * Get elements to check ifconfig attribute
+     *
+     * @return array
+     */
+    public function getIfconfigList()
+    {
+        return array_keys(array_intersect_key($this->_scheduledElements, $this->_scheduledIfconfig));
+    }
+
+    /**
      * Get scheduled elements list
      *
      * @return array
@@ -114,7 +129,7 @@ class ScheduledStructure
      * @param array $default
      * @return bool|array
      */
-    public function getElement($elementName, $default = array())
+    public function getElement($elementName, $default = [])
     {
         return $this->hasElement($elementName) ? $this->_scheduledElements[$elementName] : $default;
     }
@@ -176,6 +191,18 @@ class ScheduledStructure
     }
 
     /**
+     * Get element to check by name
+     *
+     * @param string $elementName
+     * @param mixed $default
+     * @return mixed
+     */
+    public function getIfconfigElement($elementName, $default = null)
+    {
+        return isset($this->_scheduledIfconfig[$elementName]) ? $this->_scheduledIfconfig[$elementName] : $default;
+    }
+
+    /**
      * Add element to move list
      *
      * @param string $elementName
@@ -207,6 +234,30 @@ class ScheduledStructure
     public function setElementToRemoveList($elementName)
     {
         $this->_scheduledRemoves[$elementName] = 1;
+    }
+
+    /**
+     * Unset element by name removed by ifconfig attribute
+     *
+     * @param string $elementName
+     * @return void
+     */
+    public function unsetElementFromIfconfigList($elementName)
+    {
+        unset($this->_scheduledIfconfig[$elementName]);
+    }
+
+    /**
+     * Set element value to check ifconfig attribute
+     *
+     * @param string $elementName
+     * @param string $configPath
+     * @param string $scopeType
+     * @return void
+     */
+    public function setElementToIfconfigList($elementName, $configPath, $scopeType)
+    {
+        $this->_scheduledIfconfig[$elementName] = [$configPath, $scopeType];
     }
 
     /**
@@ -255,7 +306,7 @@ class ScheduledStructure
     /**
      * Add element to scheduled structure elements list
      *
-     * @param  string $elementName
+     * @param string $elementName
      * @param array $data
      * @return void
      */
@@ -273,6 +324,31 @@ class ScheduledStructure
     public function unsetStructureElement($elementName)
     {
         unset($this->_scheduledStructure[$elementName]);
+        unset($this->_scheduledData[$elementName]);
+    }
+
+    /**
+     * Get scheduled data for element
+     *
+     * @param string $elementName
+     * @param null $default
+     * @return null
+     */
+    public function getStructureElementData($elementName, $default = null)
+    {
+        return isset($this->_scheduledData[$elementName]) ? $this->_scheduledData[$elementName] : $default;
+    }
+
+    /**
+     * Set scheduled data for element
+     *
+     * @param string $elementName
+     * @param array $data
+     * @return void
+     */
+    public function setStructureElementData($elementName, array $data)
+    {
+        $this->_scheduledData[$elementName] = $data;
     }
 
     /**
@@ -332,13 +408,35 @@ class ScheduledStructure
     }
 
     /**
+     * Remove element from broken parent list
+     *
+     * @param string $elementName
+     * @return void
+     */
+    public function unsetElementFromBrokenParentList($elementName)
+    {
+        unset($this->_brokenParent[$elementName]);
+    }
+
+    /**
+     * Set element to broken parent list
+     *
+     * @param string $elementName
+     * @return void
+     */
+    public function setElementToBrokenParentList($elementName)
+    {
+        $this->_brokenParent[$elementName] = 1;
+    }
+
+    /**
      * Flush scheduled paths list
      *
      * @return void
      */
     public function flushPaths()
     {
-        $this->_scheduledPaths = array();
+        $this->_scheduledPaths = [];
     }
 
     /**
@@ -349,7 +447,7 @@ class ScheduledStructure
     public function flushScheduledStructure()
     {
         $this->flushPaths();
-        $this->_scheduledElements = array();
-        $this->_scheduledStructure = array();
+        $this->_scheduledElements = [];
+        $this->_scheduledStructure = [];
     }
 }

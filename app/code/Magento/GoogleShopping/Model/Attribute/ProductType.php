@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\GoogleShopping\Model\Attribute;
 
@@ -33,9 +15,9 @@ class ProductType extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribu
     /**
      * Category factory
      *
-     * @var \Magento\Catalog\Model\CategoryFactory
+     * @var \Magento\Catalog\Api\CategoryRepositoryInterface
      */
-    protected $_categoryFactory;
+    protected $categoryRepository;
 
     /**
      * @param \Magento\Framework\Model\Context $context
@@ -45,9 +27,10 @@ class ProductType extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribu
      * @param \Magento\GoogleShopping\Helper\Product $gsProduct
      * @param \Magento\Catalog\Model\Product\CatalogPrice $catalogPrice
      * @param \Magento\GoogleShopping\Model\Resource\Attribute $resource
-     * @param \Magento\Catalog\Model\CategoryFactory $categoryFactory
+     * @param \Magento\Catalog\Api\CategoryRepositoryInterface $categoryRepository
      * @param \Magento\Framework\Data\Collection\Db $resourceCollection
      * @param array $data
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
         \Magento\Framework\Model\Context $context,
@@ -57,11 +40,11 @@ class ProductType extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribu
         \Magento\GoogleShopping\Helper\Product $gsProduct,
         \Magento\Catalog\Model\Product\CatalogPrice $catalogPrice,
         \Magento\GoogleShopping\Model\Resource\Attribute $resource,
-        \Magento\Catalog\Model\CategoryFactory $categoryFactory,
+        \Magento\Catalog\Api\CategoryRepositoryInterface $categoryRepository,
         \Magento\Framework\Data\Collection\Db $resourceCollection = null,
-        array $data = array()
+        array $data = []
     ) {
-        $this->_categoryFactory = $categoryFactory;
+        $this->categoryRepository = $categoryRepository;
         parent::__construct(
             $context,
             $registry,
@@ -84,16 +67,15 @@ class ProductType extends \Magento\GoogleShopping\Model\Attribute\DefaultAttribu
      */
     public function convertAttribute($product, $entry)
     {
-
         $productCategories = $product->getCategoryIds();
 
         // TODO: set Default value for product_type attribute if product isn't assigned for any category
         $value = 'Shop';
 
         if (!empty($productCategories)) {
-            $category = $this->_categoryFactory->create()->load(array_shift($productCategories));
+            $category = $this->categoryRepository->get(array_shift($productCategories));
 
-            $breadcrumbs = array();
+            $breadcrumbs = [];
 
             foreach ($category->getParentCategories() as $cat) {
                 $breadcrumbs[] = $cat->getName();

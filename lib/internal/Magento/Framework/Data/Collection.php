@@ -1,29 +1,12 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright  Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Framework\Data;
 
 use Magento\Framework\Data\Collection\EntityFactoryInterface;
+use Magento\Framework\Option\ArrayInterface;
 
 /**
  * Data collection
@@ -32,10 +15,9 @@ use Magento\Framework\Data\Collection\EntityFactoryInterface;
  */
 
 /**
- * TODO: Refactor use of \Magento\Framework\Option\ArrayInterface in library. Probably will be refactored while
- * moving \Magento\Core to library
+ * TODO: Refactor use of \Magento\Framework\Option\ArrayInterface in library.
  */
-class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\Option\ArrayInterface
+class Collection implements \IteratorAggregate, \Countable, ArrayInterface, CollectionDataSourceInterface
 {
     const SORT_ORDER_ASC = 'ASC';
 
@@ -46,7 +28,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      *
      * @var \Magento\Framework\Object[]
      */
-    protected $_items = array();
+    protected $_items = [];
 
     /**
      * Item object class name
@@ -60,14 +42,14 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      *
      * @var array
      */
-    protected $_orders = array();
+    protected $_orders = [];
 
     /**
      * Filters configuration
      *
      * @var \Magento\Framework\Object[]
      */
-    protected $_filters = array();
+    protected $_filters = [];
 
     /**
      * Filter rendered flag
@@ -111,7 +93,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      *
      * @var array
      */
-    protected $_flags = array();
+    protected $_flags = [];
 
     /**
      * @var EntityFactoryInterface
@@ -182,12 +164,13 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      *
      * @param string|array $field
      * @param string|int|array $condition
-     * @throws \Magento\Framework\Exception if some error in the input could be detected.
+     * @throws \Magento\Framework\Exception\LocalizedException if some error in the input could be detected.
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function addFieldToFilter($field, $condition)
     {
-        throw new \Magento\Framework\Exception('Not implemented');
+        throw new \Magento\Framework\Exception\LocalizedException(new \Magento\Framework\Phrase('Not implemented'));
     }
 
     /**
@@ -210,7 +193,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
                 return $this->_filters;
             }
             // non-empty array: collect all filters that match specified field names
-            $result = array();
+            $result = [];
             foreach ($this->_filters as $filter) {
                 if (in_array($filter['field'], $field)) {
                     $result[] = $filter;
@@ -301,7 +284,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
     public function getSize()
     {
         $this->load();
-        if (is_null($this->_totalRecords)) {
+        if ($this->_totalRecords === null) {
             $this->_totalRecords = count($this->getItems());
         }
         return intval($this->_totalRecords);
@@ -361,7 +344,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
     {
         $this->load();
 
-        $col = array();
+        $col = [];
         foreach ($this->getItems() as $item) {
             $col[] = $item->getData($colName);
         }
@@ -379,7 +362,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
     {
         $this->load();
 
-        $res = array();
+        $res = [];
         foreach ($this as $item) {
             if ($item->getData($column) == $value) {
                 $res[] = $item;
@@ -418,7 +401,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
     {
         $itemId = $this->_getItemId($item);
 
-        if (!is_null($itemId)) {
+        if ($itemId !== null) {
             if (isset($this->_items[$itemId])) {
                 throw new \Exception(
                     'Item (' . get_class($item) . ') with the same id "' . $item->getId() . '" already exist'
@@ -461,7 +444,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      */
     public function getAllIds()
     {
-        $ids = array();
+        $ids = [];
         foreach ($this->getItems() as $item) {
             $ids[] = $this->_getItemId($item);
         }
@@ -489,7 +472,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      */
     public function removeAllItems()
     {
-        $this->_items = array();
+        $this->_items = [];
         return $this;
     }
 
@@ -501,7 +484,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
     public function clear()
     {
         $this->_setIsLoaded(false);
-        $this->_items = array();
+        $this->_items = [];
         return $this;
     }
 
@@ -513,16 +496,15 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      *
      * @param string $callback
      * @param array $args
-     * @internal param string $method
      * @return array
      */
-    public function walk($callback, array $args = array())
+    public function walk($callback, array $args = [])
     {
-        $results = array();
+        $results = [];
         $useItemCallback = is_string($callback) && strpos($callback, '::') === false;
         foreach ($this->getItems() as $id => $item) {
             if ($useItemCallback) {
-                $cb = array($item, $callback);
+                $cb = [$item, $callback];
             } else {
                 $cb = $callback;
                 array_unshift($args, $item);
@@ -537,7 +519,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      * @param array $args
      * @return void
      */
-    public function each($objMethod, $args = array())
+    public function each($objMethod, $args = [])
     {
         foreach ($args->_items as $k => $item) {
             $args->_items[$k] = call_user_func($objMethod, $item);
@@ -663,6 +645,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      *
      * @param bool $flag
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function distinct($flag)
     {
@@ -675,6 +658,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      * @param bool $printQuery
      * @param bool $logQuery
      * @return $this
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function loadData($printQuery = false, $logQuery = false)
     {
@@ -733,12 +717,12 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      * @param array $arrRequiredFields
      * @return array
      */
-    public function toArray($arrRequiredFields = array())
+    public function toArray($arrRequiredFields = [])
     {
-        $arrItems = array();
+        $arrItems = [];
         $arrItems['totalRecords'] = $this->getSize();
 
-        $arrItems['items'] = array();
+        $arrItems['items'] = [];
         foreach ($this as $item) {
             $arrItems['items'][] = $item->toArray($arrRequiredFields);
         }
@@ -761,9 +745,9 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      * @param array $additional
      * @return array
      */
-    protected function _toOptionArray($valueField = 'id', $labelField = 'name', $additional = array())
+    protected function _toOptionArray($valueField = 'id', $labelField = 'name', $additional = [])
     {
-        $res = array();
+        $res = [];
         $additional['value'] = $valueField;
         $additional['label'] = $labelField;
 
@@ -804,7 +788,7 @@ class Collection implements \IteratorAggregate, \Countable, \Magento\Framework\O
      */
     protected function _toOptionHash($valueField = 'id', $labelField = 'name')
     {
-        $res = array();
+        $res = [];
         foreach ($this as $item) {
             $res[$item->getData($valueField)] = $item->getData($labelField);
         }

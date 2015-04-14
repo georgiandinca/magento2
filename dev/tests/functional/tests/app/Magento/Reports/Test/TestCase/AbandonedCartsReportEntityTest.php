@@ -1,144 +1,110 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Reports\Test\TestCase;
 
-use Mtf\Client\Browser;
-use Mtf\TestCase\Injectable;
-use Mtf\Fixture\FixtureFactory;
-use Magento\Cms\Test\Page\CmsIndex;
-use Magento\Customer\Test\Page\CustomerAccountLogin;
-use Magento\Customer\Test\Fixture\CustomerInjectable;
-use Magento\Catalog\Test\Fixture\CatalogProductSimple;
+use Magento\Mtf\TestCase\Injectable;
+use Magento\Mtf\Fixture\FixtureFactory;
+use Magento\Mtf\Client\BrowserInterface;
+use Magento\Customer\Test\Fixture\Customer;
 use Magento\Catalog\Test\Page\Product\CatalogProductView;
 
 /**
- * Test Creation for AbandonedCartsReportEntity
- *
  * Test Flow:
- *
  * Preconditions:
- * 1. Create simple product
- * 2. Create customer
- * 3. Go to frontend
- * 4. Login as customer
- * 5. Add simple product to cart
- * 6. Logout
+ * 1. Create simple product.
+ * 2. Create customer.
+ * 3. Go to frontend.
+ * 4. Login as customer.
+ * 5. Add simple product to cart.
+ * 6. Logout.
  *
  * Steps:
- * 1. Open Backend
- * 2. Go to Reports > Abandoned Carts
- * 3. Click "Reset Filter"
- * 4. Perform all assertions
+ * 1. Open Backend.
+ * 2. Go to Reports > Abandoned Carts.
+ * 3. Click "Reset Filter".
+ * 4. Perform all assertions.
  *
  * @group Reports_(MX)
  * @ZephyrId MAGETWO-28558
  */
 class AbandonedCartsReportEntityTest extends Injectable
 {
-    /**
-     * Cms Index page
-     *
-     * @var CmsIndex
-     */
-    protected $cmsIndex;
+    /* tags */
+    const MVP = 'no';
+    const DOMAIN = 'MX';
+    /* end tags */
 
     /**
-     * Customer Account Login page
-     *
-     * @var CustomerAccountLogin
-     */
-    protected $customerAccountLogin;
-
-    /**
-     * Catalog Product View page
+     * Catalog Product View page.
      *
      * @var CatalogProductView
      */
     protected $catalogProductView;
 
     /**
-     * Browser interface
+     * Browser interface.
      *
-     * @var Browser
+     * @var BrowserInterface
      */
     protected $browser;
 
     /**
-     * Fixture factory
+     * Fixture factory.
      *
      * @var FixtureFactory
      */
     protected $fixtureFactory;
 
     /**
-     * Inject pages
+     * Inject pages.
      *
-     * @param CmsIndex $cmsIndex
-     * @param CustomerAccountLogin $customerAccountLogin
-     * @param Browser $browser
+     * @param BrowserInterface $browser
      * @param FixtureFactory $fixtureFactory
      * @param CatalogProductView $catalogProductView
      * @return void
      */
     public function __inject(
-        CmsIndex $cmsIndex,
-        CustomerAccountLogin $customerAccountLogin,
-        Browser $browser,
+        BrowserInterface $browser,
         FixtureFactory $fixtureFactory,
         CatalogProductView $catalogProductView
     ) {
-        $this->cmsIndex = $cmsIndex;
-        $this->customerAccountLogin = $customerAccountLogin;
         $this->browser = $browser;
         $this->catalogProductView = $catalogProductView;
         $this->fixtureFactory = $fixtureFactory;
     }
 
     /**
-     * Create product and add it to cart
+     * Create product and add it to cart.
      *
      * @param string $products
-     * @param CustomerInjectable $customer
+     * @param Customer $customer
      * @return array
      */
-    public function test($products, CustomerInjectable $customer)
+    public function test($products, Customer $customer)
     {
+        $this->markTestIncomplete('Bug: MAGETWO-31737');
         // Precondition
         $products = $this->createProducts($products);
         $customer->persist();
-        $this->cmsIndex->open();
-        $this->cmsIndex->getLinksBlock()->openLink("Log In");
-        $this->customerAccountLogin->getLoginBlock()->login($customer);
+        $this->objectManager->create(
+            'Magento\Customer\Test\TestStep\LoginCustomerOnFrontendStep',
+            ['customer' => $customer]
+        )->run();
         $this->addProductsToCart($products);
-        $this->cmsIndex->getLinksBlock()->openLink("Log Out");
+        $this->objectManager->create(
+            'Magento\Customer\Test\TestStep\LogoutCustomerOnFrontendStep',
+            ['customer' => $customer]
+        )->run();
 
         return ['products' => $products];
     }
 
     /**
-     * Create products
+     * Create products.
      *
      * @param string $products
      * @return array
@@ -154,7 +120,7 @@ class AbandonedCartsReportEntityTest extends Injectable
     }
 
     /**
-     * Add products to cart
+     * Add products to cart.
      *
      * @param array $products
      * @return void

@@ -1,26 +1,10 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
+
+// @codingStandardsIgnoreFile
 
 /**
  * Default attribute model
@@ -29,6 +13,9 @@
  */
 namespace Magento\GoogleShopping\Model\Attribute;
 
+/**
+ * @SuppressWarnings(PHPMD.NumberOfChildren)
+ */
 class DefaultAttribute extends \Magento\GoogleShopping\Model\Attribute
 {
     /**
@@ -85,11 +72,11 @@ class DefaultAttribute extends \Magento\GoogleShopping\Model\Attribute
 
         if ($productAttribute->getFrontendInput() == 'date' || $productAttribute->getBackendType() == 'date') {
             $value = $product->getData($productAttribute->getAttributeCode());
-            if (empty($value) || !\Zend_Date::isDate($value, \Zend_Date::ISO_8601)) {
+            if (empty($value)) {
                 return null;
             }
-            $date = new \Magento\Framework\Stdlib\DateTime\Date($value, \Zend_Date::ISO_8601);
-            $value = $date->toString(\Zend_Date::ATOM);
+            $date = new \DateTime($value);
+            $value = $date->format('c');
         } else {
             $value = $productAttribute->getFrontend()->getValue($product);
         }
@@ -104,7 +91,7 @@ class DefaultAttribute extends \Magento\GoogleShopping\Model\Attribute
      */
     public function getGcontentAttributeType($attribute)
     {
-        $typesMapping = array('price' => self::ATTRIBUTE_TYPE_FLOAT, 'decimal' => self::ATTRIBUTE_TYPE_INT);
+        $typesMapping = ['price' => self::ATTRIBUTE_TYPE_FLOAT, 'decimal' => self::ATTRIBUTE_TYPE_INT];
         if (isset($typesMapping[$attribute->getFrontendInput()])) {
             return $typesMapping[$attribute->getFrontendInput()];
         } elseif (isset($typesMapping[$attribute->getBackendType()])) {
@@ -127,7 +114,7 @@ class DefaultAttribute extends \Magento\GoogleShopping\Model\Attribute
     protected function _setAttribute($entry, $name, $type = self::ATTRIBUTE_TYPE_TEXT, $value = '', $unit = null)
     {
         if (is_object($value) || (string)$value != $value) {
-            throw new \Magento\Framework\Model\Exception(
+            throw new \Magento\Framework\Exception\LocalizedException(
                 __(
                     'Please correct the attribute "%1" type for Google Shopping. The product with this attribute hasn\'t been updated in Google Content.',
                     $name

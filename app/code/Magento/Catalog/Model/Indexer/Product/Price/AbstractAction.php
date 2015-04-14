@@ -1,31 +1,14 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Model\Indexer\Product\Price;
 
 /**
  * Abstract action reindex class
  *
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 abstract class AbstractAction
 {
@@ -56,7 +39,7 @@ abstract class AbstractAction
     protected $_config;
 
     /**
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
@@ -104,7 +87,7 @@ abstract class AbstractAction
     /**
      * @param \Magento\Framework\App\Resource $resource
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $config
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Directory\Model\CurrencyFactory $currencyFactory
      * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate
      * @param \Magento\Framework\Stdlib\DateTime $dateTime
@@ -115,7 +98,7 @@ abstract class AbstractAction
     public function __construct(
         \Magento\Framework\App\Resource $resource,
         \Magento\Framework\App\Config\ScopeConfigInterface $config,
-        \Magento\Framework\StoreManagerInterface $storeManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Directory\Model\CurrencyFactory $currencyFactory,
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Framework\Stdlib\DateTime $dateTime,
@@ -161,16 +144,16 @@ abstract class AbstractAction
      * @param array $processIds
      * @return \Magento\Catalog\Model\Indexer\Product\Price\AbstractAction
      */
-    protected function _syncData(array $processIds = array())
+    protected function _syncData(array $processIds = [])
     {
         // delete invalid rows
         $select = $this->_getConnection()->select()->from(
-            array('index_price' => $this->_getTable('catalog_product_index_price')),
+            ['index_price' => $this->_getTable('catalog_product_index_price')],
             null
         )->joinLeft(
-            array('ip_tmp' => $this->_getIdxTable()),
+            ['ip_tmp' => $this->_getIdxTable()],
             'index_price.entity_id = ip_tmp.entity_id AND index_price.website_id = ip_tmp.website_id',
-            array()
+            []
         )->where(
             'ip_tmp.entity_id IS NULL'
         );
@@ -206,18 +189,17 @@ abstract class AbstractAction
         $baseCurrency = $this->_config->getValue(\Magento\Directory\Model\Currency::XML_PATH_CURRENCY_BASE);
 
         $select = $write->select()->from(
-            array('cw' => $this->_getTable('store_website')),
-            array('website_id')
+            ['cw' => $this->_getTable('store_website')],
+            ['website_id']
         )->join(
-            array('csg' => $this->_getTable('store_group')),
+            ['csg' => $this->_getTable('store_group')],
             'cw.default_group_id = csg.group_id',
-            array('store_id' => 'default_store_id')
+            ['store_id' => 'default_store_id']
         )->where(
             'cw.website_id != 0'
         );
 
-
-        $data = array();
+        $data = [];
         foreach ($write->fetchAll($select) as $item) {
             /** @var $website \Magento\Store\Model\Website */
             $website = $this->_storeManager->getWebsite($item['website_id']);
@@ -239,11 +221,11 @@ abstract class AbstractAction
             $store = $this->_storeManager->getStore($item['store_id']);
             if ($store) {
                 $timestamp = $this->_localeDate->scopeTimeStamp($store);
-                $data[] = array(
+                $data[] = [
                     'website_id' => $website->getId(),
                     'website_date' => $this->_dateTime->formatDate($timestamp, false),
-                    'rate' => $rate
-                );
+                    'rate' => $rate,
+                ];
             }
         }
 
@@ -270,26 +252,26 @@ abstract class AbstractAction
 
         $websiteExpression = $write->getCheckSql('tp.website_id = 0', 'ROUND(tp.value * cwd.rate, 4)', 'tp.value');
         $select = $write->select()->from(
-            array('tp' => $this->_getTable(array('catalog_product_entity', 'tier_price'))),
-            array('entity_id')
+            ['tp' => $this->_getTable(['catalog_product_entity', 'tier_price'])],
+            ['entity_id']
         )->join(
-            array('cg' => $this->_getTable('customer_group')),
+            ['cg' => $this->_getTable('customer_group')],
             'tp.all_groups = 1 OR (tp.all_groups = 0 AND tp.customer_group_id = cg.customer_group_id)',
-            array('customer_group_id')
+            ['customer_group_id']
         )->join(
-            array('cw' => $this->_getTable('store_website')),
+            ['cw' => $this->_getTable('store_website')],
             'tp.website_id = 0 OR tp.website_id = cw.website_id',
-            array('website_id')
+            ['website_id']
         )->join(
-            array('cwd' => $this->_getTable('catalog_product_index_website')),
+            ['cwd' => $this->_getTable('catalog_product_index_website')],
             'cw.website_id = cwd.website_id',
-            array()
+            []
         )->where(
             'cw.website_id != 0'
         )->columns(
             new \Zend_Db_Expr("MIN({$websiteExpression})")
         )->group(
-            array('tp.entity_id', 'cg.customer_group_id', 'cw.website_id')
+            ['tp.entity_id', 'cg.customer_group_id', 'cw.website_id']
         );
 
         if (!empty($entityIds)) {
@@ -316,26 +298,26 @@ abstract class AbstractAction
 
         $websiteExpression = $write->getCheckSql('gp.website_id = 0', 'ROUND(gp.value * cwd.rate, 4)', 'gp.value');
         $select = $write->select()->from(
-            array('gp' => $this->_getTable(array('catalog_product_entity', 'group_price'))),
-            array('entity_id')
+            ['gp' => $this->_getTable(['catalog_product_entity', 'group_price'])],
+            ['entity_id']
         )->join(
-            array('cg' => $this->_getTable('customer_group')),
+            ['cg' => $this->_getTable('customer_group')],
             'gp.all_groups = 1 OR (gp.all_groups = 0 AND gp.customer_group_id = cg.customer_group_id)',
-            array('customer_group_id')
+            ['customer_group_id']
         )->join(
-            array('cw' => $this->_getTable('store_website')),
+            ['cw' => $this->_getTable('store_website')],
             'gp.website_id = 0 OR gp.website_id = cw.website_id',
-            array('website_id')
+            ['website_id']
         )->join(
-            array('cwd' => $this->_getTable('catalog_product_index_website')),
+            ['cwd' => $this->_getTable('catalog_product_index_website')],
             'cw.website_id = cwd.website_id',
-            array()
+            []
         )->where(
             'cw.website_id != 0'
         )->columns(
             new \Zend_Db_Expr("MIN({$websiteExpression})")
         )->group(
-            array('gp.entity_id', 'cg.customer_group_id', 'cw.website_id')
+            ['gp.entity_id', 'cg.customer_group_id', 'cw.website_id']
         );
 
         if (!empty($entityIds)) {
@@ -355,8 +337,8 @@ abstract class AbstractAction
      */
     public function getTypeIndexers()
     {
-        if (is_null($this->_indexers)) {
-            $this->_indexers = array();
+        if ($this->_indexers === null) {
+            $this->_indexers = [];
             $types = $this->_catalogProductType->getTypesByPriority();
             foreach ($types as $typeId => $typeInfo) {
                 $modelName = isset(
@@ -383,13 +365,13 @@ abstract class AbstractAction
      *
      * @param string $productTypeId
      * @return \Magento\Catalog\Model\Resource\Product\Indexer\Price\PriceInterface
-     * @throws \Magento\Catalog\Exception
+     * @throws \Magento\Framework\Exception\InputException
      */
     protected function _getIndexer($productTypeId)
     {
         $this->getTypeIndexers();
         if (!isset($this->_indexers[$productTypeId])) {
-            throw new \Magento\Catalog\Exception(__('Unsupported product type "%1".', $productTypeId));
+            throw new \Magento\Framework\Exception\InputException(__('Unsupported product type "%1".', $productTypeId));
         }
         return $this->_indexers[$productTypeId];
     }
@@ -428,7 +410,7 @@ abstract class AbstractAction
      */
     protected function _useIdxTable($value = null)
     {
-        if (!is_null($value)) {
+        if ($value !== null) {
             $this->_useIdxTable = (bool)$value;
         }
         return $this->_useIdxTable;
@@ -463,27 +445,28 @@ abstract class AbstractAction
      *
      * @param array $changedIds
      * @return array Affected ids
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
-    protected function _reindexRows($changedIds = array())
+    protected function _reindexRows($changedIds = [])
     {
         $this->_emptyTable($this->_getIdxTable());
         $this->_prepareWebsiteDateTable();
 
         $select = $this->_connection->select()->from(
             $this->_getTable('catalog_product_entity'),
-            array('entity_id', 'type_id')
+            ['entity_id', 'type_id']
         )->where(
             'entity_id IN(?)',
             $changedIds
         );
         $pairs = $this->_connection->fetchPairs($select);
-        $byType = array();
+        $byType = [];
         foreach ($pairs as $productId => $productType) {
             $byType[$productType][$productId] = $productId;
         }
 
-        $compositeIds = array();
-        $notCompositeIds = array();
+        $compositeIds = [];
+        $notCompositeIds = [];
 
         foreach ($byType as $productType => $entityIds) {
             $indexer = $this->_getIndexer($productType);
@@ -496,12 +479,12 @@ abstract class AbstractAction
 
         if (!empty($notCompositeIds)) {
             $select = $this->_connection->select()->from(
-                array('l' => $this->_getTable('catalog_product_relation')),
+                ['l' => $this->_getTable('catalog_product_relation')],
                 'parent_id'
             )->join(
-                array('e' => $this->_getTable('catalog_product_entity')),
+                ['e' => $this->_getTable('catalog_product_entity')],
                 'e.entity_id = l.parent_id',
-                array('type_id')
+                ['type_id']
             )->where(
                 'l.child_id IN(?)',
                 $notCompositeIds
@@ -545,7 +528,7 @@ abstract class AbstractAction
         $write = $this->_connection;
         $select = $write->select()->from(
             $this->_getTable('catalog_product_relation'),
-            array('child_id')
+            ['child_id']
         )->where(
             'parent_id IN(?)',
             $parentIds
@@ -563,7 +546,7 @@ abstract class AbstractAction
                 'entity_id IN(?)',
                 $children
             );
-            $query = $select->insertFromSelect($this->_getIdxTable(), array(), false);
+            $query = $select->insertFromSelect($this->_getIdxTable(), [], false);
             $write->query($query);
         }
 

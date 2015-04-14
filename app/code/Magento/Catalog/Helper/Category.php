@@ -1,30 +1,14 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 namespace Magento\Catalog\Helper;
 
-use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Catalog\Api\CategoryRepositoryInterface;
 use Magento\Catalog\Model\Category as ModelCategory;
+use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Store\Model\Store;
 
 /**
@@ -43,19 +27,12 @@ class Category extends AbstractHelper
      *
      * @var array
      */
-    protected $_storeCategories = array();
-
-    /**
-     * Scope config
-     *
-     * @var \Magento\Framework\App\Config\ScopeConfigInterface
-     */
-    protected $_scopeConfig;
+    protected $_storeCategories = [];
 
     /**
      * Store manager
      *
-     * @var \Magento\Framework\StoreManagerInterface
+     * @var \Magento\Store\Model\StoreManagerInterface
      */
     protected $_storeManager;
 
@@ -74,23 +51,28 @@ class Category extends AbstractHelper
     protected $_dataCollectionFactory;
 
     /**
+     * @var CategoryRepositoryInterface
+     */
+    protected $categoryRepository;
+
+    /**
      * @param \Magento\Framework\App\Helper\Context $context
      * @param \Magento\Catalog\Model\CategoryFactory $categoryFactory
-     * @param \Magento\Framework\StoreManagerInterface $storeManager
-     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
      * @param \Magento\Framework\Data\CollectionFactory $dataCollectionFactory
+     * @param CategoryRepositoryInterface $categoryRepository
      */
     public function __construct(
         \Magento\Framework\App\Helper\Context $context,
         \Magento\Catalog\Model\CategoryFactory $categoryFactory,
-        \Magento\Framework\StoreManagerInterface $storeManager,
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
-        \Magento\Framework\Data\CollectionFactory $dataCollectionFactory
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
+        \Magento\Framework\Data\CollectionFactory $dataCollectionFactory,
+        CategoryRepositoryInterface $categoryRepository
     ) {
         $this->_categoryFactory = $categoryFactory;
         $this->_storeManager = $storeManager;
         $this->_dataCollectionFactory = $dataCollectionFactory;
-        $this->_scopeConfig = $scopeConfig;
+        $this->categoryRepository = $categoryRepository;
         parent::__construct($context);
     }
 
@@ -119,12 +101,12 @@ class Category extends AbstractHelper
             if ($asCollection) {
                 return $this->_dataCollectionFactory->create();
             }
-            return array();
+            return [];
         }
 
         $recursionLevel = max(
             0,
-            (int)$this->_scopeConfig->getValue(
+            (int)$this->scopeConfig->getValue(
                 'catalog/navigation/max_depth',
                 \Magento\Store\Model\ScopeInterface::SCOPE_STORE
             )
@@ -158,11 +140,15 @@ class Category extends AbstractHelper
     public function canShow($category)
     {
         if (is_int($category)) {
-            $category = $this->_categoryFactory->create()->load($category);
-        }
-
-        if (!$category->getId()) {
-            return false;
+            try {
+                $category = $this->categoryRepository->get($category);
+            } catch (NoSuchEntityException $e) {
+                return false;
+            }
+        } else {
+            if (!$category->getId()) {
+                return false;
+            }
         }
 
         if (!$category->getIsActive()) {
@@ -183,7 +169,7 @@ class Category extends AbstractHelper
      */
     public function canUseCanonicalTag($store = null)
     {
-        return $this->_scopeConfig->getValue(
+        return $this->scopeConfig->getValue(
             self::XML_PATH_USE_CATEGORY_CANONICAL_TAG,
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
             $store

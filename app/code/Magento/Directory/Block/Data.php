@@ -1,25 +1,7 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 /**
@@ -50,13 +32,13 @@ class Data extends \Magento\Framework\View\Element\Template
     protected $_jsonEncoder;
 
     /**
-     * @var \Magento\Core\Helper\Data
+     * @var \Magento\Directory\Helper\Data
      */
-    protected $_coreData;
+    protected $directoryHelper;
 
     /**
      * @param \Magento\Framework\View\Element\Template\Context $context
-     * @param \Magento\Core\Helper\Data $coreData
+     * @param \Magento\Directory\Helper\Data $directoryHelper
      * @param \Magento\Framework\Json\EncoderInterface $jsonEncoder
      * @param \Magento\Framework\App\Cache\Type\Config $configCacheType
      * @param \Magento\Directory\Model\Resource\Region\CollectionFactory $regionCollectionFactory
@@ -65,15 +47,15 @@ class Data extends \Magento\Framework\View\Element\Template
      */
     public function __construct(
         \Magento\Framework\View\Element\Template\Context $context,
-        \Magento\Core\Helper\Data $coreData,
+        \Magento\Directory\Helper\Data $directoryHelper,
         \Magento\Framework\Json\EncoderInterface $jsonEncoder,
         \Magento\Framework\App\Cache\Type\Config $configCacheType,
         \Magento\Directory\Model\Resource\Region\CollectionFactory $regionCollectionFactory,
         \Magento\Directory\Model\Resource\Country\CollectionFactory $countryCollectionFactory,
-        array $data = array()
+        array $data = []
     ) {
         parent::__construct($context, $data);
-        $this->_coreData = $coreData;
+        $this->directoryHelper = $directoryHelper;
         $this->_jsonEncoder = $jsonEncoder;
         $this->_configCacheType = $configCacheType;
         $this->_regionCollectionFactory = $regionCollectionFactory;
@@ -94,7 +76,7 @@ class Data extends \Magento\Framework\View\Element\Template
     public function getCountryCollection()
     {
         $collection = $this->getData('country_collection');
-        if (is_null($collection)) {
+        if ($collection === null) {
             $collection = $this->_countryCollectionFactory->create()->loadByStore();
             $this->setData('country_collection', $collection);
         }
@@ -111,8 +93,8 @@ class Data extends \Magento\Framework\View\Element\Template
      */
     public function getCountryHtmlSelect($defValue = null, $name = 'country_id', $id = 'country', $title = 'Country')
     {
-        \Magento\Framework\Profiler::start('TEST: ' . __METHOD__, array('group' => 'TEST', 'method' => __METHOD__));
-        if (is_null($defValue)) {
+        \Magento\Framework\Profiler::start('TEST: ' . __METHOD__, ['group' => 'TEST', 'method' => __METHOD__]);
+        if ($defValue === null) {
             $defValue = $this->getCountryId();
         }
         $cacheKey = 'DIRECTORY_COUNTRY_SELECT_STORE_' . $this->_storeManager->getStore()->getCode();
@@ -149,7 +131,7 @@ class Data extends \Magento\Framework\View\Element\Template
     public function getRegionCollection()
     {
         $collection = $this->getData('region_collection');
-        if (is_null($collection)) {
+        if ($collection === null) {
             $collection = $this->_regionCollectionFactory->create()->addCountryFilter($this->getCountryId())->load();
 
             $this->setData('region_collection', $collection);
@@ -162,7 +144,7 @@ class Data extends \Magento\Framework\View\Element\Template
      */
     public function getRegionHtmlSelect()
     {
-        \Magento\Framework\Profiler::start('TEST: ' . __METHOD__, array('group' => 'TEST', 'method' => __METHOD__));
+        \Magento\Framework\Profiler::start('TEST: ' . __METHOD__, ['group' => 'TEST', 'method' => __METHOD__]);
         $cacheKey = 'DIRECTORY_REGION_SELECT_STORE' . $this->_storeManager->getStore()->getId();
         $cache = $this->_configCacheType->load($cacheKey);
         if ($cache) {
@@ -186,7 +168,7 @@ class Data extends \Magento\Framework\View\Element\Template
         )->setOptions(
             $options
         )->getHtml();
-        \Magento\Framework\Profiler::start('TEST: ' . __METHOD__, array('group' => 'TEST', 'method' => __METHOD__));
+        \Magento\Framework\Profiler::start('TEST: ' . __METHOD__, ['group' => 'TEST', 'method' => __METHOD__]);
         return $html;
     }
 
@@ -196,8 +178,8 @@ class Data extends \Magento\Framework\View\Element\Template
     public function getCountryId()
     {
         $countryId = $this->getData('country_id');
-        if (is_null($countryId)) {
-            $countryId = $this->_coreData->getDefaultCountry();
+        if ($countryId === null) {
+            $countryId = $this->directoryHelper->getDefaultCountry();
         }
         return $countryId;
     }
@@ -207,23 +189,23 @@ class Data extends \Magento\Framework\View\Element\Template
      */
     public function getRegionsJs()
     {
-        \Magento\Framework\Profiler::start('TEST: ' . __METHOD__, array('group' => 'TEST', 'method' => __METHOD__));
+        \Magento\Framework\Profiler::start('TEST: ' . __METHOD__, ['group' => 'TEST', 'method' => __METHOD__]);
         $regionsJs = $this->getData('regions_js');
         if (!$regionsJs) {
-            $countryIds = array();
+            $countryIds = [];
             foreach ($this->getCountryCollection() as $country) {
                 $countryIds[] = $country->getCountryId();
             }
             $collection = $this->_regionCollectionFactory->create()->addCountryFilter($countryIds)->load();
-            $regions = array();
+            $regions = [];
             foreach ($collection as $region) {
                 if (!$region->getRegionId()) {
                     continue;
                 }
-                $regions[$region->getCountryId()][$region->getRegionId()] = array(
+                $regions[$region->getCountryId()][$region->getRegionId()] = [
                     'code' => $region->getCode(),
-                    'name' => $region->getName()
-                );
+                    'name' => $region->getName(),
+                ];
             }
             $regionsJs = $this->_jsonEncoder->encode($regions);
         }

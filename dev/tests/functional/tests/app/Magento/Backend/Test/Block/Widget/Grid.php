@@ -1,33 +1,15 @@
 <?php
 /**
- * Magento
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Open Software License (OSL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/osl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@magentocommerce.com so we can send you a copy immediately.
- *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade Magento to newer
- * versions in the future. If you wish to customize Magento for your
- * needs please refer to http://www.magentocommerce.com for more information.
- *
- * @copyright   Copyright (c) 2014 X.commerce, Inc. (http://www.magentocommerce.com)
- * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ * Copyright © 2015 Magento. All rights reserved.
+ * See COPYING.txt for license details.
  */
 
 namespace Magento\Backend\Test\Block\Widget;
 
-use Mtf\Block\Block;
-use Mtf\Client\Element;
-use Mtf\Factory\Factory;
-use Mtf\Client\Element\Locator;
+use Magento\Mtf\Block\Block;
+use Magento\Mtf\Client\Locator;
+use Magento\Mtf\Client\Element\SimpleElement;
+use Magento\Mtf\Factory\Factory;
 
 /**
  * Abstract class Grid
@@ -64,7 +46,7 @@ abstract class Grid extends Block
      *
      * @var string
      */
-    protected $resetButton = '[title="Reset Filter"][class*=action]';
+    protected $resetButton = '.action-reset';
 
     /**
      * The first row in grid. For this moment we suggest that we should strictly define what we are going to search
@@ -151,11 +133,67 @@ abstract class Grid extends Block
     protected $option = '[name="status"]';
 
     /**
-     * Selector for action expand Filter
+     * Filter button
      *
      * @var string
      */
-    protected $filterOpen = '.action.filters-toggle';
+    protected $filterButton = '.action.filters-toggle';
+
+    /**
+     * Active class
+     *
+     * @var string
+     */
+    protected $active = '.active';
+
+    /**
+     * Base part of row locator template for getRow() method
+     *
+     * @var string
+     */
+    protected $location = '//div[@class="grid"]//tr[';
+
+    /**
+     * Secondary part of row locator template for getRow() method
+     *
+     * @var string
+     */
+    protected $rowTemplate = 'td[contains(text(),normalize-space("%s"))]';
+
+    /**
+     * Secondary part of row locator template for getRow() method with strict option
+     *
+     * @var string
+     */
+    protected $rowTemplateStrict = 'td[text()[normalize-space()="%s"]]';
+
+    /**
+     * Magento grid loader
+     *
+     * @var string
+     */
+    protected $loader = '[data-role="spinner"]';
+
+    /**
+     * Locator for next page action
+     *
+     * @var string
+     */
+    protected $actionNextPage = '.pager .action-next';
+
+    /**
+     * Locator for disabled next page action
+     *
+     * @var string
+     */
+    protected $actionNextPageDisabled = '.pager .action-next.disabled';
+
+    /**
+     * First row selector
+     *
+     * @var string
+     */
+    protected $firstRowSelector = '';
 
     /**
      * Get backend abstract block
@@ -188,7 +226,7 @@ abstract class Grid extends Block
                     : null;
                 $this->_rootElement->find($selector, $strategy, $typifiedElement)->setValue($value);
             } else {
-                throw new \Exception('Such column is absent in the grid or not described yet.');
+                throw new \Exception("Column $key is absent in the grid or not described yet.");
             }
         }
     }
@@ -200,11 +238,11 @@ abstract class Grid extends Block
      */
     public function search(array $filter)
     {
+        $this->openFilterBlock();
         $this->resetFilter();
         $this->prepareForSearch($filter);
         $this->_rootElement->find($this->searchButton, Locator::SELECTOR_CSS)->click();
-        $this->getTemplateBlock()->waitLoader();
-        $this->reinitRootElement();
+        $this->waitLoader();
     }
 
     /**
@@ -215,6 +253,7 @@ abstract class Grid extends Block
      */
     public function searchAndOpen(array $filter)
     {
+        $this->openFilterBlock();
         $this->search($filter);
         $rowItem = $this->_rootElement->find($this->rowItem, Locator::SELECTOR_CSS);
         if ($rowItem->isVisible()) {
@@ -223,6 +262,24 @@ abstract class Grid extends Block
         } else {
             throw new \Exception('Searched item was not found.');
         }
+    }
+
+    /**
+     * Wait loader
+     *
+     * @return void
+     */
+    protected function waitLoader()
+    {
+        $browser = $this->browser;
+        $selector = $this->loader;
+        $browser->waitUntil(
+            function () use ($browser, $selector) {
+                $productSavedMessage = $browser->find($selector);
+                return $productSavedMessage->isVisible() == false ? true : null;
+            }
+        );
+        $this->getTemplateBlock()->waitLoader();
     }
 
     /**
@@ -247,6 +304,7 @@ abstract class Grid extends Block
      */
     public function searchAndSelect(array $filter)
     {
+        $this->openFilterBlock();
         $this->search($filter);
         $selectItem = $this->_rootElement->find($this->selectItem);
         if ($selectItem->isVisible()) {
@@ -261,13 +319,9 @@ abstract class Grid extends Block
      */
     public function resetFilter()
     {
-        $expandFilterButton = $this->_rootElement->find($this->filterOpen, Locator::SELECTOR_CSS);
-        if ($expandFilterButton->isVisible()) {
-            $expandFilterButton->click();
-        }
+        $this->openFilterBlock();
         $this->_rootElement->find($this->resetButton, Locator::SELECTOR_CSS)->click();
-        $this->getTemplateBlock()->waitLoader();
-        $this->reinitRootElement();
+        $this->waitLoader();
     }
 
     /**
@@ -309,7 +363,7 @@ abstract class Grid extends Block
     {
         $this->_rootElement->find($this->massactionSubmit, Locator::SELECTOR_CSS)->click();
         if ($acceptAlert) {
-            $this->_rootElement->acceptAlert();
+            $this->browser->acceptAlert();
         }
     }
 
@@ -319,15 +373,16 @@ abstract class Grid extends Block
      * @param array $filter
      * @param bool $isSearchable
      * @param bool $isStrict
-     * @return Element
+     * @return SimpleElement
      */
     protected function getRow(array $filter, $isSearchable = true, $isStrict = true)
     {
+        $this->openFilterBlock();
         if ($isSearchable) {
             $this->search($filter);
         }
         $location = '//div[@class="grid"]//tr[';
-        $rowTemplate = 'td[contains(text(),normalize-space("%s"))]';
+        $rowTemplate = 'td[contains(.,normalize-space("%s"))]';
         if ($isStrict) {
             $rowTemplate = 'td[text()[normalize-space()="%s"]]';
         }
@@ -340,6 +395,30 @@ abstract class Grid extends Block
     }
 
     /**
+     * Get rows data
+     *
+     * @param array $columns
+     * @return array
+     */
+    public function getRowsData(array $columns)
+    {
+        $data = [];
+        do {
+            $rows = $this->_rootElement->getElements($this->rowItem);
+            foreach ($rows as $row) {
+                $rowData = [];
+                foreach ($columns as $columnName) {
+                    $rowData[$columnName] = trim($row->find('.col-' . $columnName)->getText());
+                }
+
+                $data[] = $rowData;
+            }
+        } while ($this->nextPage());
+
+        return $data;
+    }
+
+    /**
      * Check if specific row exists in grid
      *
      * @param array $filter
@@ -349,6 +428,7 @@ abstract class Grid extends Block
      */
     public function isRowVisible(array $filter, $isSearchable = true, $isStrict = true)
     {
+        $this->openFilterBlock();
         return $this->getRow($filter, $isSearchable, $isStrict)->isVisible();
     }
 
@@ -360,11 +440,68 @@ abstract class Grid extends Block
      */
     public function sortGridByField($field, $sort = "desc")
     {
+        $this->openFilterBlock();
         $sortBlock = $this->_rootElement->find(sprintf($this->sortLink, $field, $sort));
         if ($sortBlock->isVisible()) {
             $sortBlock->click();
-            $this->getTemplateBlock()->waitLoader();
+            $this->waitLoader();
         }
-        $this->reinitRootElement();
+    }
+
+    /**
+     * Open Filter Block
+     *
+     * @return void
+     */
+    protected function openFilterBlock()
+    {
+        $this->getTemplateBlock()->waitForElementNotVisible($this->loader);
+
+        $button = $this->_rootElement->find($this->filterButton);
+        if ($button->isVisible() && !$this->_rootElement->find($this->filterButton . $this->active)->isVisible()) {
+            $button->click();
+            $browser = $this->_rootElement;
+            $selector = $this->searchButton;
+            $browser->waitUntil(
+                function () use ($browser, $selector) {
+                    return $browser->find($selector)->isVisible() ? true : null;
+                }
+            );
+        }
+    }
+
+    /**
+     * Click to next page action link
+     *
+     * @return bool
+     */
+    protected function nextPage()
+    {
+        if ($this->_rootElement->find($this->actionNextPageDisabled)->isVisible()) {
+            return false;
+        }
+        $this->_rootElement->find($this->actionNextPage)->click();
+        $this->waitLoader();
+        return true;
+    }
+
+    /**
+     * Check whether first row is visible
+     *
+     * @return bool
+     */
+    public function isFirstRowVisible()
+    {
+        return $this->_rootElement->find($this->firstRowSelector, Locator::SELECTOR_XPATH)->isVisible();
+    }
+
+    /**
+     * Open first item in grid
+     *
+     * @return void
+     */
+    public function openFirstRow()
+    {
+        $this->_rootElement->find($this->firstRowSelector, Locator::SELECTOR_XPATH)->click();
     }
 }
